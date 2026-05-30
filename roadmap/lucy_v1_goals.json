@@ -1,0 +1,25 @@
+[
+  {
+    "id": "animation-polish-1",
+    "goal": "Improve Lucy's procedural spider animation. Make the idle, crawl, hop, thinking, and hidden states feel more alive while preserving existing commands and compile success.",
+    "files": [
+      "swift_app/Sources/LucySpriteView.swift",
+      "swift_app/Sources/AppDelegate.swift"
+    ]
+  },
+  {
+    "id": "pet-behavior-1",
+    "goal": "Improve Lucy's pet behavior so she feels less random: add more intentional idle/perch/watch/curious behavior without breaking chat or movement.",
+    "files": [
+      "swift_app/Sources/AppDelegate.swift",
+      "swift_app/Sources/LucyRuntime.swift"
+    ]
+  },
+  {
+    "id": "agent-routing-1",
+    "goal": "Improve Lucy's natural language routing for common user requests. Keep slash commands working, but make normal phrases like open google, search youtube, use chrome, hide, and find/search queries more reliable.",
+    "files": [
+      "swift_app/Sources/ChatWindowController.swift"
+    ]
+  }
+]
