@@ -1,12 +1,62 @@
 import Cocoa
 import Foundation
 
+
+class LucySettings {
+    static let shared = LucySettings()
+
+    func ensureSettingsFile() {
+        let dir = LucyPaths.settingsURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        if !FileManager.default.fileExists(atPath: LucyPaths.settingsURL.path) {
+            let initial: [String: Any] = [
+                "browser": "Safari"
+            ]
+
+            if let data = try? JSONSerialization.data(withJSONObject: initial, options: [.prettyPrinted]) {
+                try? data.write(to: LucyPaths.settingsURL)
+            }
+        }
+    }
+
+    func loadSettings() -> [String: Any] {
+        ensureSettingsFile()
+
+        guard
+            let data = try? Data(contentsOf: LucyPaths.settingsURL),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return ["browser": "Safari"]
+        }
+
+        return json
+    }
+
+    func browserPreference() -> String {
+        let settings = loadSettings()
+        return settings["browser"] as? String ?? "Safari"
+    }
+
+    func saveBrowserPreference(_ browser: String) {
+        ensureSettingsFile()
+
+        var settings = loadSettings()
+        settings["browser"] = browser
+
+        if let data = try? JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted]) {
+            try? data.write(to: LucyPaths.settingsURL)
+        }
+    }
+}
+
+
 class ChatWindowController: NSObject {
     var window: NSWindow!
     var output: NSTextView!
     var input: NSTextField!
     let model = "qwen2.5:1.5b"
-    var preferredBrowser = "Safari"
+    var preferredBrowser = LucySettings.shared.browserPreference()
 
     var onHideRequested: (() -> Void)?
 
@@ -58,6 +108,7 @@ class ChatWindowController: NSObject {
         /browser Safari
         /browser Google Chrome
         /browser default
+        /settings
         /dev animation-smoother
 
         """
@@ -257,6 +308,15 @@ class ChatWindowController: NSObject {
 
 
 
+
+        if lowered == "/settings" {
+            append("Lucy: Settings:\n")
+            append("- Browser: \(preferredBrowser)\n")
+            append("- Settings file: \(LucyPaths.settingsURL.path)\n\n")
+            return
+        }
+
+
         if lowered.hasPrefix("/browser ") {
             let browser = String(userText.dropFirst("/browser ".count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -437,11 +497,13 @@ class ChatWindowController: NSObject {
 
         if cleaned.lowercased() == "default" {
             preferredBrowser = "default"
-            return "Browser preference set to system default."
+            LucySettings.shared.saveBrowserPreference("default")
+            return "Browser preference set to system default and saved."
         }
 
         preferredBrowser = cleaned
-        return "Browser preference set to: \(preferredBrowser)"
+        LucySettings.shared.saveBrowserPreference(cleaned)
+        return "Browser preference set to: \(preferredBrowser) and saved."
     }
 
     func browserCommandPrefix() -> String {
