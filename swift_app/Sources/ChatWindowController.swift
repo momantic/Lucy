@@ -389,6 +389,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
+
+        if !userText.hasPrefix("/") && routeNaturalCommand(userText) {
+            return
+        }
+
         let remembered = LucyMemory.shared.maybeRemember(userText)
 
         if remembered {
@@ -533,7 +538,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return ""
         }
 
-        return "; osascript -e 'tell application \(shellQuote(preferredBrowser)) to activate'"
+        let escapedBrowser = preferredBrowser.replacingOccurrences(of: "\"", with: "\\\"")
+        return "; osascript -e 'tell application \"\(escapedBrowser)\" to activate'"
     }
 
     func openURL(_ urlString: String) -> String {
@@ -554,6 +560,216 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     func openApp(_ appName: String) -> String {
         return runShell("open -a \(shellQuote(appName)); osascript -e 'tell application \(shellQuote(appName)) to activate'")
     }
+
+    func stripPolitePrefix(_ text: String) -> String {
+        var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let prefixes = [
+            "lucy,",
+            "lucy ",
+            "hey lucy,",
+            "hey lucy ",
+            "can you ",
+            "could you ",
+            "please "
+        ]
+
+        var changed = true
+        while changed {
+            changed = false
+            let lowered = cleaned.lowercased()
+
+            for prefix in prefixes {
+                if lowered.hasPrefix(prefix) {
+                    cleaned = String(cleaned.dropFirst(prefix.count))
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    changed = true
+                    break
+                }
+            }
+        }
+
+        return cleaned
+    }
+
+    func routeNaturalCommand(_ userText: String) -> Bool {
+        let cleaned = stripPolitePrefix(userText)
+        let lowered = cleaned.lowercased()
+
+        func removePhrases(_ input: String, _ phrases: [String]) -> String {
+            var result = input
+
+            for phrase in phrases {
+                result = result.replacingOccurrences(of: phrase, with: "", options: [.caseInsensitive])
+            }
+
+            while result.contains("  ") {
+                result = result.replacingOccurrences(of: "  ", with: " ")
+            }
+
+            return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        func googleSearch(_ query: String) -> Bool {
+            let cleanedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if cleanedQuery.isEmpty {
+                let result = openURL("https://www.google.com")
+                append("Lucy: \(result)\n\n")
+                return true
+            }
+
+            let encoded = cleanedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? cleanedQuery
+            let result = openURL("https://www.google.com/search?q=\(encoded)")
+            append("Lucy: \(result)\n\n")
+            return true
+        }
+
+        func youtubeSearch(_ query: String) -> Bool {
+            let cleanedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if cleanedQuery.isEmpty {
+                let result = openURL("https://www.youtube.com")
+                append("Lucy: \(result)\n\n")
+                return true
+            }
+
+            let result = openYouTubeSearch(cleanedQuery)
+            append("Lucy: \(result)\n\n")
+            return true
+        }
+
+        if lowered == "hide"
+            || lowered == "hide for a bit"
+            || lowered == "go hide"
+            || lowered == "disappear"
+            || lowered == "hide lucy" {
+            append("Lucy: okay, I’ll hide for 5 seconds.\n\n")
+            onHideRequested?()
+            return true
+        }
+
+        if lowered == "open google"
+            || lowered == "open google.com"
+            || lowered == "go to google"
+            || lowered == "open google in browser" {
+            return googleSearch("")
+        }
+
+        if lowered == "open youtube"
+            || lowered == "go to youtube" {
+            return youtubeSearch("")
+        }
+
+        if lowered == "use chrome"
+            || lowered == "use google chrome"
+            || lowered == "switch to chrome"
+            || lowered == "open things in chrome" {
+            let result = setBrowserPreference("Google Chrome")
+            append("Lucy: \(result)\n\n")
+            return true
+        }
+
+        if lowered == "use safari"
+            || lowered == "switch to safari"
+            || lowered == "open things in safari" {
+            let result = setBrowserPreference("Safari")
+            append("Lucy: \(result)\n\n")
+            return true
+        }
+
+        if lowered == "use default browser"
+            || lowered == "use system default browser" {
+            let result = setBrowserPreference("default")
+            append("Lucy: \(result)\n\n")
+            return true
+        }
+
+        if lowered.hasPrefix("search youtube for ")
+            || lowered.hasPrefix("searfch youtube for ")
+            || lowered.hasPrefix("serach youtube for ")
+            || lowered.hasPrefix("youtube ") {
+
+            let query = removePhrases(cleaned, [
+                "search youtube for",
+                "searfch youtube for",
+                "serach youtube for",
+                "youtube"
+            ])
+
+            return youtubeSearch(query)
+        }
+
+        if lowered.hasPrefix("find me ") && lowered.contains("youtube") {
+            let query = removePhrases(cleaned, [
+                "find me",
+                "on youtube",
+                "youtube"
+            ])
+
+            return youtubeSearch(query)
+        }
+
+        if lowered.hasPrefix("find me ") && lowered.contains("video") {
+            let query = removePhrases(cleaned, [
+                "find me",
+                "a video",
+                "video"
+            ])
+
+            return youtubeSearch(query)
+        }
+
+        let mentionsGoogle = lowered.contains("google")
+            || lowered.contains("googel")
+            || lowered.contains("gogle")
+            || lowered.contains("googl")
+
+        if mentionsGoogle && (lowered.hasPrefix("find ") || lowered.hasPrefix("search ")) {
+            let query = removePhrases(cleaned, [
+                "find",
+                "search",
+                "on google",
+                "on googel",
+                "on gogle",
+                "on googl",
+                "google",
+                "googel",
+                "gogle",
+                "googl",
+                "for"
+            ])
+
+            return googleSearch(query)
+        }
+
+        // Default behavior: find/search means Google search.
+        if lowered.hasPrefix("find ") || lowered.hasPrefix("search ") {
+            let query = removePhrases(cleaned, [
+                "find",
+                "search",
+                "for"
+            ])
+
+            return googleSearch(query)
+        }
+
+        if lowered.hasPrefix("open ") && lowered.contains(".") {
+            var url = String(cleaned.dropFirst("open ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if !url.lowercased().hasPrefix("http://") && !url.lowercased().hasPrefix("https://") {
+                url = "https://\(url)"
+            }
+
+            let result = openURL(url)
+            append("Lucy: \(result)\n\n")
+            return true
+        }
+
+        return false
+    }
+
 
     func runDevAgentApply(task: String) -> String {
         let process = Process()
