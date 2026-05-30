@@ -8,5 +8,6 @@ class LucyPaths {
     static let backupsDir = root.appendingPathComponent("backups")
     static let memoryBackupsDir = root.appendingPathComponent("backups").appendingPathComponent("memory")
     static let swiftFile = root.appendingPathComponent("swift_app").appendingPathComponent("Lucy.swift")
+    static let sourcesDir = root.appendingPathComponent("swift_app").appendingPathComponent("Sources")
     static let binaryFile = root.appendingPathComponent("swift_app").appendingPathComponent("Lucy")
 }
