@@ -156,8 +156,27 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
     @objc func sendMessage() {
-        let userText = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        if userText.isEmpty { return }
+        let rawText = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if rawText.isEmpty { return }
+
+        let lines = rawText
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if lines.count > 1 {
+            input.stringValue = ""
+
+            for line in lines {
+                input.stringValue = line
+                sendMessage()
+            }
+
+            input.stringValue = ""
+            return
+        }
+
+        let userText = rawText
 
         input.stringValue = ""
         append("You: \(userText)\n")
