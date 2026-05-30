@@ -557,6 +557,23 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+        if lowered == "copy email draft"
+            || lowered == "copy last email draft"
+            || lowered == "copy the email draft" {
+            let result = copyTextToClipboard(lastEmailDraft)
+            append("Lucy: \(result)\n\n")
+            return
+        }
+
+        if lowered == "open gmail"
+            || lowered == "open google mail"
+            || lowered == "open email" {
+            let result = openGmail()
+            append("Lucy: \(result)\n\n")
+            return
+        }
+
         if lowered.contains("write an email")
             || lowered.contains("draft an email")
             || lowered.hasPrefix("email ") {
@@ -814,17 +831,32 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         if lowered.contains("gmail") {
+            if lowered.contains("draft") || lowered.contains("helper") || lowered.contains("add") || lowered.contains("build") || lowered.contains("give yourself") {
+                append("Lucy: I understand this as a selfbuild request for a safe Gmail draft helper.\n\n")
+
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let result = self.runSelfBuild(goal: "add gmail draft helper")
+
+                    DispatchQueue.main.async {
+                        self.append("Lucy Selfbuild:\n\(result)\n\n")
+                    }
+                }
+
+                return true
+            }
+
             append("""
             Lucy: I understand you want Gmail control.
 
-            I do not have a safe selfbuild template for Gmail automation yet.
-            I can currently draft email text, but I will not click/send Gmail messages until we build a safe approval flow.
+            I can build/use a safe Gmail draft helper, but I will not send emails automatically.
+            Safe flow:
+            - draft email text
+            - copy draft to clipboard
+            - open Gmail
+            - you review and send manually
 
-            Safer next selfbuild template to add:
-            - Gmail draft helper
-            - Opens Gmail
-            - Prepares text
-            - Requires your approval before sending
+            Try:
+            give yourself Gmail draft helper
 
             I did not edit my code.
 
@@ -1160,7 +1192,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         let taskName: String
 
-        if loweredGoal.contains("email") {
+        if loweredGoal.contains("gmail") {
+            taskName = "selfbuild-gmail-draft-helper"
+        } else if loweredGoal.contains("email") {
             taskName = "selfbuild-email-helper"
         } else {
             return """
@@ -1308,6 +1342,37 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
+
+    var lastEmailDraft: String {
+        get {
+            return UserDefaults.standard.string(forKey: "lucy.lastEmailDraft") ?? ""
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "lucy.lastEmailDraft")
+        }
+    }
+
+    func saveLastEmailDraft(_ draft: String) {
+        lastEmailDraft = draft
+    }
+
+    func copyTextToClipboard(_ text: String) -> String {
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "There is no saved email draft to copy yet."
+        }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        return "Copied the latest email draft to clipboard."
+    }
+
+    func openGmail() -> String {
+        return openURL("https://mail.google.com/mail/u/0/#inbox")
+    }
+
+
     func runDevAgentApply(task: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -1423,13 +1488,19 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         """
 
         let draft = runOllama(prompt: prompt)
+        saveLastEmailDraft(draft)
 
         return """
         Here is a draft:
 
         \(draft)
 
+        I saved this as your latest email draft.
         I have not sent anything.
+
+        You can now say:
+        - copy email draft
+        - open gmail
         """
     }
 
