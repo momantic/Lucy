@@ -10,8 +10,8 @@ class LucySpriteView: NSView {
         super.init(frame: frameRect)
 
         wantsLayer = true
-        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.12).cgColor
-        layer?.cornerRadius = 20
+        layer?.backgroundColor = NSColor.clear.cgColor
+        layer?.cornerRadius = 0
     }
 
     required init?(coder: NSCoder) {
