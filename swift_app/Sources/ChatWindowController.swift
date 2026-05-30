@@ -98,6 +98,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - use safari
         - hide for a bit
         - write an email to Professor Smith asking about research opportunities
+        - write an email to johndoe@gmail.com asking to schedule a meeting
 
         Useful commands:
         /memory
@@ -577,6 +578,20 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         if lowered.contains("write an email")
             || lowered.contains("draft an email")
             || lowered.hasPrefix("email ") {
+
+            if firstEmailAddress(in: userText) != nil {
+                append("Lucy: drafting the email and opening Gmail compose...\n")
+
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let result = self.draftEmailForGmailCompose(userText)
+
+                    DispatchQueue.main.async {
+                        self.append("Lucy:\n\(result)\n\n")
+                    }
+                }
+
+                return
+            }
 
             append("Lucy: drafting an email for you...\n")
 
@@ -1352,6 +1367,17 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
     }
 
+
+    func stripTerminalEscapes(_ text: String) -> String {
+        let pattern = #"\u{001B}\[[0-9;?]*[A-Za-z]"#
+        return text.replacingOccurrences(
+            of: pattern,
+            with: "",
+            options: .regularExpression
+        )
+    }
+
+
     func saveLastEmailDraft(_ draft: String) {
         lastEmailDraft = draft
     }
@@ -1437,6 +1463,143 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
+
+    func firstEmailAddress(in text: String) -> String? {
+        let pattern = #"[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+
+        guard let match = regex.firstMatch(in: text, range: range),
+              let swiftRange = Range(match.range, in: text)
+        else {
+            return nil
+        }
+
+        return String(text[swiftRange])
+    }
+
+    func removeEmailAddress(from text: String) -> String {
+        guard let email = firstEmailAddress(in: text) else {
+            return text
+        }
+
+        return text.replacingOccurrences(of: email, with: "")
+            .replacingOccurrences(of: "()", with: "")
+            .replacingOccurrences(of: "( )", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func parseEmailDraft(_ draft: String) -> (subject: String, body: String) {
+        let lines = draft.components(separatedBy: .newlines)
+
+        var subject = "Draft email"
+        var bodyLines: [String] = []
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if trimmed.lowercased().hasPrefix("subject:") {
+                let parsed = String(trimmed.dropFirst("subject:".count))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if !parsed.isEmpty {
+                    subject = parsed
+                }
+            } else {
+                bodyLines.append(line)
+            }
+        }
+
+        var body = bodyLines.joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if body.isEmpty {
+            body = draft
+        }
+
+        return (subject, body)
+    }
+
+    func gmailComposeURL(to recipient: String, subject: String, body: String) -> String {
+        let encodedTo = recipient.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? recipient
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject
+        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? body
+
+        return "https://mail.google.com/mail/?view=cm&fs=1&to=\(encodedTo)&su=\(encodedSubject)&body=\(encodedBody)"
+    }
+
+    func draftEmailForGmailCompose(_ request: String) -> String {
+        guard let recipient = firstEmailAddress(in: request) else {
+            return draftEmailFromRequest(request)
+        }
+
+        let cleanedRequest = removeEmailAddress(from: request)
+
+        let prompt = """
+        You are Lucy, a helpful local AI desktop pet.
+
+        Draft an email based on this request:
+        \(cleanedRequest)
+
+        Recipient email:
+        \(recipient)
+
+        Requirements:
+        - Include a clear subject line.
+        - Keep it polished, natural, and concise.
+        - Do not invent specific facts.
+        - Do not say you sent the email.
+        - The sender is Mo.
+        - Sign the email as Mo.
+
+        Output format exactly:
+        Subject: ...
+
+        Dear ...,
+
+        ...
+
+        Best,
+        Mo
+        """
+
+        let draft = runOllama(prompt: prompt)
+        let cleanDraft = stripTerminalEscapes(draft)
+        let parsed = parseEmailDraft(cleanDraft)
+
+        let fullDraft = """
+        To: \(recipient)
+        Subject: \(parsed.subject)
+
+        \(parsed.body)
+        """
+
+        saveLastEmailDraft(stripTerminalEscapes(fullDraft))
+
+        let composeURL = gmailComposeURL(
+            to: recipient,
+            subject: parsed.subject,
+            body: parsed.body
+        )
+
+        let openResult = openURL(composeURL)
+
+        return """
+        I drafted the email and opened Gmail compose.
+
+        \(fullDraft)
+
+        \(openResult)
+
+        I have not sent anything. Please review it and click Send yourself if it looks good.
+        """
+    }
+
+
     func draftEmailFromRequest(_ request: String) -> String {
         var cleaned = request.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -1488,7 +1651,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         """
 
         let draft = runOllama(prompt: prompt)
-        saveLastEmailDraft(draft)
+        let cleanDraft = stripTerminalEscapes(draft)
+        saveLastEmailDraft(cleanDraft)
 
         return """
         Here is a draft:
