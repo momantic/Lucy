@@ -51,6 +51,9 @@ class ChatWindowController: NSObject {
         /patches
         /readpatch latest
         /devstatus
+        /youtube search terms
+        /openurl https://example.com
+        /openapp Safari
         /dev animation-smoother
 
         """
@@ -248,6 +251,50 @@ class ChatWindowController: NSObject {
             return
         }
 
+
+        if lowered.hasPrefix("/youtube ") {
+            let query = String(userText.dropFirst("/youtube ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if query.isEmpty {
+                append("Lucy: Tell me what to search on YouTube. Example: /youtube cute jumping spider\n\n")
+                return
+            }
+
+            let result = openYouTubeSearch(query)
+            append("Lucy: \(result)\n\n")
+            return
+        }
+
+        if lowered.hasPrefix("/openurl ") {
+            let url = String(userText.dropFirst("/openurl ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if url.isEmpty {
+                append("Lucy: Give me a URL after /openurl.\n\n")
+                return
+            }
+
+            let result = openURL(url)
+            append("Lucy: \(result)\n\n")
+            return
+        }
+
+        if lowered.hasPrefix("/openapp ") {
+            let appName = String(userText.dropFirst("/openapp ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if appName.isEmpty {
+                append("Lucy: Tell me the app name after /openapp. Example: /openapp Safari\n\n")
+                return
+            }
+
+            let result = openApp(appName)
+            append("Lucy: \(result)\n\n")
+            return
+        }
+
+
         let remembered = LucyMemory.shared.maybeRemember(userText)
 
         if remembered {
@@ -326,13 +373,49 @@ class ChatWindowController: NSObject {
 
 
 
+    func shellQuote(_ text: String) -> String {
+        return "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
+    func runShell(_ command: String) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", command]
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            let details = [out, err]
+                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .joined(separator: "\n")
+
+            if process.terminationStatus == 0 {
+                return "Opened successfully.\nCommand: \(command)"
+            }
+
+            return "Command failed.\nCommand: \(command)\n\(details)"
+        } catch {
+            return "Could not run command: \(error.localizedDescription)"
+        }
+    }
+
     func openURL(_ urlString: String) -> String {
-        guard let url = URL(string: urlString) else {
+        guard URL(string: urlString) != nil else {
             return "That URL does not look valid."
         }
 
-        NSWorkspace.shared.open(url)
-        return "Opened URL: \(urlString)"
+        // Force Safari for reliability and bring it forward.
+        return runShell("open -a Safari \(shellQuote(urlString)); osascript -e 'tell application \"Safari\" to activate'")
     }
 
     func openYouTubeSearch(_ query: String) -> String {
@@ -342,15 +425,8 @@ class ChatWindowController: NSObject {
     }
 
     func openApp(_ appName: String) -> String {
-        let workspace = NSWorkspace.shared
-
-        if workspace.launchApplication(appName) {
-            return "Opened app: \(appName)"
-        }
-
-        return "I could not open app: \(appName). Try the exact app name, like Safari, Google Chrome, or Terminal."
+        return runShell("open -a \(shellQuote(appName)); osascript -e 'tell application \(shellQuote(appName)) to activate'")
     }
-
 
     func runDevAgentApply(task: String) -> String {
         let process = Process()
