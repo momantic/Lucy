@@ -116,6 +116,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /dev cursor-aware
         /dev natural-commands
         /autodev roadmap
+        /autodev next
 
         """
 
@@ -218,6 +219,22 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+
+
+
+        if lowered == "/autodev next" {
+            append("Lucy: running my next local autodev task.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runAutoDevNext()
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Autodev:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
 
 
         if lowered == "/autodev roadmap" {
@@ -812,6 +829,41 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return false
     }
 
+
+
+
+    func runAutoDevNext() -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["python3", "tools/lucy_autodev.py", "next"]
+        process.currentDirectoryURL = LucyPaths.root
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            let combined = [out, err]
+                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .joined(separator: "\n")
+
+            if combined.isEmpty {
+                return "Autodev next finished with no output."
+            }
+
+            return combined
+        } catch {
+            return "Could not run autodev next: \(error.localizedDescription)"
+        }
+    }
 
 
     func runAutoDevRoadmap() -> String {

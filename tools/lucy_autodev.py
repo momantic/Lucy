@@ -10,6 +10,15 @@ BINARY = ROOT / "swift_app" / "Lucy"
 SOURCES = ROOT / "swift_app" / "Sources"
 
 
+NEXT_TASKS = [
+    {
+        "name": "fix-version-label",
+        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "fix-version-label"],
+        "description": "Fix Lucy Terminal startup version label."
+    }
+]
+
+
 ROADMAP = [
     {
         "name": "status",
@@ -147,16 +156,71 @@ def run_roadmap():
     print(f"Report: {report}")
 
 
+
+def run_next():
+    print("Lucy Autodev Next")
+    print("=================")
+
+    if not NEXT_TASKS:
+        print("No next tasks configured.")
+        return
+
+    task = NEXT_TASKS[0]
+    print(f"Next task: {task['name']}")
+    print(task["description"])
+
+    ok, output = run_command(task["command"])
+
+    body = "# Lucy Autodev Next Report\n\n"
+    body += f"Task: `{task['name']}`\n\n"
+    body += f"Description: {task['description']}\n\n"
+    body += f"Command OK: `{ok}`\n\n"
+    body += "```text\n"
+    body += output
+    body += "\n```\n\n"
+
+    if not ok:
+        report = write_report("next_failed", body)
+        print("FAILED.")
+        print(output)
+        print(f"Report: {report}")
+        sys.exit(1)
+
+    compile_ok, compile_output = compile_lucy()
+
+    body += "## Compile Check\n\n"
+    body += f"Compile OK: `{compile_ok}`\n\n"
+    body += "```text\n"
+    body += compile_output
+    body += "\n```\n"
+
+    if not compile_ok:
+        report = write_report("next_compile_failed", body)
+        print("COMPILE FAILED.")
+        print(compile_output)
+        print(f"Report: {report}")
+        sys.exit(1)
+
+    report = write_report("next_complete", body)
+
+    print("Next task complete.")
+    print(output)
+    print(f"Report: {report}")
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
         print("  python3 tools/lucy_autodev.py roadmap")
+        print("  python3 tools/lucy_autodev.py next")
         sys.exit(1)
 
     command = sys.argv[1].lower()
 
     if command == "roadmap":
         run_roadmap()
+    elif command == "next":
+        run_next()
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

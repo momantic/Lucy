@@ -13,7 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var isHidden = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("Lucy Dev Mode v0.4 started")
+        print("Lucy Dev Mode v0.5 started")
         print("Terminal logging is quiet by default. Use /loud inside Lucy chat to enable movement logs.")
 
         _ = LucyMemory.shared
