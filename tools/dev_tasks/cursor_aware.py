@@ -1,12 +1,6 @@
 from common import SOURCES, backup_sources, restore_backup, compile_lucy, write_apply_report
 
 
-def replace_once(text: str, old: str, new: str) -> str:
-    if old not in text:
-        raise ValueError(f"Could not find expected block:\n{old[:200]}...")
-    return text.replace(old, new, 1)
-
-
 def run():
     backup_dir = backup_sources()
     app_delegate = SOURCES / "AppDelegate.swift"
@@ -17,39 +11,69 @@ def run():
     original = app_delegate.read_text()
     updated = original
 
-    # 1. Add a timer property.
-    updated = replace_once(
-        updated,
-        """    var wanderTimer: Timer?
+    already_has_timer = "var cursorTimer: Timer?" in updated
+    already_starts = "startCursorAwareness()" in updated
+    already_has_method = "func startCursorAwareness()" in updated
+
+    if already_has_timer and already_starts and already_has_method:
+        ok, compile_output = compile_lucy()
+
+        report = write_apply_report(
+            "cursor_aware",
+            backup_dir,
+            ok,
+            compile_output,
+            ["swift_app/Sources/AppDelegate.swift"],
+            "Cursor awareness already appears to be installed. No source changes were needed."
+        )
+
+        print("Cursor-aware already installed. No changes needed.")
+        print(f"Backup: {backup_dir}")
+        print(f"Report: {report}")
+
+        if not ok:
+            raise SystemExit(1)
+
+        return
+
+    if not already_has_timer:
+        old = """    var wanderTimer: Timer?
     var moodTimer: Timer?
     var animationTimer: Timer?
     var isHidden = false
-""",
-        """    var wanderTimer: Timer?
+"""
+        new = """    var wanderTimer: Timer?
     var moodTimer: Timer?
     var animationTimer: Timer?
     var cursorTimer: Timer?
     var isHidden = false
 """
-    )
+        if old not in updated:
+            print("Could not find timer property block.")
+            raise SystemExit(1)
+        updated = updated.replace(old, new, 1)
 
-    # 2. Start cursor awareness after other loops.
-    updated = replace_once(
-        updated,
-        """        startAnimation()
+    if not already_starts:
+        old = """        startAnimation()
         startWandering()
         startIdleMoods()
-""",
-        """        startAnimation()
+"""
+        new = """        startAnimation()
         startWandering()
         startIdleMoods()
         startCursorAwareness()
 """
-    )
+        if old not in updated:
+            print("Could not find startup loop block.")
+            raise SystemExit(1)
+        updated = updated.replace(old, new, 1)
 
-    # 3. Add cursor awareness method before startAnimation().
-    marker = "    func startAnimation() {"
-    if "func startCursorAwareness()" not in updated:
+    if not already_has_method:
+        marker = "    func startAnimation() {"
+        if marker not in updated:
+            print("Could not find startAnimation insertion point.")
+            raise SystemExit(1)
+
         cursor_method = r'''    func startCursorAwareness() {
         cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
             if self.isHidden { return }
@@ -102,7 +126,7 @@ def run():
         True,
         compile_output,
         ["swift_app/Sources/AppDelegate.swift"],
-        "Added a cursor-awareness loop so Lucy notices the mouse nearby and reacts with watching/boop moods."
+        "Added cursor awareness, or filled in missing cursor-awareness pieces."
     )
 
     print("Applied cursor-aware update.")
