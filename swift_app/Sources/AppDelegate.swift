@@ -149,23 +149,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 LucyRuntime.shared.crawlCount += 1
                 LucyRuntime.shared.log("Lucy crawled")
             } else if action <= 8 {
-                let dx = CGFloat([-60, -40, 40, 60].randomElement()!)
-                let dy = CGFloat([30, 45].randomElement()!)
-
+                let dx = CGFloat([-70, -50, 50, 70].randomElement()!)
                 LucyRuntime.shared.facingRight = dx >= 0
 
-                frame.origin.x = max(screen.minX, min(frame.origin.x + dx, screen.maxX - frame.width))
-                frame.origin.y = max(screen.minY, min(frame.origin.y + dy, screen.maxY - frame.height))
-
                 self.petView.setState(.hop, mood: LucyRuntime.shared.facingRight ? "hop →" : "← hop")
-                self.window.setFrame(frame, display: true, animate: true)
+                self.performHopArc(dx: dx)
                 LucyRuntime.shared.hopCount += 1
-                LucyRuntime.shared.log("Lucy hopped")
+                LucyRuntime.shared.log("Lucy hopped with arc")
             } else {
                 let moods = ["look 👀", "idle", "hmm", "Lucy"]
                 self.petView.setState(.idle, mood: moods.randomElement() ?? "Lucy")
                 LucyRuntime.shared.idleCount += 1
                 LucyRuntime.shared.log("Lucy idled")
+            }
+        }
+    }
+
+    func performHopArc(dx: CGFloat) {
+        guard let screen = NSScreen.main?.visibleFrame else { return }
+
+        let startFrame = self.window.frame
+        var endFrame = startFrame
+
+        endFrame.origin.x = max(screen.minX, min(startFrame.origin.x + dx, screen.maxX - startFrame.width))
+        endFrame.origin.y = max(screen.minY, min(startFrame.origin.y + 10, screen.maxY - startFrame.height))
+
+        var peakFrame = startFrame
+        peakFrame.origin.x = (startFrame.origin.x + endFrame.origin.x) / 2
+        peakFrame.origin.y = min(startFrame.origin.y + 70, screen.maxY - startFrame.height)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.window.animator().setFrame(peakFrame, display: true)
+        } completionHandler: {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.20
+                context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                self.window.animator().setFrame(endFrame, display: true)
             }
         }
     }
