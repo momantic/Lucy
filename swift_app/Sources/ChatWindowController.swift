@@ -85,33 +85,39 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         output.isEditable = false
         output.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         output.string = """
-        Lucy: Hi, I’m Lucy. Dev Mode v0.4 is active.
+        Lucy: Hi, I’m Lucy. Dev Mode v0.5 is active.
 
-        Commands:
+        You can talk naturally:
+        - open google
+        - find cute jumping spider pictures
+        - search best mac desktop pet examples
+        - search youtube for lucas the spider
+        - find me a jumping spider video
+        - open wikipedia.org
+        - use chrome
+        - use safari
+        - hide for a bit
+
+        Useful commands:
         /memory
         /project
         /readself
         /status
-        /quiet
-        /loud
-        /hide
-        /selfupdate your request here
-        /apply hide-command
-        /apply clean-memory
-        /patch patch-name
-        /patches
-        /readpatch latest
-        /devstatus
+        /settings
+        /browser Google Chrome
+        /browser Safari
         /youtube search terms
         /openurl https://example.com
         /openapp Safari
-        /browser Safari
-        /browser Google Chrome
-        /browser default
-        /settings
+        /devstatus
         /dev animation-smoother
+        /dev cute-eyes
+        /dev better-crawl
+        /dev cursor-aware
+        /dev natural-commands
 
         """
+
 
         scroll.documentView = output
 
