@@ -47,6 +47,7 @@ class ChatWindowController: NSObject {
         /selfupdate your request here
         /apply hide-command
         /apply clean-memory
+        /patch patch-name
 
         """
 
@@ -148,6 +149,21 @@ class ChatWindowController: NSObject {
                 }
             }
 
+            return
+        }
+
+
+        if lowered.hasPrefix("/patch ") {
+            let patchName = String(userText.dropFirst("/patch ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if patchName.isEmpty {
+                append("Lucy: Tell me the patch name after /patch.\n\n")
+                return
+            }
+
+            let result = LucyDevTools.shared.createPatchPlan(name: patchName)
+            append("Lucy:\n\(result)\n\n")
             return
         }
 

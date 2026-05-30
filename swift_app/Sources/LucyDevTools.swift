@@ -43,6 +43,7 @@ class LucyDevTools {
         result += "- /hide command\n"
         result += "- /status command\n"
         result += "- /apply clean-memory command\n"
+        result += "- /patch command for creating patch plans\n"
         result += "- /quiet and /loud logging controls\n"
 
         return result
@@ -149,6 +150,64 @@ class LucyDevTools {
             return "I could not apply the update: \(error.localizedDescription)"
         }
     }
+
+
+    func createPatchPlan(name: String) -> String {
+        ensureDirs()
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let stamp = formatter.string(from: Date())
+
+        let safeName = name
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: "/", with: "-")
+
+        let fileName = "patch_plan_\(stamp)_\(safeName).md"
+        let url = LucyPaths.selfUpdatesDir.appendingPathComponent(fileName)
+
+        let body = """
+        # Lucy Patch Plan
+
+        Patch name: \(name)
+
+        ## Purpose
+
+        This file is a proposed patch plan. It is not automatically applied.
+
+        ## Current safe patch flow
+
+        1. Lucy creates this patch plan.
+        2. User reviews it.
+        3. Lucy can later implement an approved patch applier.
+        4. Lucy must backup files before applying.
+        5. Lucy must compile after applying.
+        6. Lucy must roll back on compile failure.
+
+        ## Target
+
+        Requested patch:
+        \(name)
+
+        ## Notes
+
+        For now, Lucy only supports safe built-in apply commands:
+        - /apply hide-command
+        - /apply clean-memory
+
+        Future patch applier should only edit files inside:
+        \(LucyPaths.root.path)
+
+        """
+
+        do {
+            try body.write(to: url, atomically: true, encoding: .utf8)
+            return "Patch plan saved to:\n\(url.path)"
+        } catch {
+            return "I could not save patch plan: \(error.localizedDescription)"
+        }
+    }
+
 
     func compileLucy() -> (success: Bool, output: String) {
         let fm = FileManager.default
