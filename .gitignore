@@ -1,0 +1,11 @@
+# compiled binary
+swift_app/Lucy
+
+# generated backups
+backups/
+
+# old/experimental Python app
+app/
+
+# macOS junk
+.DS_Store
