@@ -117,6 +117,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /dev natural-commands
         /autodev roadmap
         /autodev next
+        /build your goal here
 
         """
 
@@ -220,6 +221,31 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
+
+
+
+        if lowered.hasPrefix("/build ") {
+            let goal = String(userText.dropFirst("/build ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if goal.isEmpty {
+                append("Lucy: Tell me what to build after /build.\n\n")
+                return
+            }
+
+            append("Lucy: I’ll try to update my own code for this goal:\n\(goal)\n\n")
+            append("Lucy: I will only edit my project files, compile after the change, and roll back if it breaks.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runBuilderGoal(goal)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Builder:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
 
 
         if lowered == "/autodev next" {
@@ -830,6 +856,41 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
+
+
+
+    func runBuilderGoal(_ goal: String) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["python3", "tools/lucy_builder.py", "goal", goal]
+        process.currentDirectoryURL = LucyPaths.root
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            let combined = [out, err]
+                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .joined(separator: "\n")
+
+            if combined.isEmpty {
+                return "Builder finished with no output."
+            }
+
+            return combined
+        } catch {
+            return "Could not run Lucy Builder: \(error.localizedDescription)"
+        }
+    }
 
 
     func runAutoDevNext() -> String {

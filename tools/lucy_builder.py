@@ -293,6 +293,18 @@ def run_task(task):
     return True
 
 
+
+def custom_task(goal):
+    files = [str(p.relative_to(ROOT)) for p in sorted(SOURCES.glob("*.swift"))]
+
+    return {
+        "id": "custom-goal-" + stamp(),
+        "goal": goal,
+        "files": files
+    }
+
+
+
 def load_roadmap():
     return json.loads(ROADMAP.read_text())
 
@@ -304,6 +316,7 @@ def main():
         print("Usage:")
         print("  python3 tools/lucy_builder.py run")
         print("  python3 tools/lucy_builder.py one <task-id>")
+        print("  python3 tools/lucy_builder.py goal \"your goal here\"")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -317,6 +330,16 @@ def main():
                 sys.exit(1)
         print("\nLucy builder completed roadmap.")
         sys.exit(0)
+
+    if command == "goal":
+        if len(sys.argv) < 3:
+            print("Usage: python3 tools/lucy_builder.py goal \"your goal here\"")
+            sys.exit(1)
+
+        goal = " ".join(sys.argv[2:]).strip()
+        task = custom_task(goal)
+        ok = run_task(task)
+        sys.exit(0 if ok else 1)
 
     if command == "one":
         if len(sys.argv) < 3:
