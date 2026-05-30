@@ -87,7 +87,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         output.string = """
         Lucy: Hi, I’m Lucy. Dev Mode v0.5 is active.
 
-        You can talk naturally:
+        You can use flexible wording. I will try to understand typos and different phrasings:\n        \n        Examples:
         - open google
         - find cute jumping spider pictures
         - search best mac desktop pet examples
@@ -187,6 +187,30 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         append("You: \(userText)\n")
 
         let lowered = userText.lowercased()
+
+
+        if !userText.hasPrefix("/")
+            && firstEmailAddress(in: userText) != nil
+            && (
+                lowered.contains("email")
+                || lowered.contains("mail")
+                || lowered.contains("write")
+                || lowered.contains("draft")
+                || lowered.contains("message")
+            ) {
+
+            append("Lucy: drafting the email and opening Gmail compose...\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.draftEmailForGmailCompose(userText)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
 
         if lowered == "/ping" || lowered == "ping" {
             append("Lucy: pong\n\n")
@@ -576,7 +600,15 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         if lowered.contains("write an email")
+            || lowered.contains("write a email")
+            || lowered.contains("write me email")
+            || lowered.contains("write me an email")
+            || lowered.contains("write me a email")
             || lowered.contains("draft an email")
+            || lowered.contains("draft a email")
+            || lowered.contains("draft me email")
+            || lowered.contains("draft me an email")
+            || lowered.contains("draft me a email")
             || lowered.hasPrefix("email ") {
 
             if firstEmailAddress(in: userText) != nil {
@@ -613,6 +645,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         if !userText.hasPrefix("/") && routeNaturalCommand(userText) {
+            return
+        }
+
+
+        if !userText.hasPrefix("/") && routeAIIntent(userText) {
             return
         }
 
@@ -685,8 +722,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
                 return "I had trouble talking to Ollama:\n\(errorText)"
             }
 
-            return String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? "I did not get a response."
+            let rawText = String(data: data, encoding: .utf8) ?? "I did not get a response."
+            return stripTerminalEscapes(rawText)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
             return "I could not start Ollama. Error: \(error.localizedDescription)"
         }
@@ -812,6 +850,187 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         return cleaned
+    }
+
+
+
+    func extractJSONBlock(_ text: String) -> String? {
+        guard
+            let start = text.firstIndex(of: "{"),
+            let end = text.lastIndex(of: "}")
+        else {
+            return nil
+        }
+
+        return String(text[start...end])
+    }
+
+    func classifyIntent(_ userText: String) -> [String: Any]? {
+        let prompt = """
+        You are Lucy's intent router.
+
+        Convert the user's message into exactly one JSON object.
+        Do not answer the user.
+        Do not include markdown.
+        Do not include explanations.
+
+        Allowed intents:
+        - youtube_search
+        - google_search
+        - open_url
+        - open_app
+        - set_browser
+        - gmail_compose
+        - email_draft
+        - hide
+        - selfbuild
+        - chat
+
+        JSON schema:
+        {
+          "intent": "...",
+          "query": "...",
+          "url": "...",
+          "app": "...",
+          "browser": "...",
+          "recipient": "...",
+          "email_request": "...",
+          "confidence": 0.0
+        }
+
+        Rules:
+        - If the user asks to find/search/look up something generally, use google_search.
+        - If the user asks for a video, YouTube, yt, clip, or watch, use youtube_search.
+        - If the user asks to write/draft/email someone and includes an email address, use gmail_compose.
+        - If the user asks to write/draft an email but no email address is included, use email_draft.
+        - If the user asks to open a website/domain, use open_url.
+        - If the user asks to open an app, use open_app.
+        - If the user says use Chrome/Safari/default browser, use set_browser.
+        - If the user asks Lucy to hide/disappear/go away, use hide.
+        - If the user asks Lucy to add/build/teach/give herself a capability, use selfbuild.
+        - If unsure, use chat.
+        - Correct obvious typos mentally.
+        - Keep query/email_request concise but preserve meaning.
+
+        User message:
+        \(userText)
+        """
+
+        let raw = runOllama(prompt: prompt)
+
+        guard let jsonText = extractJSONBlock(raw),
+              let data = jsonText.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        return json
+    }
+
+    func routeAIIntent(_ userText: String) -> Bool {
+        guard let intent = classifyIntent(userText) else {
+            return false
+        }
+
+        let name = (intent["intent"] as? String ?? "chat").lowercased()
+        let confidence = intent["confidence"] as? Double ?? 0.0
+
+        if confidence < 0.55 || name == "chat" {
+            return false
+        }
+
+        switch name {
+        case "youtube_search":
+            let query = intent["query"] as? String ?? userText
+            let result = openYouTubeSearch(query)
+            append("Lucy: \(result)\n\n")
+            return true
+
+        case "google_search":
+            let query = intent["query"] as? String ?? userText
+            let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+            let result = openURL("https://www.google.com/search?q=\(encoded)")
+            append("Lucy: \(result)\n\n")
+            return true
+
+        case "open_url":
+            var url = intent["url"] as? String ?? ""
+            if url.isEmpty {
+                url = intent["query"] as? String ?? ""
+            }
+
+            if url.isEmpty {
+                return false
+            }
+
+            if !url.lowercased().hasPrefix("http://") && !url.lowercased().hasPrefix("https://") {
+                url = "https://\(url)"
+            }
+
+            let result = openURL(url)
+            append("Lucy: \(result)\n\n")
+            return true
+
+        case "open_app":
+            let app = intent["app"] as? String ?? intent["query"] as? String ?? ""
+            if app.isEmpty { return false }
+
+            let result = openApp(app)
+            append("Lucy: \(result)\n\n")
+            return true
+
+        case "set_browser":
+            let browser = intent["browser"] as? String ?? intent["query"] as? String ?? ""
+            if browser.isEmpty { return false }
+
+            let result = setBrowserPreference(browser)
+            append("Lucy: \(result)\n\n")
+            return true
+
+        case "gmail_compose":
+            let recipient = intent["recipient"] as? String ?? firstEmailAddress(in: userText) ?? ""
+            let request = intent["email_request"] as? String ?? userText
+
+            if recipient.isEmpty {
+                let result = draftEmailFromRequest(userText)
+                append("Lucy:\n\(result)\n\n")
+                return true
+            }
+
+            let combinedRequest = "\(request) Recipient: \(recipient)"
+            let result = draftEmailForGmailCompose(combinedRequest)
+            append("Lucy:\n\(result)\n\n")
+            return true
+
+        case "email_draft":
+            let request = intent["email_request"] as? String ?? userText
+            let result = draftEmailFromRequest(request)
+            append("Lucy:\n\(result)\n\n")
+            return true
+
+        case "hide":
+            append("Lucy: okay, I’ll hide for 5 seconds.\n\n")
+            onHideRequested?()
+            return true
+
+        case "selfbuild":
+            let goal = intent["query"] as? String ?? userText
+            append("Lucy: I understand this as a selfbuild request.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runSelfBuild(goal: goal)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Selfbuild:\n\(result)\n\n")
+                }
+            }
+
+            return true
+
+        default:
+            return false
+        }
     }
 
 
@@ -1369,12 +1588,121 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
     func stripTerminalEscapes(_ text: String) -> String {
-        let pattern = #"\u{001B}\[[0-9;?]*[A-Za-z]"#
-        return text.replacingOccurrences(
-            of: pattern,
-            with: "",
+        var output: [Character] = []
+        var cursor = 0
+        let chars = Array(text)
+        var i = 0
+
+        func clampCursor() {
+            if cursor < 0 { cursor = 0 }
+            if cursor > output.count { cursor = output.count }
+        }
+
+        while i < chars.count {
+            let ch = chars[i]
+
+            // ESC sequences from terminal-style model output.
+            if ch == "\u{001B}" {
+                i += 1
+
+                if i < chars.count && chars[i] == "[" {
+                    i += 1
+                    var numberText = ""
+                    var finalChar: Character = "\0"
+
+                    while i < chars.count {
+                        let c = chars[i]
+
+                        if c.isNumber {
+                            numberText.append(c)
+                            i += 1
+                            continue
+                        }
+
+                        if c == ";" || c == "?" || c == " " {
+                            i += 1
+                            continue
+                        }
+
+                        finalChar = c
+                        i += 1
+                        break
+                    }
+
+                    let n = Int(numberText) ?? 1
+
+                    switch finalChar {
+                    case "D":
+                        // Cursor left.
+                        cursor -= n
+                        clampCursor()
+
+                    case "C":
+                        // Cursor right.
+                        cursor += n
+                        clampCursor()
+
+                    case "K":
+                        // Clear from cursor to end of line.
+                        if cursor < output.count {
+                            output.removeSubrange(cursor..<output.count)
+                        }
+
+                    case "A", "B", "H", "J", "m":
+                        // Ignore other common terminal controls.
+                        break
+
+                    default:
+                        break
+                    }
+
+                    continue
+                }
+
+                // Skip unknown ESC sequence.
+                continue
+            }
+
+            // Backspace.
+            if ch == "\u{0008}" {
+                if cursor > 0 {
+                    cursor -= 1
+                    output.remove(at: cursor)
+                }
+                i += 1
+                continue
+            }
+
+            // Ignore other non-newline control characters.
+            if let scalar = String(ch).unicodeScalars.first {
+                let value = scalar.value
+                if (value < 32 && ch != "\n" && ch != "\t") || value == 127 {
+                    i += 1
+                    continue
+                }
+            }
+
+            // Normal character, respecting cursor overwrite behavior.
+            if cursor < output.count {
+                output[cursor] = ch
+            } else {
+                output.append(ch)
+            }
+
+            cursor += 1
+            i += 1
+        }
+
+        var cleaned = String(output)
+
+        // Cleanup common duplicated fragments left by terminal redraws.
+        cleaned = cleaned.replacingOccurrences(
+            of: #"\b([A-Za-z]{2,})\1\b"#,
+            with: "$1",
             options: .regularExpression
         )
+
+        return cleaned
     }
 
 
@@ -1571,19 +1899,25 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         let cleanDraft = stripTerminalEscapes(draft)
         let parsed = parseEmailDraft(cleanDraft)
 
+        let cleanSubject = stripTerminalEscapes(parsed.subject)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let cleanBody = stripTerminalEscapes(parsed.body)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
         let fullDraft = """
         To: \(recipient)
-        Subject: \(parsed.subject)
+        Subject: \(cleanSubject)
 
-        \(parsed.body)
+        \(cleanBody)
         """
 
-        saveLastEmailDraft(stripTerminalEscapes(fullDraft))
+        saveLastEmailDraft(fullDraft)
 
         let composeURL = gmailComposeURL(
             to: recipient,
-            subject: parsed.subject,
-            body: parsed.body
+            subject: cleanSubject,
+            body: cleanBody
         )
 
         let openResult = openURL(composeURL)
@@ -1657,7 +1991,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return """
         Here is a draft:
 
-        \(draft)
+        \(cleanDraft)
 
         I saved this as your latest email draft.
         I have not sent anything.
