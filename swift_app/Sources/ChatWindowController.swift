@@ -575,6 +575,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
+
+        if !userText.hasPrefix("/") && routeNaturalSelfBuild(userText) {
+            return
+        }
+
         if !userText.hasPrefix("/") && routeNaturalCommand(userText) {
             return
         }
@@ -776,6 +781,80 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         return cleaned
     }
+
+
+    func routeNaturalSelfBuild(_ userText: String) -> Bool {
+        let cleaned = stripPolitePrefix(userText)
+        let lowered = cleaned.lowercased()
+
+        let asksToBuild = lowered.contains("build")
+            || lowered.contains("add")
+            || lowered.contains("give yourself")
+            || lowered.contains("make yourself")
+            || lowered.contains("teach yourself")
+            || lowered.contains("selfbuild")
+            || lowered.contains("upgrade yourself")
+
+        if !asksToBuild {
+            return false
+        }
+
+        if lowered.contains("email") || lowered.contains("draft") {
+            append("Lucy: I understand this as a selfbuild request for email drafting.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runSelfBuild(goal: "add email helper")
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Selfbuild:\n\(result)\n\n")
+                }
+            }
+
+            return true
+        }
+
+        if lowered.contains("gmail") {
+            append("""
+            Lucy: I understand you want Gmail control.
+
+            I do not have a safe selfbuild template for Gmail automation yet.
+            I can currently draft email text, but I will not click/send Gmail messages until we build a safe approval flow.
+
+            Safer next selfbuild template to add:
+            - Gmail draft helper
+            - Opens Gmail
+            - Prepares text
+            - Requires your approval before sending
+
+            I did not edit my code.
+
+            """)
+            return true
+        }
+
+        if lowered.contains("animation")
+            || lowered.contains("crawl")
+            || lowered.contains("jump")
+            || lowered.contains("spider") {
+            append("Lucy: I can improve animation through my existing dev/autodev tasks. Try /autodev roadmap or /dev better-crawl.\n\n")
+            return true
+        }
+
+        append("""
+        Lucy: I heard a selfbuild-style request, but I do not have a safe template for it yet.
+
+        Available selfbuild templates:
+        - email helper
+
+        Try:
+        give yourself email drafting ability
+
+        I did not edit my code.
+
+        """)
+        return true
+    }
+
 
     func routeNaturalCommand(_ userText: String) -> Bool {
         let cleaned = stripPolitePrefix(userText)
