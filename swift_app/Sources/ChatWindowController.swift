@@ -6,6 +6,7 @@ class ChatWindowController: NSObject {
     var output: NSTextView!
     var input: NSTextField!
     let model = "qwen2.5:1.5b"
+    var preferredBrowser = "Safari"
 
     var onHideRequested: (() -> Void)?
 
@@ -54,6 +55,9 @@ class ChatWindowController: NSObject {
         /youtube search terms
         /openurl https://example.com
         /openapp Safari
+        /browser Safari
+        /browser Google Chrome
+        /browser default
         /dev animation-smoother
 
         """
@@ -252,6 +256,22 @@ class ChatWindowController: NSObject {
         }
 
 
+
+        if lowered.hasPrefix("/browser ") {
+            let browser = String(userText.dropFirst("/browser ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if browser.isEmpty {
+                append("Lucy: Tell me the browser after /browser. Example: /browser Google Chrome\n\n")
+                return
+            }
+
+            let result = setBrowserPreference(browser)
+            append("Lucy: \(result)\n\n")
+            return
+        }
+
+
         if lowered.hasPrefix("/youtube ") {
             let query = String(userText.dropFirst("/youtube ".count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -400,7 +420,10 @@ class ChatWindowController: NSObject {
                 .joined(separator: "\n")
 
             if process.terminationStatus == 0 {
-                return "Opened successfully.\nCommand: \(command)"
+                if details.isEmpty {
+                    return "Opened successfully.\nCommand: \(command)"
+                }
+                return "Opened successfully.\nCommand: \(command)\n\(details)"
             }
 
             return "Command failed.\nCommand: \(command)\n\(details)"
@@ -409,13 +432,41 @@ class ChatWindowController: NSObject {
         }
     }
 
+    func setBrowserPreference(_ browser: String) -> String {
+        let cleaned = browser.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if cleaned.lowercased() == "default" {
+            preferredBrowser = "default"
+            return "Browser preference set to system default."
+        }
+
+        preferredBrowser = cleaned
+        return "Browser preference set to: \(preferredBrowser)"
+    }
+
+    func browserCommandPrefix() -> String {
+        if preferredBrowser.lowercased() == "default" {
+            return "open"
+        }
+
+        return "open -a \(shellQuote(preferredBrowser))"
+    }
+
+    func activatePreferredBrowserCommand() -> String {
+        if preferredBrowser.lowercased() == "default" {
+            return ""
+        }
+
+        return "; osascript -e 'tell application \(shellQuote(preferredBrowser)) to activate'"
+    }
+
     func openURL(_ urlString: String) -> String {
         guard URL(string: urlString) != nil else {
             return "That URL does not look valid."
         }
 
-        // Force Safari for reliability and bring it forward.
-        return runShell("open -a Safari \(shellQuote(urlString)); osascript -e 'tell application \"Safari\" to activate'")
+        let command = "\(browserCommandPrefix()) \(shellQuote(urlString))\(activatePreferredBrowserCommand())"
+        return runShell(command)
     }
 
     func openYouTubeSearch(_ query: String) -> String {
