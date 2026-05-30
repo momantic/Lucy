@@ -151,11 +151,26 @@ class LucyDevTools {
     }
 
     func compileLucy() -> (success: Bool, output: String) {
+        let fm = FileManager.default
+
+        guard
+            let sourceFiles = try? fm.contentsOfDirectory(
+                at: LucyPaths.sourcesDir,
+                includingPropertiesForKeys: nil
+            )
+            .filter({ $0.pathExtension == "swift" })
+            .sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
+        else {
+            return (false, "Could not list Swift source files in \(LucyPaths.sourcesDir.path)")
+        }
+
+        if sourceFiles.isEmpty {
+            return (false, "No Swift source files found in \(LucyPaths.sourcesDir.path)")
+        }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "swiftc",
-            LucyPaths.swiftFile.path,
+        process.arguments = ["swiftc"] + sourceFiles.map { $0.path } + [
             "-o",
             LucyPaths.binaryFile.path
         ]
