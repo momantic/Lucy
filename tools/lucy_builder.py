@@ -28,14 +28,19 @@ def ensure_dirs():
     BACKUPS.mkdir(parents=True, exist_ok=True)
 
 
-def run(cmd, cwd=ROOT, input_text=None):
-    result = subprocess.run(
-        cmd,
-        cwd=cwd,
-        input=input_text,
-        text=True,
-        capture_output=True,
-    )
+def run(cmd, cwd=ROOT, input_text=None, timeout=120):
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=cwd,
+            input=input_text,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"Command timed out after {timeout} seconds: {' '.join(cmd)}"
+
     output = (result.stdout + "\n" + result.stderr).strip()
     return result.returncode == 0, output or "No output."
 
@@ -93,7 +98,10 @@ def read_files(files):
 
 
 def ask_ollama_for_patch(task, file_context):
-    prompt = f"""
+    feedback = ""
+
+    for attempt in range(1, 4):
+        prompt = f"""
 You are Lucy's local code builder. You are editing a Swift macOS desktop pet project.
 
 Task ID:
@@ -108,10 +116,17 @@ Allowed files:
 Current file contents:
 {file_context}
 
-Return ONLY a unified diff patch.
+{feedback}
+
+Return ONLY a unified diff patch in git format.
+Your output must start with a line like:
+diff --git a/swift_app/Sources/File.swift b/swift_app/Sources/File.swift
+
 Rules:
 - Only edit allowed files.
 - Do not include explanations outside the diff.
+- Do not include shell commands.
+- Do not say how to compile.
 - Keep changes small and compile-safe.
 - Preserve existing features.
 - Do not delete commands.
@@ -120,22 +135,55 @@ Rules:
 - The patch must be applicable with git apply.
 """.strip()
 
-    ok, output = run(["ollama", "run", MODEL], input_text=prompt)
-    if not ok:
-        return False, output
+        ok, output = run(["ollama", "run", MODEL], input_text=prompt, timeout=180)
 
-    patch = extract_patch(output)
-    if not patch.strip():
-        return False, "Model did not return a usable patch."
+        if not ok:
+            feedback = f"Previous attempt failed to call Ollama: {output}"
+            continue
 
-    return True, patch
+        patch = extract_patch(output)
+
+        if not patch.strip():
+            feedback = """
+Previous attempt was invalid because it did not return a unified diff patch.
+Do not return prose, shell commands, or explanations.
+Return only diff --git format.
+"""
+            continue
+
+        valid, validation_msg = validate_patch_paths(patch, task["files"])
+        if not valid:
+            feedback = f"""
+Previous patch was rejected:
+{validation_msg}
+
+Return a new patch that edits only the allowed files.
+"""
+            continue
+
+        return True, patch
+
+    return False, "Model failed to produce a valid allowed unified diff patch after 3 attempts."
 
 
 def extract_patch(text):
-    # Remove common markdown fences if the model uses them.
     text = text.strip()
+
+    # Remove markdown fences if present.
     text = re.sub(r"^```(?:diff|patch)?\s*", "", text)
     text = re.sub(r"\s*```$", "", text)
+
+    # If model included explanation before the patch, start at the first diff marker.
+    markers = ["diff --git ", "--- a/", "--- swift_app/", "+++ b/"]
+    starts = [text.find(marker) for marker in markers if text.find(marker) != -1]
+
+    if starts:
+        text = text[min(starts):]
+
+    # Reject obvious non-patch output.
+    if "diff --git" not in text and "--- " not in text and "+++ " not in text:
+        return ""
+
     return text.strip() + "\n"
 
 
