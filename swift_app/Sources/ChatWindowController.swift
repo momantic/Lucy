@@ -97,6 +97,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - use chrome
         - use safari
         - hide for a bit
+        - write an email to Professor Smith asking about research opportunities
 
         Useful commands:
         /memory
@@ -229,6 +230,30 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+
+
+        if lowered.hasPrefix("/selfbuild ") {
+            let goal = String(userText.dropFirst("/selfbuild ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if goal.isEmpty {
+                append("Lucy: Tell me what to selfbuild. Example: /selfbuild add email helper\n\n")
+                return
+            }
+
+            append("Lucy: I’ll try to selfbuild this safely:\n\(goal)\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runSelfBuild(goal: goal)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Selfbuild:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
 
 
         if lowered == "/autopilot once" {
@@ -529,6 +554,25 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+
+
+
+        if lowered.contains("write an email")
+            || lowered.contains("draft an email")
+            || lowered.hasPrefix("email ") {
+
+            append("Lucy: drafting an email for you...\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.draftEmailFromRequest(userText)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
 
 
         if !userText.hasPrefix("/") && routeNaturalCommand(userText) {
@@ -1031,6 +1075,29 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
+
+    func runSelfBuild(goal: String) -> String {
+        let loweredGoal = goal.lowercased()
+
+        let taskName: String
+
+        if loweredGoal.contains("email") {
+            taskName = "selfbuild-email-helper"
+        } else {
+            return """
+            I do not have a safe selfbuild template for that yet.
+
+            Available selfbuild templates:
+            - /selfbuild add email helper
+
+            I did not edit my code.
+            """
+        }
+
+        return runDevAgentApply(task: taskName)
+    }
+
+
     func runBuilderGoal(_ goal: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -1223,6 +1290,68 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         } catch {
             return "Could not run dev agent: \(error.localizedDescription)"
         }
+    }
+
+
+    func draftEmailFromRequest(_ request: String) -> String {
+        var cleaned = request.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let removablePhrases = [
+            "write an email for me",
+            "write an email",
+            "draft an email for me",
+            "draft an email",
+            "email for me"
+        ]
+
+        for phrase in removablePhrases {
+            cleaned = cleaned.replacingOccurrences(of: phrase, with: "", options: [.caseInsensitive])
+        }
+
+        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if cleaned.isEmpty {
+            return """
+            I can draft it. Tell me:
+            - who it is for
+            - what you want to say
+            - the tone, like polite, casual, professional, or short
+            """
+        }
+
+        let prompt = """
+        You are Lucy, a helpful local AI desktop pet.
+
+        Draft an email based on this request:
+        \(request)
+
+        Requirements:
+        - Include a clear subject line.
+        - Keep it polished and natural.
+        - Do not invent specific facts.
+        - If recipient/name/details are missing, write a useful draft with placeholders.
+        - Do not send the email. Only draft it.
+
+        Output format:
+        Subject: ...
+
+        Dear ...,
+
+        ...
+
+        Best,
+        Mo
+        """
+
+        let draft = runOllama(prompt: prompt)
+
+        return """
+        Here is a draft:
+
+        \(draft)
+
+        I have not sent anything.
+        """
     }
 
 
