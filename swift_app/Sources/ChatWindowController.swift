@@ -229,6 +229,22 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+        if lowered == "/self" || lowered == "/think" {
+            append("Lucy: thinking about what safe command I should give myself...\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runSelfLoop()
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Self Loop:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
+
+
         if lowered.hasPrefix("/build ") {
             let goal = String(userText.dropFirst("/build ".count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -862,6 +878,88 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+
+
+    func runSelfCommand(_ command: String) -> String {
+        switch command {
+        case "/status":
+            return LucyRuntime.shared.statusText()
+
+        case "/settings":
+            return "Settings:\n- Browser: \(preferredBrowser)\n- Settings file: \(LucyPaths.settingsURL.path)"
+
+        case "/devstatus":
+            return runDevAgentStatus()
+
+        case "/autodev roadmap":
+            return runAutoDevRoadmap()
+
+        case "/autodev next":
+            return runAutoDevNext()
+
+        case "/dev animation-smoother":
+            return runDevAgentApply(task: "animation-smoother")
+
+        case "/dev cute-eyes":
+            return runDevAgentApply(task: "cute-eyes")
+
+        case "/dev better-crawl":
+            return runDevAgentApply(task: "better-crawl")
+
+        case "/dev cursor-aware":
+            return runDevAgentApply(task: "cursor-aware")
+
+        case "/dev natural-commands":
+            return runDevAgentApply(task: "natural-commands")
+
+        default:
+            return "I refused to run an unsafe or unknown self-command: \(command)"
+        }
+    }
+
+    func chooseSelfCommand() -> (String, String) {
+        // Simple deterministic self-command policy for v1.
+        // Later this can be model-assisted, but still restricted to this allowlist.
+
+        let status = LucyRuntime.shared.statusText()
+        let browser = preferredBrowser
+
+        if browser.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return ("/settings", "My browser setting looks empty, so I should inspect settings.")
+        }
+
+        if LucyRuntime.shared.clickCount == 0 && LucyRuntime.shared.chatCount == 0 {
+            return ("/status", "I just started and do not have much activity yet, so I should check my status.")
+        }
+
+        if status.contains("Dev Mode") {
+            return ("/devstatus", "I should verify that my local dev agent can still compile and inspect my project.")
+        }
+
+        return ("/autodev next", "My basic status looks okay, so I should run the next safe autodev task.")
+    }
+
+    func runSelfLoop() -> String {
+        let choice = chooseSelfCommand()
+        let command = choice.0
+        let reason = choice.1
+
+        let result = runSelfCommand(command)
+
+        return """
+        Self-command decision:
+
+        I chose:
+        \(command)
+
+        Why:
+        \(reason)
+
+        Result:
+        \(result)
+        """
+    }
 
 
     func runBuilderGoal(_ goal: String) -> String {
