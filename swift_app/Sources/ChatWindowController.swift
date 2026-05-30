@@ -48,6 +48,8 @@ class ChatWindowController: NSObject {
         /apply hide-command
         /apply clean-memory
         /patch patch-name
+        /patches
+        /readpatch latest
 
         """
 
@@ -152,6 +154,25 @@ class ChatWindowController: NSObject {
             return
         }
 
+
+
+        if lowered == "/patches" {
+            append("Lucy:\n\(LucyDevTools.shared.listPatchPlans())\n\n")
+            return
+        }
+
+        if lowered.hasPrefix("/readpatch ") {
+            let name = String(userText.dropFirst("/readpatch ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if name.isEmpty {
+                append("Lucy: Tell me which patch to read. Example: /readpatch latest\n\n")
+                return
+            }
+
+            append("Lucy:\n\(LucyDevTools.shared.readPatchPlan(name: name))\n\n")
+            return
+        }
 
         if lowered.hasPrefix("/patch ") {
             let patchName = String(userText.dropFirst("/patch ".count))
