@@ -115,6 +115,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /dev better-crawl
         /dev cursor-aware
         /dev natural-commands
+        /autodev roadmap
 
         """
 
@@ -211,6 +212,22 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
                 DispatchQueue.main.async {
                     self.append("Lucy Dev Agent:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
+
+
+
+        if lowered == "/autodev roadmap" {
+            append("Lucy: starting my local autodev roadmap. I’ll stop if a task fails.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runAutoDevRoadmap()
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Autodev:\n\(result)\n\n")
                 }
             }
 
@@ -793,6 +810,41 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         return false
+    }
+
+
+
+    func runAutoDevRoadmap() -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["python3", "tools/lucy_autodev.py", "roadmap"]
+        process.currentDirectoryURL = LucyPaths.root
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            let combined = [out, err]
+                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .joined(separator: "\n")
+
+            if combined.isEmpty {
+                return "Autodev finished with no output."
+            }
+
+            return combined
+        } catch {
+            return "Could not run autodev roadmap: \(error.localizedDescription)"
+        }
     }
 
 
