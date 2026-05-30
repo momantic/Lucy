@@ -873,7 +873,36 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+
+            let timeoutSeconds = 90.0
+            let deadline = Date().addingTimeInterval(timeoutSeconds)
+
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.2)
+            }
+
+            if process.isRunning {
+                process.terminate()
+                Thread.sleep(forTimeInterval: 0.5)
+
+                if process.isRunning {
+                    process.interrupt()
+                }
+
+                return """
+                Builder timed out after \(Int(timeoutSeconds)) seconds.
+
+                I stopped the build attempt so I would not stay stuck thinking forever.
+
+                Try a smaller build goal, for example:
+                /build add a simple /ping command that replies pong
+
+                Or use safer task commands:
+                /autodev roadmap
+                /autodev next
+                /dev better-crawl
+                """
+            }
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
