@@ -326,6 +326,32 @@ class ChatWindowController: NSObject {
 
 
 
+    func openURL(_ urlString: String) -> String {
+        guard let url = URL(string: urlString) else {
+            return "That URL does not look valid."
+        }
+
+        NSWorkspace.shared.open(url)
+        return "Opened URL: \(urlString)"
+    }
+
+    func openYouTubeSearch(_ query: String) -> String {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        let url = "https://www.youtube.com/results?search_query=\(encoded)"
+        return openURL(url)
+    }
+
+    func openApp(_ appName: String) -> String {
+        let workspace = NSWorkspace.shared
+
+        if workspace.launchApplication(appName) {
+            return "Opened app: \(appName)"
+        }
+
+        return "I could not open app: \(appName). Try the exact app name, like Safari, Google Chrome, or Terminal."
+    }
+
+
     func runDevAgentApply(task: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
