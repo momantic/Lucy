@@ -230,6 +230,41 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+        if lowered == "/autopilot once" {
+            append("Lucy: starting one autopilot tick.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runAutopilot(iterations: 1)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Autopilot:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
+
+        if lowered.hasPrefix("/autopilot ") {
+            let rawCount = String(userText.dropFirst("/autopilot ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let count = Int(rawCount) ?? 1
+
+            append("Lucy: starting autopilot for \(max(1, min(count, 5))) tick(s).\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runAutopilot(iterations: count)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Autopilot:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
+
+
         if lowered == "/self" || lowered == "/think" {
             append("Lucy: thinking about what safe command I should give myself...\n\n")
 
@@ -939,6 +974,40 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         return ("/autodev next", "My basic status looks okay, so I should run the next safe autodev task.")
     }
+
+
+    func runAutopilot(iterations: Int) -> String {
+        let safeIterations = max(1, min(iterations, 5))
+
+        var report = """
+        Autopilot run started.
+
+        Planned ticks: \(safeIterations)
+
+        """
+
+        for index in 1...safeIterations {
+            report += "\n--- Tick \(index) ---\n"
+            let result = runSelfLoop()
+            report += result
+            report += "\n"
+
+            // Basic stop condition: if a result says compile failed or refused,
+            // stop instead of chaining more actions.
+            let lowered = result.lowercased()
+            if lowered.contains("compile ok: false")
+                || lowered.contains("failed")
+                || lowered.contains("refused")
+                || lowered.contains("timed out") {
+                report += "\nAutopilot stopped early because the last tick looked unsafe or failed.\n"
+                break
+            }
+        }
+
+        report += "\nAutopilot run complete."
+        return report
+    }
+
 
     func runSelfLoop() -> String {
         let choice = chooseSelfCommand()
