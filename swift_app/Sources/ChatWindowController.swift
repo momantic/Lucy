@@ -186,6 +186,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         let lowered = userText.lowercased()
 
+        if lowered == "/ping" || lowered == "ping" {
+            append("Lucy: pong\n\n")
+            return
+        }
+
         if lowered == "/memory"
             || lowered.contains("what do you remember")
             || lowered.contains("what do you know about me") {
