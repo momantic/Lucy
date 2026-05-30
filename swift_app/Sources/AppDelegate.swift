@@ -76,13 +76,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func startAnimation() {
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { _ in
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.18, repeats: true) { _ in
             self.petView.animateNextFrame()
         }
     }
 
     func startWandering() {
-        wanderTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { _ in
+        wanderTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             if self.isHidden { return }
             guard let screen = NSScreen.main?.visibleFrame else { return }
 
@@ -147,7 +147,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func startIdleMoods() {
-        moodTimer = Timer.scheduledTimer(withTimeInterval: 6.0, repeats: true) { _ in
+        moodTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
             if self.isHidden { return }
             let moods = ["Lucy", "watching 👀", "tiny spider", "thinking", "ready"]
             self.petView.setState(.idle, mood: moods.randomElement() ?? "Lucy")

@@ -51,6 +51,7 @@ class ChatWindowController: NSObject {
         /patches
         /readpatch latest
         /devstatus
+        /dev animation-smoother
 
         """
 
@@ -100,6 +101,22 @@ class ChatWindowController: NSObject {
 
         if lowered == "/readself" {
             append("Lucy:\n\(LucyDevTools.shared.readSwiftPreview())\n\n")
+            return
+        }
+
+
+
+        if lowered == "/dev animation-smoother" {
+            append("Lucy: asking my local dev agent to smooth my animation...\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runDevAgentApply(task: "animation-smoother")
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Dev Agent:\n\(result)\n\n")
+                }
+            }
+
             return
         }
 
@@ -304,6 +321,39 @@ class ChatWindowController: NSObject {
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? "I did not get a response."
         } catch {
             return "I could not start Ollama. Error: \(error.localizedDescription)"
+        }
+    }
+
+
+
+    func runDevAgentApply(task: String) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["python3", "tools/lucy_dev_agent.py", "apply", task]
+        process.currentDirectoryURL = LucyPaths.root
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            let combined = [out, err].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "\n")
+
+            if combined.isEmpty {
+                return "Dev agent apply finished with no output."
+            }
+
+            return combined
+        } catch {
+            return "Could not run dev agent apply: \(error.localizedDescription)"
         }
     }
 
