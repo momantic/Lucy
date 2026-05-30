@@ -9,6 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var wanderTimer: Timer?
     var moodTimer: Timer?
     var animationTimer: Timer?
+    var cursorTimer: Timer?
     var isHidden = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -46,6 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         startAnimation()
         startWandering()
         startIdleMoods()
+        startCursorAwareness()
     }
 
     func openChat() {
@@ -72,6 +74,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.petView.setState(.idle, mood: "back")
             self.isHidden = false
             LucyRuntime.shared.log("Lucy returned from hiding")
+        }
+    }
+
+    func startCursorAwareness() {
+        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
+            if self.isHidden { return }
+
+            let mouse = NSEvent.mouseLocation
+            let frame = self.window.frame
+            let center = NSPoint(x: frame.midX, y: frame.midY)
+
+            let dx = mouse.x - center.x
+            let dy = mouse.y - center.y
+            let distance = sqrt(dx * dx + dy * dy)
+
+            if distance < 90 {
+                LucyRuntime.shared.facingRight = dx >= 0
+                self.petView.setState(.thinking, mood: "boop?")
+            } else if distance < 170 {
+                LucyRuntime.shared.facingRight = dx >= 0
+                self.petView.setState(.idle, mood: "watching 👀")
+            }
         }
     }
 
