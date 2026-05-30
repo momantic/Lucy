@@ -45,7 +45,7 @@ class LucyRuntime {
         - Hides: \(hideCount)
 
         Current mode:
-        - Dev Mode v0.3
+        - Dev Mode v0.4
         - Local Ollama chat
         - Local memory
         - Safe self-update proposal flow
@@ -59,6 +59,7 @@ class LucyPaths {
     static let memoryURL = root.appendingPathComponent("memory").appendingPathComponent("memory.json")
     static let selfUpdatesDir = root.appendingPathComponent("self_updates")
     static let backupsDir = root.appendingPathComponent("backups")
+    static let memoryBackupsDir = root.appendingPathComponent("backups").appendingPathComponent("memory")
     static let swiftFile = root.appendingPathComponent("swift_app").appendingPathComponent("Lucy.swift")
     static let binaryFile = root.appendingPathComponent("swift_app").appendingPathComponent("Lucy")
 }
@@ -204,6 +205,7 @@ class LucyDevTools {
     func ensureDirs() {
         try? FileManager.default.createDirectory(at: LucyPaths.selfUpdatesDir, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: LucyPaths.backupsDir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: LucyPaths.memoryBackupsDir, withIntermediateDirectories: true)
     }
 
     func projectSummary() -> String {
@@ -238,6 +240,7 @@ class LucyDevTools {
         result += "- Safe built-in apply flow for /apply hide-command\n"
         result += "- /hide command\n"
         result += "- /status command\n"
+        result += "- /apply clean-memory command\n"
         result += "- /quiet and /loud logging controls\n"
 
         return result
@@ -374,6 +377,89 @@ class LucyDevTools {
             return (false, error.localizedDescription)
         }
     }
+
+    func cleanMemoryFile() -> String {
+        ensureDirs()
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let stamp = formatter.string(from: Date())
+
+        let backupURL = LucyPaths.memoryBackupsDir.appendingPathComponent("memory_\(stamp).json")
+
+        do {
+            let data = try Data(contentsOf: LucyPaths.memoryURL)
+
+            guard
+                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let facts = json["facts"] as? [String]
+            else {
+                return "I could not clean memory because memory.json is not in the expected format."
+            }
+
+            try data.write(to: backupURL)
+
+            let cleanedFacts = facts.map { fact -> String in
+                var cleaned = fact.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                let prefixes = [
+                    "remember that",
+                    "remember this",
+                    "from now on,"
+                ]
+
+                for prefix in prefixes {
+                    if cleaned.lowercased().hasPrefix(prefix) {
+                        cleaned = String(cleaned.dropFirst(prefix.count))
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+
+                while cleaned.contains("  ") {
+                    cleaned = cleaned.replacingOccurrences(of: "  ", with: " ")
+                }
+
+                return cleaned
+            }
+            .filter { !$0.isEmpty }
+
+            var uniqueFacts: [String] = []
+            for fact in cleanedFacts {
+                if !uniqueFacts.contains(fact) {
+                    uniqueFacts.append(fact)
+                }
+            }
+
+            let updated: [String: Any] = [
+                "agent_name": "Lucy",
+                "facts": uniqueFacts
+            ]
+
+            let updatedData = try JSONSerialization.data(withJSONObject: updated, options: [.prettyPrinted])
+            try updatedData.write(to: LucyPaths.memoryURL)
+
+            _ = try JSONSerialization.jsonObject(with: updatedData)
+
+            return """
+            Applied safe update: clean-memory.
+
+            What happened:
+            - Memory backup created:
+              \(backupURL.path)
+            - Cleaned memory file:
+              \(LucyPaths.memoryURL.path)
+            - Removed repeated spaces and prefixes like "remember that"
+            - Validation passed.
+
+            Cleaned facts:
+            \(uniqueFacts.map { "- \($0)" }.joined(separator: "\n"))
+            """
+        } catch {
+            return "I could not clean memory: \(error.localizedDescription)"
+        }
+    }
+
+
 }
 
 class ClickablePetView: NSView {
@@ -502,7 +588,7 @@ class ChatWindowController: NSObject {
         output.isEditable = false
         output.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         output.string = """
-        Lucy: Hi, I’m Lucy. Dev Mode v0.3 is active.
+        Lucy: Hi, I’m Lucy. Dev Mode v0.4 is active.
 
         Commands:
         /memory
@@ -514,6 +600,7 @@ class ChatWindowController: NSObject {
         /hide
         /selfupdate your request here
         /apply hide-command
+        /apply clean-memory
 
         """
 
@@ -586,6 +673,21 @@ class ChatWindowController: NSObject {
         if lowered == "/hide" || lowered.contains("hide lucy") || lowered.contains("go hide") {
             append("Lucy: okay, I’ll hide for 5 seconds.\n\n")
             onHideRequested?()
+            return
+        }
+
+
+        if lowered == "/apply clean-memory" {
+            append("Lucy: applying safe built-in update: clean-memory...\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = LucyDevTools.shared.cleanMemoryFile()
+
+                DispatchQueue.main.async {
+                    self.append("Lucy:\n\(result)\n\n")
+                }
+            }
+
             return
         }
 
@@ -780,7 +882,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var isHidden = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("Lucy Dev Mode v0.3 started")
+        print("Lucy Dev Mode v0.4 started")
         print("Terminal logging is quiet by default. Use /loud inside Lucy chat to enable movement logs.")
 
         _ = LucyMemory.shared
