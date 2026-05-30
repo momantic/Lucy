@@ -51,7 +51,7 @@ class LucySettings {
 }
 
 
-class ChatWindowController: NSObject {
+class ChatWindowController: NSObject, NSTextFieldDelegate {
     var window: NSWindow!
     var output: NSTextView!
     var input: NSTextField!
@@ -117,6 +117,7 @@ class ChatWindowController: NSObject {
 
         input = NSTextField(frame: NSRect(x: 15, y: 20, width: 490, height: 30))
         input.placeholderString = "Message Lucy..."
+        input.delegate = self
 
         let sendButton = NSButton(frame: NSRect(x: 515, y: 20, width: 90, height: 30))
         sendButton.title = "Send"
@@ -134,6 +135,19 @@ class ChatWindowController: NSObject {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
+
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        guard
+            let movement = obj.userInfo?["NSTextMovement"] as? Int,
+            movement == NSReturnTextMovement
+        else {
+            return
+        }
+
+        sendMessage()
+    }
+
 
     @objc func sendMessage() {
         let userText = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
