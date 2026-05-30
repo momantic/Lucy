@@ -182,16 +182,43 @@ class LucySpriteView: NSView {
     func drawLegs(centerX: CGFloat, centerY: CGFloat, legSwing: CGFloat) {
         NSColor.black.setStroke()
 
-        let legs: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
-            (-28, 4, -65, 30 + legSwing),
-            (-30, -5, -70, 0 - legSwing),
-            (-26, -15, -60, -35 + legSwing),
-            (-14, -24, -35, -55 - legSwing),
+        let phase = frameIndex % 4
 
-            (28, 4, 65, 30 - legSwing),
-            (30, -5, 70, 0 + legSwing),
-            (26, -15, 60, -35 - legSwing),
-            (14, -24, 35, -55 + legSwing)
+        let frontSwing: CGFloat
+        let midSwing: CGFloat
+        let backSwing: CGFloat
+
+        switch state {
+        case .crawl:
+            frontSwing = CGFloat([10, 2, -10, -2][phase])
+            midSwing = CGFloat([-8, -2, 8, 2][phase])
+            backSwing = CGFloat([6, -4, -6, 4][phase])
+        case .hop:
+            frontSwing = CGFloat([4, -2, -6, 2][phase])
+            midSwing = CGFloat([-3, 3, -3, 3][phase])
+            backSwing = CGFloat([-8, -4, 4, 8][phase])
+        case .thinking:
+            frontSwing = CGFloat([1, 0, -1, 0][phase])
+            midSwing = CGFloat([0, 1, 0, -1][phase])
+            backSwing = CGFloat([-1, 0, 1, 0][phase])
+        default:
+            frontSwing = CGFloat([2, 0, -2, 0][phase])
+            midSwing = CGFloat([-1, 1, -1, 1][phase])
+            backSwing = CGFloat([1, -1, 1, -1][phase])
+        }
+
+        let direction = facingMultiplier()
+
+        let legs: [(CGFloat, CGFloat, CGFloat, CGFloat, CGFloat)] = [
+            (-28, 6, -68, 34 + frontSwing, frontSwing),
+            (-31, -3, -74, 4 + midSwing, midSwing),
+            (-28, -13, -66, -34 + backSwing, backSwing),
+            (-15, -24, -40, -58 - backSwing, backSwing),
+
+            (28, 6, 68, 34 - frontSwing, -frontSwing),
+            (31, -3, 74, 4 - midSwing, -midSwing),
+            (28, -13, 66, -34 - backSwing, -backSwing),
+            (15, -24, 40, -58 + backSwing, -backSwing)
         ]
 
         for leg in legs {
@@ -200,8 +227,15 @@ class LucySpriteView: NSView {
             path.lineCapStyle = .round
             path.lineJoinStyle = .round
 
-            path.move(to: NSPoint(x: centerX + leg.0, y: centerY + leg.1))
-            path.line(to: NSPoint(x: centerX + leg.2, y: centerY + leg.3))
+            let shoulder = NSPoint(x: centerX + leg.0, y: centerY + leg.1)
+            let foot = NSPoint(x: centerX + leg.2 + (leg.4 * 0.25 * direction), y: centerY + leg.3)
+            let knee = NSPoint(
+                x: (shoulder.x + foot.x) / 2 + (leg.4 * 0.45 * direction),
+                y: (shoulder.y + foot.y) / 2 + 7
+            )
+
+            path.move(to: shoulder)
+            path.curve(to: foot, controlPoint1: knee, controlPoint2: knee)
             path.stroke()
         }
     }
