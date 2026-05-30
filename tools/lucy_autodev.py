@@ -41,6 +41,11 @@ ROADMAP = [
         "description": "Ensure better crawl leg animation is applied."
     },
     {
+        "name": "jump-arc",
+        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "jump-arc"],
+        "description": "Ensure Lucy uses a two-stage hop arc instead of sliding."
+    },
+    {
         "name": "cursor-aware",
         "command": ["python3", "tools/lucy_dev_agent.py", "apply", "cursor-aware"],
         "description": "Ensure cursor awareness is applied."
