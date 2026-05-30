@@ -9,6 +9,51 @@ enum LucyState {
     case hidden
 }
 
+class LucyRuntime {
+    static let shared = LucyRuntime()
+
+    var verboseLogging = false
+    var startTime = Date()
+    var crawlCount = 0
+    var hopCount = 0
+    var idleCount = 0
+    var clickCount = 0
+    var hideCount = 0
+    var chatCount = 0
+
+    func log(_ message: String) {
+        if verboseLogging {
+            print(message)
+        }
+    }
+
+    func statusText() -> String {
+        let uptime = Int(Date().timeIntervalSince(startTime))
+
+        return """
+        Lucy Runtime Status
+
+        Uptime: \(uptime) seconds
+        Verbose logging: \(verboseLogging ? "on" : "off")
+
+        Activity:
+        - Clicks: \(clickCount)
+        - Chats opened: \(chatCount)
+        - Crawls: \(crawlCount)
+        - Hops: \(hopCount)
+        - Idles: \(idleCount)
+        - Hides: \(hideCount)
+
+        Current mode:
+        - Dev Mode v0.3
+        - Local Ollama chat
+        - Local memory
+        - Safe self-update proposal flow
+        - Safe built-in apply flow
+        """
+    }
+}
+
 class LucyPaths {
     static let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
     static let memoryURL = root.appendingPathComponent("memory").appendingPathComponent("memory.json")
@@ -171,6 +216,7 @@ class LucyDevTools {
             "memory/memory.json",
             "self_updates/",
             "backups/",
+            ".gitignore",
             "README.md"
         ]
 
@@ -190,7 +236,9 @@ class LucyDevTools {
         result += "- Local memory file\n"
         result += "- Dev Mode proposal writing\n"
         result += "- Safe built-in apply flow for /apply hide-command\n"
-        result += "- Chat command /hide hides Lucy for 5 seconds\n"
+        result += "- /hide command\n"
+        result += "- /status command\n"
+        result += "- /quiet and /loud logging controls\n"
 
         return result
     }
@@ -260,9 +308,6 @@ class LucyDevTools {
         do {
             let currentSource = try String(contentsOf: LucyPaths.swiftFile, encoding: .utf8)
 
-            // v0.2 safe apply demo:
-            // The running source already includes the hide command.
-            // This proves Lucy can backup, rewrite, compile, and report.
             try currentSource.write(to: backupURL, atomically: true, encoding: .utf8)
             try currentSource.write(to: LucyPaths.swiftFile, atomically: true, encoding: .utf8)
 
@@ -279,7 +324,7 @@ class LucyDevTools {
                   \(LucyPaths.swiftFile.path)
                 - Compile check passed.
 
-                You can now type /hide in Lucy chat to hide her for 5 seconds.
+                /hide is available.
                 """
             } else {
                 try? String(contentsOf: backupURL, encoding: .utf8)
@@ -410,14 +455,16 @@ class ClickablePetView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         if event.clickCount >= 2 {
-            print("Lucy double clicked")
+            LucyRuntime.shared.chatCount += 1
+            LucyRuntime.shared.log("Lucy double clicked")
             setState(.thinking, mood: "chat")
             onDoubleClick?()
         } else {
             clickCount += 1
+            LucyRuntime.shared.clickCount += 1
             let messages = ["tap tap...", "watching 👀", "ready", "hi!", "boop", "clicked \(clickCount)"]
             setState(.thinking, mood: messages.randomElement() ?? "Lucy")
-            print("Lucy clicked")
+            LucyRuntime.shared.log("Lucy clicked")
         }
     }
 }
@@ -455,12 +502,15 @@ class ChatWindowController: NSObject {
         output.isEditable = false
         output.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         output.string = """
-        Lucy: Hi, I’m Lucy. Dev Mode v0.2 is active.
+        Lucy: Hi, I’m Lucy. Dev Mode v0.3 is active.
 
         Commands:
         /memory
         /project
         /readself
+        /status
+        /quiet
+        /loud
         /hide
         /selfupdate your request here
         /apply hide-command
@@ -513,6 +563,23 @@ class ChatWindowController: NSObject {
 
         if lowered == "/readself" {
             append("Lucy:\n\(LucyDevTools.shared.readSwiftPreview())\n\n")
+            return
+        }
+
+        if lowered == "/status" {
+            append("Lucy:\n\(LucyRuntime.shared.statusText())\n\n")
+            return
+        }
+
+        if lowered == "/quiet" {
+            LucyRuntime.shared.verboseLogging = false
+            append("Lucy: Quiet mode on. I’ll stop spamming Terminal movement logs.\n\n")
+            return
+        }
+
+        if lowered == "/loud" {
+            LucyRuntime.shared.verboseLogging = true
+            append("Lucy: Loud mode on. I’ll print movement logs to Terminal again.\n\n")
             return
         }
 
@@ -713,7 +780,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var isHidden = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("Lucy Dev Mode v0.2 started")
+        print("Lucy Dev Mode v0.3 started")
+        print("Terminal logging is quiet by default. Use /loud inside Lucy chat to enable movement logs.")
 
         _ = LucyMemory.shared
         LucyDevTools.shared.ensureDirs()
@@ -763,6 +831,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if isHidden { return }
 
         isHidden = true
+        LucyRuntime.shared.hideCount += 1
         petView.setState(.hidden, mood: "hiding")
         window.orderOut(nil)
 
@@ -770,7 +839,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.window.makeKeyAndOrderFront(nil)
             self.petView.setState(.idle, mood: "back")
             self.isHidden = false
-            print("Lucy returned from hiding")
+            LucyRuntime.shared.log("Lucy returned from hiding")
         }
     }
 
@@ -797,7 +866,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 self.petView.setState(.crawl, mood: "crawl")
                 self.window.setFrame(frame, display: true, animate: true)
-                print("Lucy crawled")
+                LucyRuntime.shared.crawlCount += 1
+                LucyRuntime.shared.log("Lucy crawled")
             } else if action <= 8 {
                 let dx = CGFloat([-60, -40, 40, 60].randomElement()!)
                 let dy = CGFloat([30, 45].randomElement()!)
@@ -807,11 +877,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 self.petView.setState(.hop, mood: "hop!")
                 self.window.setFrame(frame, display: true, animate: true)
-                print("Lucy hopped")
+                LucyRuntime.shared.hopCount += 1
+                LucyRuntime.shared.log("Lucy hopped")
             } else {
                 let moods = ["look 👀", "idle", "hmm", "Lucy"]
                 self.petView.setState(.idle, mood: moods.randomElement() ?? "Lucy")
-                print("Lucy idled")
+                LucyRuntime.shared.idleCount += 1
+                LucyRuntime.shared.log("Lucy idled")
             }
         }
     }
