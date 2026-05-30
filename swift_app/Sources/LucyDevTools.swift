@@ -44,6 +44,7 @@ class LucyDevTools {
         result += "- /status command\n"
         result += "- /apply clean-memory command\n"
         result += "- /patch command for creating patch plans\n"
+        result += "- /patches and /readpatch commands\n"
         result += "- /quiet and /loud logging controls\n"
 
         return result
@@ -148,6 +149,72 @@ class LucyDevTools {
             }
         } catch {
             return "I could not apply the update: \(error.localizedDescription)"
+        }
+    }
+
+
+
+    func listPatchPlans() -> String {
+        ensureDirs()
+
+        guard
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: LucyPaths.selfUpdatesDir,
+                includingPropertiesForKeys: nil
+            )
+            .filter({ $0.lastPathComponent.hasPrefix("patch_plan_") && $0.pathExtension == "md" })
+            .sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
+        else {
+            return "I could not list patch plans."
+        }
+
+        if files.isEmpty {
+            return "No patch plans found yet."
+        }
+
+        var result = "Patch plans:\n"
+        for file in files {
+            result += "- \(file.lastPathComponent)\n"
+        }
+
+        return result
+    }
+
+    func readPatchPlan(name: String) -> String {
+        ensureDirs()
+
+        guard
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: LucyPaths.selfUpdatesDir,
+                includingPropertiesForKeys: nil
+            )
+            .filter({ $0.lastPathComponent.hasPrefix("patch_plan_") && $0.pathExtension == "md" })
+            .sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
+        else {
+            return "I could not list patch plans."
+        }
+
+        if files.isEmpty {
+            return "No patch plans found yet."
+        }
+
+        let selected: URL?
+
+        if name.lowercased() == "latest" {
+            selected = files.last
+        } else {
+            selected = files.first(where: { $0.lastPathComponent.contains(name) })
+        }
+
+        guard let file = selected else {
+            return "I could not find a patch plan matching: \(name)"
+        }
+
+        do {
+            let text = try String(contentsOf: file, encoding: .utf8)
+            return "Reading patch plan: \(file.lastPathComponent)\n\n\(text)"
+        } catch {
+            return "I could not read patch plan: \(error.localizedDescription)"
         }
     }
 
