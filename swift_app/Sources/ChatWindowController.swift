@@ -50,6 +50,7 @@ class ChatWindowController: NSObject {
         /patch patch-name
         /patches
         /readpatch latest
+        /devstatus
 
         """
 
@@ -101,6 +102,22 @@ class ChatWindowController: NSObject {
             append("Lucy:\n\(LucyDevTools.shared.readSwiftPreview())\n\n")
             return
         }
+
+
+        if lowered == "/devstatus" {
+            append("Lucy: running local dev agent status check...\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runDevAgentStatus()
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Dev Agent:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
+
 
         if lowered == "/status" {
             append("Lucy:\n\(LucyRuntime.shared.statusText())\n\n")
@@ -289,6 +306,39 @@ class ChatWindowController: NSObject {
             return "I could not start Ollama. Error: \(error.localizedDescription)"
         }
     }
+
+
+    func runDevAgentStatus() -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["python3", "tools/lucy_dev_agent.py", "status"]
+        process.currentDirectoryURL = LucyPaths.root
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            let combined = [out, err].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "\n")
+
+            if combined.isEmpty {
+                return "Dev agent finished with no output."
+            }
+
+            return combined
+        } catch {
+            return "Could not run dev agent: \(error.localizedDescription)"
+        }
+    }
+
 
     func askOllama(_ userText: String) -> String {
         let memoryText = LucyMemory.shared.memoryPromptText()
