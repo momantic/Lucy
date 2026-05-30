@@ -89,14 +89,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             var frame = self.window.frame
             let action = Int.random(in: 1...10)
 
+            let nearLeft = frame.origin.x <= screen.minX + 30
+            let nearRight = frame.origin.x >= screen.maxX - frame.width - 30
+            let nearBottom = frame.origin.y <= screen.minY + 30
+
+            if action == 10 || nearLeft || nearRight || nearBottom {
+                if nearLeft {
+                    LucyRuntime.shared.facingRight = true
+                    self.petView.setState(.idle, mood: "edge →")
+                } else if nearRight {
+                    LucyRuntime.shared.facingRight = false
+                    self.petView.setState(.idle, mood: "← edge")
+                } else if nearBottom {
+                    self.petView.setState(.idle, mood: "perch")
+                } else {
+                    self.petView.setState(.idle, mood: "looking")
+                }
+
+                LucyRuntime.shared.idleCount += 1
+                LucyRuntime.shared.log("Lucy perched")
+                return
+            }
+
             if action <= 6 {
                 let dx = CGFloat([-35, -20, -10, 10, 20, 35].randomElement()!)
                 let dy = CGFloat([-12, 0, 12].randomElement()!)
 
+                LucyRuntime.shared.facingRight = dx >= 0
+
                 frame.origin.x = max(screen.minX, min(frame.origin.x + dx, screen.maxX - frame.width))
                 frame.origin.y = max(screen.minY, min(frame.origin.y + dy, screen.maxY - frame.height))
 
-                self.petView.setState(.crawl, mood: "crawl")
+                self.petView.setState(.crawl, mood: LucyRuntime.shared.facingRight ? "crawl →" : "← crawl")
                 self.window.setFrame(frame, display: true, animate: true)
                 LucyRuntime.shared.crawlCount += 1
                 LucyRuntime.shared.log("Lucy crawled")
@@ -104,10 +128,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let dx = CGFloat([-60, -40, 40, 60].randomElement()!)
                 let dy = CGFloat([30, 45].randomElement()!)
 
+                LucyRuntime.shared.facingRight = dx >= 0
+
                 frame.origin.x = max(screen.minX, min(frame.origin.x + dx, screen.maxX - frame.width))
                 frame.origin.y = max(screen.minY, min(frame.origin.y + dy, screen.maxY - frame.height))
 
-                self.petView.setState(.hop, mood: "hop!")
+                self.petView.setState(.hop, mood: LucyRuntime.shared.facingRight ? "hop →" : "← hop")
                 self.window.setFrame(frame, display: true, animate: true)
                 LucyRuntime.shared.hopCount += 1
                 LucyRuntime.shared.log("Lucy hopped")

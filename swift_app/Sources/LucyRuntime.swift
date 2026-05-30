@@ -12,6 +12,7 @@ class LucyRuntime {
     var clickCount = 0
     var hideCount = 0
     var chatCount = 0
+    var facingRight = true
 
     func log(_ message: String) {
         if verboseLogging {

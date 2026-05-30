@@ -62,6 +62,10 @@ class LucySpriteView: NSView {
         )
     }
 
+    func facingMultiplier() -> CGFloat {
+        return LucyRuntime.shared.facingRight ? 1.0 : -1.0
+    }
+
     func drawLucyBody() {
         let centerX: CGFloat = bounds.midX
         let baseCenterY: CGFloat = bounds.midY + 20
@@ -125,7 +129,7 @@ class LucySpriteView: NSView {
 
         drawLegs(centerX: centerX, centerY: centerY, legSwing: legSwing)
         drawBody(centerX: centerX, centerY: centerY, scaleX: bodyScaleX, scaleY: bodyScaleY)
-        drawEyes(centerX: centerX, centerY: centerY, eyeOffsetX: eyeOffsetX)
+        drawEyes(centerX: centerX, centerY: centerY, eyeOffsetX: eyeOffsetX + 2 * facingMultiplier())
     }
 
     func drawBody(centerX: CGFloat, centerY: CGFloat, scaleX: CGFloat, scaleY: CGFloat) {
@@ -160,6 +164,17 @@ class LucySpriteView: NSView {
                 y: centerY - 12,
                 width: 36,
                 height: 24
+            )
+        ).fill()
+
+        // front direction cue
+        NSColor(calibratedWhite: 0.28, alpha: 1.0).setFill()
+        NSBezierPath(
+            ovalIn: NSRect(
+                x: centerX + (18 * facingMultiplier()) - 5,
+                y: centerY + 5,
+                width: 10,
+                height: 8
             )
         ).fill()
     }
