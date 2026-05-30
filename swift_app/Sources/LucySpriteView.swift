@@ -207,20 +207,48 @@ class LucySpriteView: NSView {
     }
 
     func drawEyes(centerX: CGFloat, centerY: CGFloat, eyeOffsetX: CGFloat) {
-        let eyeY = centerY + 34
+        let eyeY = centerY + 32
 
+        let isBlinkFrame = state == .idle && frameIndex % 18 == 0
+
+        if isBlinkFrame {
+            NSColor.white.withAlphaComponent(0.95).setStroke()
+
+            let leftBlink = NSBezierPath()
+            leftBlink.lineWidth = 3
+            leftBlink.lineCapStyle = .round
+            leftBlink.move(to: NSPoint(x: centerX - 25, y: eyeY + 10))
+            leftBlink.line(to: NSPoint(x: centerX - 5, y: eyeY + 10))
+            leftBlink.stroke()
+
+            let rightBlink = NSBezierPath()
+            rightBlink.lineWidth = 3
+            rightBlink.lineCapStyle = .round
+            rightBlink.move(to: NSPoint(x: centerX + 5, y: eyeY + 10))
+            rightBlink.line(to: NSPoint(x: centerX + 25, y: eyeY + 10))
+            rightBlink.stroke()
+
+            return
+        }
+
+        // large cute jumping-spider eyes
         NSColor.white.setFill()
-        NSBezierPath(ovalIn: NSRect(x: centerX - 21, y: eyeY, width: 17, height: 19)).fill()
-        NSBezierPath(ovalIn: NSRect(x: centerX + 4, y: eyeY, width: 17, height: 19)).fill()
+        NSBezierPath(ovalIn: NSRect(x: centerX - 30, y: eyeY, width: 26, height: 29)).fill()
+        NSBezierPath(ovalIn: NSRect(x: centerX + 4, y: eyeY, width: 26, height: 29)).fill()
 
         NSColor.black.setFill()
-        NSBezierPath(ovalIn: NSRect(x: centerX - 15 + eyeOffsetX, y: eyeY + 5, width: 7, height: 8)).fill()
-        NSBezierPath(ovalIn: NSRect(x: centerX + 10 + eyeOffsetX, y: eyeY + 5, width: 7, height: 8)).fill()
+        NSBezierPath(ovalIn: NSRect(x: centerX - 21 + eyeOffsetX, y: eyeY + 6, width: 12, height: 14)).fill()
+        NSBezierPath(ovalIn: NSRect(x: centerX + 13 + eyeOffsetX, y: eyeY + 6, width: 12, height: 14)).fill()
 
-        // tiny eye highlights
-        NSColor.white.withAlphaComponent(0.8).setFill()
-        NSBezierPath(ovalIn: NSRect(x: centerX - 13 + eyeOffsetX, y: eyeY + 10, width: 2.5, height: 2.5)).fill()
-        NSBezierPath(ovalIn: NSRect(x: centerX + 12 + eyeOffsetX, y: eyeY + 10, width: 2.5, height: 2.5)).fill()
+        // glossy highlights
+        NSColor.white.withAlphaComponent(0.9).setFill()
+        NSBezierPath(ovalIn: NSRect(x: centerX - 18 + eyeOffsetX, y: eyeY + 16, width: 4.5, height: 4.5)).fill()
+        NSBezierPath(ovalIn: NSRect(x: centerX + 16 + eyeOffsetX, y: eyeY + 16, width: 4.5, height: 4.5)).fill()
+
+        // tiny secondary sparkle
+        NSColor.white.withAlphaComponent(0.65).setFill()
+        NSBezierPath(ovalIn: NSRect(x: centerX - 12 + eyeOffsetX, y: eyeY + 10, width: 2.2, height: 2.2)).fill()
+        NSBezierPath(ovalIn: NSRect(x: centerX + 22 + eyeOffsetX, y: eyeY + 10, width: 2.2, height: 2.2)).fill()
     }
 
     func drawMoodText() {
