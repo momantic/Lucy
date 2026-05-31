@@ -212,6 +212,23 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+
+        if lowered == "/whoami" || lowered == "who are you" || lowered == "what are you" {
+            append("Lucy:\n\(selfIdentitySummary())\n\n")
+            return
+        }
+
+        if lowered == "/capabilities" || lowered == "what can you do" || lowered == "what can you do?" {
+            append("Lucy:\n\(capabilitiesSummary())\n\n")
+            return
+        }
+
+        if lowered == "/limitations" || lowered == "what can you not do" || lowered == "what can't you do" {
+            append("Lucy:\n\(limitationsSummary())\n\n")
+            return
+        }
+
+
         if lowered == "/ping" || lowered == "ping" {
             append("Lucy: pong\n\n")
             return
@@ -1468,6 +1485,119 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
+
+
+
+    func capabilitiesSummary() -> String {
+        let url = LucyPaths.root.appendingPathComponent("data").appendingPathComponent("capabilities.json")
+
+        guard
+            let data = try? Data(contentsOf: url),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let capabilities = json["capabilities"] as? [[String: Any]]
+        else {
+            return """
+            I could not read my capability registry.
+
+            Installed abilities I know I have:
+            - chat
+            - memory
+            - Google search / open URLs
+            - YouTube search
+            - Gmail draft compose
+            - Apple Notes creation
+            - selfbuild templates
+            - autodev roadmap
+            """
+        }
+
+        var installed: [String] = []
+        var available: [String] = []
+        var unknown: [String] = []
+
+        for capability in capabilities {
+            let id = capability["id"] as? String ?? "unknown"
+            let status = capability["status"] as? String ?? "unknown"
+            let description = capability["description"] as? String ?? ""
+
+            let line = "- \(id): \(description)"
+
+            if status == "installed" {
+                installed.append(line)
+            } else if status == "available_template" {
+                available.append(line)
+            } else {
+                unknown.append(line)
+            }
+        }
+
+        return """
+        My capability registry:
+
+        Installed:
+        \(installed.isEmpty ? "- none listed" : installed.joined(separator: "\n"))
+
+        Available selfbuild templates:
+        \(available.isEmpty ? "- none listed" : available.joined(separator: "\n"))
+
+        Unknown/other:
+        \(unknown.isEmpty ? "- none listed" : unknown.joined(separator: "\n"))
+        """
+    }
+
+    func limitationsSummary() -> String {
+        return """
+        Current limitations:
+
+        Things I can do:
+        - Search Google and YouTube.
+        - Open websites and apps.
+        - Draft emails and open Gmail compose for you to review.
+        - Copy the latest email draft.
+        - Create new Apple Notes notes.
+        - Run safe dev/autodev tasks.
+        - Selfbuild known templates like email helper, Gmail draft helper, and Notes helper.
+        - Give myself safe commands through /self and /autopilot.
+
+        Things I should NOT do yet:
+        - Send emails automatically.
+        - Delete notes automatically.
+        - Delete files automatically.
+        - Click destructive buttons.
+        - Make purchases.
+        - Run arbitrary Terminal commands outside my project.
+        - Edit code outside the Lucy project.
+
+        If you ask for something I cannot safely do yet, I should:
+        1. Recognize the missing capability.
+        2. Tell you what is missing.
+        3. Suggest or selfbuild a safe template if one exists.
+        4. Avoid pretending I did it.
+        """
+    }
+
+    func selfIdentitySummary() -> String {
+        return """
+        I am Lucy.
+
+        I am a local-first Mac desktop AI pet and agent.
+        I live in this project:
+        \(LucyPaths.root.path)
+
+        My current architecture:
+        - Swift/AppKit floating desktop pet
+        - local Ollama chat
+        - local memory
+        - capability registry
+        - dev task system
+        - autodev roadmap
+        - self-command loop
+        - selfbuild templates
+
+        My long-term goal:
+        become a cute animated jumping-spider desktop companion that can safely improve herself, add new abilities, operate your Mac with approval, and help you without you manually coding every feature.
+        """
+    }
 
 
     func capabilityStatus(_ id: String) -> String {
