@@ -69,6 +69,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
     var onHideRequested: (() -> Void)?
     var onUse3DChanged: ((Bool) -> Void)?
+    var onReal3DChanged: ((Bool) -> Void)?
+    var onRenderInfoRequested: (() -> String)?
     var onSpriteInfoRequested: (() -> String)?
 
     override init() {
@@ -134,6 +136,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /develop your goal here
         /use3d on
         /use3d off
+        /real3d on
+        /real3d off
+        /renderinfo
 
         """
 
@@ -403,6 +408,25 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
+
+
+        if lowered == "/real3d on" {
+            onReal3DChanged?(true)
+            append("Lucy: Real 3D SceneKit mode is on.\n\n")
+            return
+        }
+
+        if lowered == "/real3d off" {
+            onReal3DChanged?(false)
+            append("Lucy: Real 3D SceneKit mode is off.\n\n")
+            return
+        }
+
+        if lowered == "/renderinfo" {
+            let result = onRenderInfoRequested?() ?? "Render info is not wired."
+            append("Lucy Render Info:\n\(result)\n\n")
+            return
+        }
 
         if lowered == "/spriteinfo" {
             let result = onSpriteInfoRequested?() ?? "Sprite info is not wired."

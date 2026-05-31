@@ -2,6 +2,8 @@ import Cocoa
 import Foundation
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    var sceneView: LucySceneView!
+    var real3DMode = UserDefaults.standard.bool(forKey: "lucy.real3DMode")
     var window: NSWindow!
     var petView: ClickablePetView!
     var chatController: ChatWindowController?
@@ -40,7 +42,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.openChat()
         }
 
-        window.contentView = petView
+        sceneView = LucySceneView(frame: NSRect(x: 0, y: 0, width: 180, height: 180))
+        applyPetRenderMode()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -63,6 +66,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             chatController?.onSpriteInfoRequested = {
                 return self.petView.spriteInfoText()
+            }
+
+            chatController?.onReal3DChanged = { enabled in
+                self.setReal3DMode(enabled)
+            }
+
+            chatController?.onRenderInfoRequested = {
+                return self.currentRenderInfo()
             }
 
 
@@ -99,6 +110,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let dy = mouse.y - center.y
             let distance = sqrt(dx * dx + dy * dy)
 
+            if distance < 320 {
+                LucyRuntime.shared.facingRight = dx >= 0
+                self.sceneView.lookToward(dx: dx, dy: dy)
+            }
+
             if distance < 90 {
                 LucyRuntime.shared.facingRight = dx >= 0
                 self.petView.setState(.thinking, mood: "boop?")
@@ -108,6 +124,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+
+
+    func applyPetRenderMode() {
+        if real3DMode {
+            window.contentView = sceneView
+        } else {
+            window.contentView = petView
+        }
+    }
+
+    func setReal3DMode(_ enabled: Bool) {
+        real3DMode = enabled
+        UserDefaults.standard.set(enabled, forKey: "lucy.real3DMode")
+        applyPetRenderMode()
+    }
+
+    func currentRenderInfo() -> String {
+        if real3DMode {
+            return sceneView.renderInfoText()
+        }
+
+        return petView.spriteInfoText()
+    }
+
 
     func startAnimation() {
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.18, repeats: true) { _ in
