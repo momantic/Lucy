@@ -21,6 +21,9 @@
     <key>CFBundleExecutable</key>
     <string>Lucy</string>
 
+    <key>CFBundleIconFile</key>
+    <string>Lucy</string>
+
     <key>CFBundlePackageType</key>
     <string>APPL</string>
 
