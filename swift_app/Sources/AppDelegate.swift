@@ -14,7 +14,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var cursorTimer: Timer?
     var isHidden = false
 
+
+    func installAppMenu() {
+        let mainMenu = NSMenu()
+
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+
+        let appMenu = NSMenu()
+        appMenuItem.submenu = appMenu
+
+        appMenu.addItem(
+            withTitle: "Quit Lucy",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+
+        NSApp.mainMenu = mainMenu
+    }
+
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+
+        NSApp.setActivationPolicy(.regular)
+        installAppMenu()
+        NSApp.activate(ignoringOtherApps: true)
+
         print("Lucy Dev Mode v0.5 started")
         print("Terminal logging is quiet by default. Use /loud inside Lucy chat to enable movement logs.")
 
@@ -250,4 +275,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.petView.setState(.idle, mood: moods.randomElement() ?? "Lucy")
         }
     }
+
+
+    func applicationWillTerminate(_ notification: Notification) {
+        animationTimer?.invalidate()
+        cursorTimer?.invalidate()
+        window?.close()
+        chatController?.window?.close()
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
+    }
+
+
 }

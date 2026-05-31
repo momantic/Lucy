@@ -118,6 +118,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /project
         /readself
         /status
+        /quit
         /settings
         /browser Google Chrome
         /browser Safari
@@ -444,6 +445,16 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         if lowered == "/use3d off" {
             onUse3DChanged?(false)
             append("Lucy: 3D sprite mode is off. I will use my old drawn body.\n\n")
+            return
+        }
+
+
+
+        if lowered == "/quit" || lowered == "quit lucy" || lowered == "close lucy" {
+            append("Lucy: okay, closing now.\n\n")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                NSApp.terminate(nil)
+            }
             return
         }
 
