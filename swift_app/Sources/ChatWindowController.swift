@@ -583,6 +583,32 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+        if lowered == "open gmail with this draft"
+            || lowered == "open gmail with the draft"
+            || lowered == "open gmail draft"
+            || lowered == "put it in gmail"
+            || lowered == "open this in gmail" {
+            let result = openGmailWithLastDraft()
+            append("Lucy: \(result)\n\n")
+            return
+        }
+
+        if looksLikeEmailRevisionRequest(lowered) {
+            append("Lucy: revising your latest email draft...\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.reviseLastEmailDraft(userText)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
+
+
         if lowered == "copy email draft"
             || lowered == "copy last email draft"
             || lowered == "copy the email draft" {
@@ -639,6 +665,28 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
+
+
+        if !userText.hasPrefix("/")
+            && (
+                lowered.contains("notes app")
+                || lowered.contains("apple notes")
+                || lowered.contains("write a note")
+                || lowered.contains("create a note")
+            ) {
+
+            append("Lucy: I will check whether I have Apple Notes writing capability.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.ensureNotesCapabilityThenCreateNote(request: userText)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Capability Manager:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
 
         if !userText.hasPrefix("/") && routeNaturalSelfBuild(userText) {
             return
@@ -1421,12 +1469,169 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+    func capabilityStatus(_ id: String) -> String {
+        guard
+            let data = try? Data(contentsOf: LucyPaths.root.appendingPathComponent("data").appendingPathComponent("capabilities.json")),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let capabilities = json["capabilities"] as? [[String: Any]]
+        else {
+            return "unknown"
+        }
+
+        return capabilities.first(where: { $0["id"] as? String == id })?["status"] as? String ?? "unknown"
+    }
+
+    func updateCapabilityStatus(id: String, status: String) {
+        let url = LucyPaths.root.appendingPathComponent("data").appendingPathComponent("capabilities.json")
+
+        guard
+            let data = try? Data(contentsOf: url),
+            var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            var capabilities = json["capabilities"] as? [[String: Any]]
+        else {
+            return
+        }
+
+        for index in capabilities.indices {
+            if capabilities[index]["id"] as? String == id {
+                capabilities[index]["status"] = status
+            }
+        }
+
+        json["capabilities"] = capabilities
+
+        if let updated = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) {
+            try? updated.write(to: url)
+        }
+    }
+
+    func ensureNotesCapabilityThenCreateNote(request: String) -> String {
+        let status = capabilityStatus("apple_notes_writer")
+
+        if status == "installed" {
+            return createMotivationalNote(from: request)
+        }
+
+        if status == "available_template" || status == "unknown" {
+            let buildResult = runSelfBuild(goal: "add notes helper")
+
+            if buildResult.lowercased().contains("successfully")
+                || buildResult.lowercased().contains("already installed") {
+                updateCapabilityStatus(id: "apple_notes_writer", status: "installed")
+                return """
+                I installed my Apple Notes helper.
+
+                Now I will create the note.
+
+                \(createMotivationalNote(from: request))
+                """
+            }
+
+            return """
+            I tried to install my Apple Notes helper, but it did not complete.
+
+            \(buildResult)
+            """
+        }
+
+        return "I do not have a safe capability path for Apple Notes yet."
+    }
+
+
+    func escapeAppleScriptString(_ text: String) -> String {
+        return text
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+    }
+
+    func writeAppleNote(title: String, body: String) -> String {
+        let safeTitle = escapeAppleScriptString(title)
+        let safeBody = escapeAppleScriptString(body)
+
+        let script = """
+        tell application "Notes"
+            activate
+            make new note with properties {name:"\(safeTitle)", body:"\(safeBody)"}
+        end tell
+        """
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            if process.terminationStatus == 0 {
+                return "Created a new Apple Notes note titled: \(title)"
+            }
+
+            let details = [out, err]
+                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .joined(separator: "\n")
+
+            return """
+            I tried to create the note, but macOS blocked or failed the AppleScript.
+
+            Details:
+            \(details)
+
+            You may need to allow Terminal/Lucy automation permissions in:
+            System Settings → Privacy & Security → Automation
+            """
+        } catch {
+            return "Could not run Apple Notes automation: \(error.localizedDescription)"
+        }
+    }
+
+    func createMotivationalNote(from request: String) -> String {
+        let prompt = """
+        You are Lucy, a kind local AI desktop pet.
+
+        The user wants a motivational note in Apple Notes.
+
+        User request:
+        \(request)
+
+        Write a short motivational note.
+        Requirements:
+        - 2 to 5 sentences
+        - warm, encouraging, and personal
+        - no clichés if possible
+        - output only the note body
+        """
+
+        let noteBody = stripTerminalEscapes(runOllama(prompt: prompt))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let finalBody = noteBody.isEmpty
+            ? "You are building something real. Keep going, one small step at a time."
+            : noteBody
+
+        return writeAppleNote(title: "Motivation from Lucy", body: finalBody)
+    }
+
+
     func runSelfBuild(goal: String) -> String {
         let loweredGoal = goal.lowercased()
 
         let taskName: String
 
-        if loweredGoal.contains("gmail") {
+        if loweredGoal.contains("notes") || loweredGoal.contains("note") {
+            taskName = "selfbuild-notes-helper"
+        } else if loweredGoal.contains("gmail") {
             taskName = "selfbuild-gmail-draft-helper"
         } else if loweredGoal.contains("email") {
             taskName = "selfbuild-email-helper"
@@ -1999,7 +2204,122 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         You can now say:
         - copy email draft
         - open gmail
+        - make it shorter
+        - make it more professional
+        - make it warmer
+        - open gmail with this draft
         """
+    }
+
+
+
+    func reviseLastEmailDraft(_ instruction: String) -> String {
+        let currentDraft = lastEmailDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if currentDraft.isEmpty {
+            return "I do not have a saved email draft to revise yet. Ask me to write an email first."
+        }
+
+        let prompt = """
+        You are Lucy, a helpful local AI desktop pet.
+
+        Revise this email draft according to the user's instruction.
+
+        User instruction:
+        \(instruction)
+
+        Current draft:
+        \(currentDraft)
+
+        Requirements:
+        - Preserve the original intent.
+        - Do not invent specific facts.
+        - Keep the sender as Mo.
+        - Sign as Mo.
+        - Output only the revised email.
+        - Include the subject if the current draft includes one.
+        """
+
+        let revised = stripTerminalEscapes(runOllama(prompt: prompt))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        saveLastEmailDraft(revised)
+
+        return """
+        I revised the email draft:
+
+        \(revised)
+
+        I saved this as your latest email draft.
+        You can say:
+        - copy email draft
+        - open gmail with this draft
+        """
+    }
+
+    func openGmailWithLastDraft() -> String {
+        let draft = lastEmailDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if draft.isEmpty {
+            return "I do not have a saved email draft to open in Gmail yet."
+        }
+
+        let recipient = firstEmailAddress(in: draft) ?? ""
+        let parsed = parseEmailDraft(draft)
+
+        let cleanSubject = stripTerminalEscapes(parsed.subject)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let cleanBody = stripTerminalEscapes(parsed.body)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if recipient.isEmpty {
+            let result = openGmail()
+            return """
+            I opened Gmail, but I could not find a recipient email address in the saved draft.
+
+            I also copied the draft to your clipboard so you can paste it manually.
+
+            \(copyTextToClipboard(draft))
+
+            \(result)
+            """
+        }
+
+        let composeURL = gmailComposeURL(
+            to: recipient,
+            subject: cleanSubject,
+            body: cleanBody
+        )
+
+        return openURL(composeURL)
+    }
+
+    func looksLikeEmailRevisionRequest(_ lowered: String) -> Bool {
+        let phrases = [
+            "make it shorter",
+            "make it longer",
+            "make it warmer",
+            "make it colder",
+            "make it friendlier",
+            "make it more professional",
+            "make it less formal",
+            "make it more formal",
+            "make it casual",
+            "make it concise",
+            "make it polite",
+            "make it sound better",
+            "rewrite it",
+            "revise it",
+            "edit it",
+            "improve it",
+            "shorter",
+            "more professional",
+            "warmer",
+            "less formal"
+        ]
+
+        return phrases.contains { lowered.contains($0) }
     }
 
 

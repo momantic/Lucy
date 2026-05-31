@@ -1,0 +1,25 @@
+{
+  "capabilities" : [
+    {
+      "status" : "installed",
+      "id" : "web_search",
+      "description" : "Search Google or open URLs."
+    },
+    {
+      "id" : "youtube_search",
+      "description" : "Search YouTube.",
+      "status" : "installed"
+    },
+    {
+      "description" : "Draft email and open Gmail compose for user review.",
+      "status" : "installed",
+      "id" : "gmail_compose"
+    },
+    {
+      "status" : "installed",
+      "selfbuild_task" : "selfbuild-notes-helper",
+      "description" : "Create new Apple Notes notes via AppleScript.",
+      "id" : "apple_notes_writer"
+    }
+  ]
+}
