@@ -68,6 +68,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         sceneView = LucySceneView(frame: NSRect(x: 0, y: 0, width: 180, height: 180))
+
+        petView.onClick = {
+            self.openChat()
+        }
+
+        petView.onDoubleClick = {
+            self.closeChat()
+        }
+
+        sceneView.onClick = {
+            self.openChat()
+        }
+
+        sceneView.onDoubleClick = {
+            self.closeChat()
+        }
+
         applyPetRenderMode()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -77,6 +94,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         startIdleMoods()
         startCursorAwareness()
     }
+
+
+
+    func toggleChat() {
+        if let chatWindow = chatController?.window, chatWindow.isVisible {
+            chatWindow.orderOut(nil)
+        } else {
+            openChat()
+        }
+    }
+
+    func closeChat() {
+        chatController?.window?.orderOut(nil)
+    }
+
 
     func openChat() {
         if chatController == nil {

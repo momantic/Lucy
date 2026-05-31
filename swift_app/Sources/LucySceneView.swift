@@ -7,6 +7,8 @@ class LucySceneView: SCNView {
     var idleTimer: Timer?
     var lookTargetX: CGFloat = 0
     var lookTargetY: CGFloat = 0
+    var onClick: (() -> Void)?
+    var onDoubleClick: (() -> Void)?
     var modelLoaded = false
 
     override init(frame frameRect: NSRect, options: [String : Any]? = nil) {
@@ -199,6 +201,16 @@ class LucySceneView: SCNView {
         lookTargetX = max(-1.0, min(1.0, dx / 180.0))
         lookTargetY = max(-1.0, min(1.0, dy / 180.0))
     }
+
+
+    override func mouseDown(with event: NSEvent) {
+        if event.clickCount >= 2 {
+            onDoubleClick?()
+        } else {
+            onClick?()
+        }
+    }
+
 
     func renderInfoText() -> String {
         let modelURL = LucyPaths.root
