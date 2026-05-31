@@ -101,8 +101,11 @@ class LucySceneView: SCNView {
             normalize(node: modelContainer)
             applyFallbackMaterials(to: modelContainer)
 
-            // Rotate to a more likely visible orientation for converted Blender assets.
+            // Base orientation for Blender/OBJ converted Lucy.
+            // X lays the model into the SceneKit camera view.
+            // Y turns her so she faces the user instead of facing sideways.
             modelContainer.eulerAngles.x = CGFloat(-Double.pi / 2)
+            modelContainer.eulerAngles.y = CGFloat(-Double.pi / 2)
 
             modelLoaded = true
             modelNode = modelContainer
@@ -182,7 +185,10 @@ class LucySceneView: SCNView {
         let bob = CGFloat(sin(now * 2.0) * 0.06)
         modelNode.position.y = bob
 
-        let targetYaw = lookTargetX * 0.65
+        // Base yaw controls Lucy's default facing direction.
+        // The lookTargetX value is then added on top so she can still look toward the cursor.
+        let baseYaw = CGFloat(-Double.pi / 2)
+        let targetYaw = baseYaw + lookTargetX * 0.65
         let targetPitch = -lookTargetY * 0.20
 
         modelNode.eulerAngles.y = modelNode.eulerAngles.y + (targetYaw - modelNode.eulerAngles.y) * 0.12

@@ -110,9 +110,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let dy = mouse.y - center.y
             let distance = sqrt(dx * dx + dy * dy)
 
-            if distance < 320 {
+            if distance < 700 {
                 LucyRuntime.shared.facingRight = dx >= 0
                 self.sceneView.lookToward(dx: dx, dy: dy)
+            } else {
+                self.sceneView.lookToward(dx: 0, dy: 0)
             }
 
             if distance < 90 {
