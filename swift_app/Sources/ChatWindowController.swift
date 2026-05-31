@@ -1,5 +1,7 @@
 import Cocoa
 import Foundation
+import Speech
+import AVFoundation
 
 
 class LucySettings {
@@ -52,6 +54,13 @@ class LucySettings {
 
 
 class ChatWindowController: NSObject, NSTextFieldDelegate {
+
+    var audioEngine = AVAudioEngine()
+    var speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    var recognitionTask: SFSpeechRecognitionTask?
+    var isListening = false
+
     var window: NSWindow!
     var output: NSTextView!
     var input: NSTextField!
@@ -169,29 +178,129 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
     @objc func startDictation() {
-        input.becomeFirstResponder()
+        if isListening {
+            stopListening()
+            return
+        }
 
-        let started = NSApp.sendAction(
-            Selector(("startDictation:")),
-            to: nil,
-            from: input
-        )
+        requestSpeechPermissions { allowed in
+            DispatchQueue.main.async {
+                if allowed {
+                    self.startListening()
+                } else {
+                    self.append("""
+                    Lucy: I need microphone and speech-recognition permission to listen.
 
-        if started {
-            append("Lucy: Listening... Speak now. Press Enter when the text appears.\n\n")
-        } else {
-            append("""
-            Lucy: I could not start macOS Dictation from here.
+                    Check:
+                    System Settings → Privacy & Security → Microphone
+                    System Settings → Privacy & Security → Speech Recognition
 
-            Try enabling Dictation:
-            System Settings → Keyboard → Dictation → On
+                    Then allow Lucy.
 
-            You can also use your Mac's dictation shortcut while the Lucy input box is selected.
-
-            """)
+                    """)
+                }
+            }
         }
     }
 
+    func requestSpeechPermissions(completion: @escaping (Bool) -> Void) {
+        SFSpeechRecognizer.requestAuthorization { speechStatus in
+            if speechStatus != .authorized {
+                completion(false)
+                return
+            }
+
+            if #available(macOS 14.0, *) {
+                AVAudioApplication.requestRecordPermission { micAllowed in
+                    completion(micAllowed)
+                }
+            } else {
+                AVCaptureDevice.requestAccess(for: .audio) { micAllowed in
+                    completion(micAllowed)
+                }
+            }
+        }
+    }
+
+    func startListening() {
+        recognitionTask?.cancel()
+        recognitionTask = nil
+
+        if audioEngine.isRunning {
+            audioEngine.stop()
+            audioEngine.inputNode.removeTap(onBus: 0)
+        }
+
+        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+        guard let recognitionRequest = recognitionRequest else {
+            append("Lucy: I could not create a speech recognition request.\n\n")
+            return
+        }
+
+        recognitionRequest.shouldReportPartialResults = true
+
+        guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+            append("Lucy: Speech recognition is not available right now.\n\n")
+            return
+        }
+
+        let inputNode = audioEngine.inputNode
+        let format = inputNode.outputFormat(forBus: 0)
+
+        input.stringValue = ""
+        input.becomeFirstResponder()
+
+        recognitionTask = recognizer.recognitionTask(with: recognitionRequest) { result, error in
+            if let result = result {
+                let spokenText = result.bestTranscription.formattedString
+
+                DispatchQueue.main.async {
+                    self.input.stringValue = spokenText
+                }
+
+                if result.isFinal {
+                    DispatchQueue.main.async {
+                        self.stopListening()
+                    }
+                }
+            }
+
+            if error != nil {
+                DispatchQueue.main.async {
+                    self.stopListening()
+                }
+            }
+        }
+
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+            self.recognitionRequest?.append(buffer)
+        }
+
+        do {
+            try audioEngine.start()
+            isListening = true
+            append("Lucy: Listening... speak now. Click Listen again to stop, then press Enter to send.\n\n")
+        } catch {
+            append("Lucy: I could not start listening: \(error.localizedDescription)\n\n")
+            stopListening()
+        }
+    }
+
+    func stopListening() {
+        if audioEngine.isRunning {
+            audioEngine.stop()
+            audioEngine.inputNode.removeTap(onBus: 0)
+        }
+
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+
+        recognitionRequest = nil
+        recognitionTask = nil
+        isListening = false
+
+        append("Lucy: Stopped listening. Press Enter or Send when ready.\n\n")
+    }
 
     @objc func sendMessage() {
         let rawText = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
