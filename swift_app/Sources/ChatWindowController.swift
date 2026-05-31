@@ -213,6 +213,23 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
+
+        if lowered == "/reflect" || lowered == "reflect" {
+            append("Lucy:\n\(lucyReflection())\n\n")
+            return
+        }
+
+        if lowered == "/goals" || lowered == "what are your goals" || lowered == "what are your goals?" {
+            append("Lucy:\n\(lucyGoalsSummary())\n\n")
+            return
+        }
+
+        if lowered == "/plan" || lowered == "what should you do next" || lowered == "what should you do next?" {
+            append("Lucy:\n\(lucyNextPlan())\n\n")
+            return
+        }
+
+
         if lowered == "/whoami" || lowered == "who are you" || lowered == "what are you" {
             append("Lucy:\n\(selfIdentitySummary())\n\n")
             return
@@ -1486,6 +1503,85 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+
+
+    func lucyGoalsSummary() -> String {
+        return """
+        My long-term goals:
+
+        1. Become a cute animated jumping-spider desktop companion.
+        2. Help you operate your Mac through safe, approved actions.
+        3. Remember useful preferences and context locally.
+        4. Recognize what I can and cannot do.
+        5. Selfbuild missing safe capabilities when possible.
+        6. Improve myself through dev tasks, autodev, and self-command loops.
+        7. Avoid destructive actions unless a safe approval flow exists.
+
+        My current short-term goals:
+
+        - Make my capability manager smarter.
+        - Recognize unsupported requests instead of pretending.
+        - Add safer selfbuild templates.
+        - Improve my animation and personality.
+        - Eventually package myself as a clickable Mac app.
+        """
+    }
+
+    func lucyReflection() -> String {
+        let status = LucyRuntime.shared.statusText()
+        let capabilities = capabilitiesSummary()
+        let limitations = limitationsSummary()
+
+        return """
+        Reflection:
+
+        I am Lucy, a local-first Mac desktop pet and agent.
+
+        What I know about myself:
+        - I live in the Lucy project folder.
+        - I can chat, remember things, search, open apps, draft Gmail messages, and create Apple Notes.
+        - I can run safe self-commands and autodev tasks.
+        - I have a capability registry and selfbuild templates.
+
+        Current runtime:
+        \(status)
+
+        Capabilities:
+        \(capabilities)
+
+        Limitations:
+        \(limitations)
+
+        My honest self-assessment:
+        I am not truly conscious, but I now have a working self-model. I can describe my identity, goals, abilities, limits, and safe improvement paths. The next step toward stronger agency is to make my capability manager recognize unsupported requests and either selfbuild a safe template or clearly refuse.
+        """
+    }
+
+    func lucyNextPlan() -> String {
+        return """
+        My suggested next self-improvement plan:
+
+        Step 1:
+        Add an unsupported-capability detector.
+        Reason: If you ask me to delete a note, send an email, or do something I cannot safely do, I should recognize the missing capability instead of falling into generic chat.
+
+        Step 2:
+        Add a notes-manager template.
+        Reason: I can create notes now, but I cannot safely list/edit/delete notes yet.
+
+        Step 3:
+        Improve selfbuild routing.
+        Reason: I should map more natural requests to known templates automatically.
+
+        Step 4:
+        Improve animation/personality.
+        Reason: I should feel more alive as a pet, not just a tool.
+
+        Recommended next command:
+        /selfbuild add unsupported capability detector
+        """
+    }
 
 
     func capabilitiesSummary() -> String {
