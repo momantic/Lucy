@@ -204,15 +204,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let normalizedX = awayX / length
         let normalizedY = awayY / length
 
-        // Gentle acceleration; close cursor adds urgency but no teleporting.
-        let closeness = max(0, min(1, (145 - distance) / 145))
-        let desiredSpeed = CGFloat(0.9 + closeness * 4.2)
+        // Closer cursor = stronger flee.
+        let closeness = max(0, min(1, (150 - distance) / 150))
 
-        let targetVX = normalizedX * desiredSpeed
-        let targetVY = normalizedY * desiredSpeed
+        // Slight randomness makes Lucy feel less robotic.
+        let randomSpeed = CGFloat.random(in: 0.75...1.35)
+        let burstChance = CGFloat.random(in: 0...1)
+        let burst = burstChance < 0.10 ? CGFloat.random(in: 1.4...2.2) : 1.0
 
-        fleeVelocityX += (targetVX - fleeVelocityX) * 0.15
-        fleeVelocityY += (targetVY - fleeVelocityY) * 0.15
+        // Perpendicular drift makes her dodge/curve instead of always running straight.
+        let dodge = CGFloat.random(in: -0.55...0.55) * closeness
+        let dodgeX = -normalizedY * dodge
+        let dodgeY = normalizedX * dodge
+
+        let desiredSpeed = CGFloat(2.2 + closeness * 8.5) * randomSpeed * burst
+
+        let targetVX = (normalizedX + dodgeX) * desiredSpeed
+        let targetVY = (normalizedY + dodgeY) * desiredSpeed
+
+        // Quicker acceleration than before, still smoothed.
+        fleeVelocityX += (targetVX - fleeVelocityX) * 0.30
+        fleeVelocityY += (targetVY - fleeVelocityY) * 0.30
 
         var newFrame = frame
         newFrame.origin.x += fleeVelocityX
