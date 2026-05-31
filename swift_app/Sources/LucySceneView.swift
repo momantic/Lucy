@@ -80,7 +80,7 @@ class LucySceneView: SCNView {
         let modelURL = LucyPaths.root
             .appendingPathComponent("assets")
             .appendingPathComponent("scenekit")
-            .appendingPathComponent("lucy_spider_v1.obj")
+            .appendingPathComponent("lucy_spider_colored.obj")
 
         guard FileManager.default.fileExists(atPath: modelURL.path) else {
             addFallbackCube(reason: "model missing at \(modelURL.path)")
@@ -119,22 +119,49 @@ class LucySceneView: SCNView {
 
 
     func applyFallbackMaterials(to node: SCNNode) {
-        let bodyMaterial = SCNMaterial()
-        bodyMaterial.name = "LucyDarkBody"
-        bodyMaterial.diffuse.contents = NSColor(calibratedRed: 0.055, green: 0.045, blue: 0.075, alpha: 1.0)
-        bodyMaterial.ambient.contents = NSColor(calibratedRed: 0.055, green: 0.045, blue: 0.075, alpha: 1.0)
-        bodyMaterial.specular.contents = NSColor(calibratedWhite: 0.35, alpha: 1.0)
-        bodyMaterial.emission.contents = NSColor(calibratedRed: 0.012, green: 0.010, blue: 0.018, alpha: 1.0)
-        bodyMaterial.shininess = 0.22
-        bodyMaterial.lightingModel = .blinn
-        bodyMaterial.isDoubleSided = true
+        let textureURL = LucyPaths.root
+            .appendingPathComponent("assets")
+            .appendingPathComponent("scenekit")
+            .appendingPathComponent("textures")
+            .appendingPathComponent("cute+jumping+spider+3d+model_basecolor.png")
+
+        let normalURL = LucyPaths.root
+            .appendingPathComponent("assets")
+            .appendingPathComponent("scenekit")
+            .appendingPathComponent("textures")
+            .appendingPathComponent("cute+jumping+spider+3d+model_normal.png")
+
+        let baseColorImage = NSImage(contentsOf: textureURL)
+        let normalImage = NSImage(contentsOf: normalURL)
+
+        let fallbackMaterial = SCNMaterial()
+        fallbackMaterial.name = "LucyOriginalTextureMaterial"
+
+        if let baseColorImage {
+            fallbackMaterial.diffuse.contents = baseColorImage
+            fallbackMaterial.ambient.contents = baseColorImage
+        } else {
+            fallbackMaterial.diffuse.contents = NSColor(calibratedRed: 0.055, green: 0.045, blue: 0.075, alpha: 1.0)
+            fallbackMaterial.ambient.contents = NSColor(calibratedRed: 0.055, green: 0.045, blue: 0.075, alpha: 1.0)
+        }
+
+        if let normalImage {
+            fallbackMaterial.normal.contents = normalImage
+        }
+
+        fallbackMaterial.specular.contents = NSColor(calibratedWhite: 0.25, alpha: 1.0)
+        fallbackMaterial.shininess = 0.20
+        fallbackMaterial.lightingModel = .blinn
+        fallbackMaterial.isDoubleSided = true
+        fallbackMaterial.diffuse.wrapS = .repeat
+        fallbackMaterial.diffuse.wrapT = .repeat
 
         var geometryCount = 0
 
         func apply(to current: SCNNode) {
             if let geometry = current.geometry {
-                geometry.materials = [bodyMaterial]
-                geometry.firstMaterial = bodyMaterial
+                geometry.materials = [fallbackMaterial]
+                geometry.firstMaterial = fallbackMaterial
                 geometryCount += 1
             }
 
@@ -144,7 +171,8 @@ class LucySceneView: SCNView {
         }
 
         apply(to: node)
-        print("LucySceneView: forced dark stylized material on \(geometryCount) geometries")
+        print("LucySceneView: applied original GLB basecolor texture to \(geometryCount) geometries")
+        print("LucySceneView: texture path \(textureURL.path), exists \(FileManager.default.fileExists(atPath: textureURL.path))")
     }
 
 
@@ -218,7 +246,7 @@ class LucySceneView: SCNView {
         let modelURL = LucyPaths.root
             .appendingPathComponent("assets")
             .appendingPathComponent("scenekit")
-            .appendingPathComponent("lucy_spider_v1.obj")
+            .appendingPathComponent("lucy_spider_colored.obj")
 
         let bbox = modelNode.boundingBox
 
