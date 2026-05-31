@@ -16,6 +16,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var autoPerchEnabled = UserDefaults.standard.bool(forKey: "lucy.autoPerchEnabled")
     var nextAutoPerchTime = Date().addingTimeInterval(Double.random(in: 8.0...18.0))
     var isPerching = false
+    var gravityModeEnabled = UserDefaults.standard.bool(forKey: "lucy.gravityModeEnabled")
+    var gravityVelocityY: CGFloat = 0
+    var gravityVelocityX: CGFloat = 0
+    var nextGravityJumpTime = Date().addingTimeInterval(Double.random(in: 2.5...6.0))
+    var roamEnabled = UserDefaults.standard.bool(forKey: "lucy.roamEnabled")
+    var nextRoamActionTime = Date().addingTimeInterval(Double.random(in: 10.0...24.0))
     var window: NSWindow!
     var petView: ClickablePetView!
     var chatController: ChatWindowController?
@@ -25,6 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var animationTimer: Timer?
     var cursorTimer: Timer?
     var isHidden = false
+    var isSoftHidden = false
 
 
     func installAppMenu() {
@@ -40,6 +47,50 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             withTitle: "Quit Lucy",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
+        )
+
+        let editMenuItem = NSMenuItem()
+        mainMenu.addItem(editMenuItem)
+
+        let editMenu = NSMenu(title: "Edit")
+        editMenuItem.submenu = editMenu
+
+        editMenu.addItem(
+            withTitle: "Undo",
+            action: Selector(("undo:")),
+            keyEquivalent: "z"
+        )
+
+        editMenu.addItem(
+            withTitle: "Redo",
+            action: Selector(("redo:")),
+            keyEquivalent: "Z"
+        )
+
+        editMenu.addItem(NSMenuItem.separator())
+
+        editMenu.addItem(
+            withTitle: "Cut",
+            action: #selector(NSText.cut(_:)),
+            keyEquivalent: "x"
+        )
+
+        editMenu.addItem(
+            withTitle: "Copy",
+            action: #selector(NSText.copy(_:)),
+            keyEquivalent: "c"
+        )
+
+        editMenu.addItem(
+            withTitle: "Paste",
+            action: #selector(NSText.paste(_:)),
+            keyEquivalent: "v"
+        )
+
+        editMenu.addItem(
+            withTitle: "Select All",
+            action: #selector(NSText.selectAll(_:)),
+            keyEquivalent: "a"
         )
 
         NSApp.mainMenu = mainMenu
@@ -124,6 +175,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
 
+
+    func softHideLucy() {
+        isSoftHidden = true
+        fleeVelocityX = 0
+        fleeVelocityY = 0
+        gravityVelocityX = 0
+        gravityVelocityY = 0
+        window.orderOut(nil)
+    }
+
+    func comeBackLucy() {
+        isSoftHidden = false
+
+        if let screen = NSScreen.main {
+            var frame = window.frame
+            let visible = screen.visibleFrame
+
+            if frame.origin.x < visible.minX || frame.origin.x > visible.maxX || frame.origin.y < visible.minY - frame.height || frame.origin.y > visible.maxY {
+                frame.origin.x = visible.midX - frame.width / 2
+                frame.origin.y = visible.midY - frame.height / 2
+                window.setFrame(frame, display: true)
+            }
+        }
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+
     func openChat() {
         if chatController == nil {
             chatController = ChatWindowController()
@@ -147,12 +227,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return self.currentRenderInfo()
             }
 
+            chatController?.onModelBoundsRequested = {
+                return self.sceneView.modelBoundsInfoText()
+            }
+
             chatController?.onPerchRequested = {
                 self.perchOnActiveWindow()
             }
 
             chatController?.onAutoPerchChanged = { enabled in
                 self.setAutoPerchEnabled(enabled)
+            }
+
+            chatController?.onDockPerchRequested = {
+                self.perchOnDock()
+            }
+
+            chatController?.onJumpRequested = {
+                self.jumpFarAway()
+            }
+
+            chatController?.onRoamChanged = { enabled in
+                self.setRoamEnabled(enabled)
+            }
+
+            chatController?.onGravityChanged = { enabled in
+                self.setGravityModeEnabled(enabled)
+            }
+
+            chatController?.onSoftHideRequested = {
+                self.softHideLucy()
+            }
+
+            chatController?.onComeBackRequested = {
+                self.comeBackLucy()
             }
 
 
@@ -207,6 +315,225 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
 
+
+    func setRoamEnabled(_ enabled: Bool) {
+        roamEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "lucy.roamEnabled")
+        nextRoamActionTime = Date().addingTimeInterval(Double.random(in: 6.0...16.0))
+    }
+
+    func dockPerchFrame() -> NSRect {
+        guard let screen = NSScreen.main else {
+            return window.frame
+        }
+
+        let visible = screen.visibleFrame
+        let full = screen.frame
+        var frame = window.frame
+
+        // Estimate Dock zone. If Dock is at bottom, visibleFrame.minY is above screen.minY.
+        let dockTopY = visible.minY
+        let dockHeight = max(40, dockTopY - full.minY)
+
+        let xChoices: [CGFloat] = [
+            visible.minX + visible.width * 0.18,
+            visible.minX + visible.width * 0.38,
+            visible.minX + visible.width * 0.62,
+            visible.minX + visible.width * 0.82
+        ]
+
+        let targetX = xChoices.randomElement() ?? visible.midX
+        frame.origin.x = targetX - frame.width / 2
+
+        // Put Lucy slightly above the Dock, like she is sitting on it.
+        frame.origin.y = full.minY + dockHeight - frame.height * 0.22
+
+        return clampFrameToScreen(frame)
+    }
+
+    func perchOnDock() {
+        guard !isPerching else {
+            return
+        }
+
+        isPerching = true
+        fleeVelocityX = 0
+        fleeVelocityY = 0
+
+        let targetFrame = dockPerchFrame()
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Double.random(in: 0.55...0.90)
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.window.animator().setFrame(targetFrame, display: true)
+        } completionHandler: {
+            self.isPerching = false
+            self.lastManualInteraction = Date()
+        }
+    }
+
+    func jumpFarAway() {
+        guard !isPerching else {
+            return
+        }
+
+        guard let screen = NSScreen.main else {
+            return
+        }
+
+        isPerching = true
+        fleeVelocityX = 0
+        fleeVelocityY = 0
+
+        let visible = screen.visibleFrame
+        var frame = window.frame
+
+        // Pick a far place, preferably away from current position.
+        let currentCenter = NSPoint(x: frame.midX, y: frame.midY)
+
+        var candidates: [NSPoint] = []
+        for _ in 0..<10 {
+            candidates.append(NSPoint(
+                x: CGFloat.random(in: visible.minX...(visible.maxX - frame.width)),
+                y: CGFloat.random(in: visible.minY...(visible.maxY - frame.height))
+            ))
+        }
+
+        let target = candidates.max { a, b in
+            let da = hypot((a.x + frame.width / 2) - currentCenter.x, (a.y + frame.height / 2) - currentCenter.y)
+            let db = hypot((b.x + frame.width / 2) - currentCenter.x, (b.y + frame.height / 2) - currentCenter.y)
+            return da < db
+        } ?? NSPoint(x: visible.midX, y: visible.midY)
+
+        frame.origin = target
+        frame = clampFrameToScreen(frame)
+
+        // Two-stage jump: small lift, then land far away.
+        var liftFrame = window.frame
+        liftFrame.origin.y += 28
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            self.window.animator().setFrame(self.clampFrameToScreen(liftFrame), display: true)
+        } completionHandler: {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Double.random(in: 0.45...0.75)
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                self.window.animator().setFrame(frame, display: true)
+            } completionHandler: {
+                self.isPerching = false
+                self.lastManualInteraction = Date()
+            }
+        }
+    }
+
+    func maybeRoam() {
+        guard roamEnabled else {
+            return
+        }
+
+        guard Date() > nextRoamActionTime else {
+            return
+        }
+
+        nextRoamActionTime = Date().addingTimeInterval(Double.random(in: 16.0...38.0))
+
+        if Bool.random() {
+            perchOnDock()
+        } else {
+            jumpFarAway()
+        }
+    }
+
+
+
+    func setGravityModeEnabled(_ enabled: Bool) {
+        gravityModeEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "lucy.gravityModeEnabled")
+
+        fleeVelocityX = 0
+        fleeVelocityY = 0
+        gravityVelocityY = 0
+        gravityVelocityX = 0
+        nextGravityJumpTime = Date().addingTimeInterval(Double.random(in: 1.0...3.0))
+    }
+
+    func applyGravityStep() {
+        guard gravityModeEnabled else {
+            return
+        }
+
+        guard let screen = NSScreen.main else {
+            return
+        }
+
+        var frame = window.frame
+        let visible = screen.visibleFrame
+
+        // Bottom floor of the usable screen.
+        // Lucy's visible 3D body sits above the bottom of her transparent 180x180 window,
+        // so allow the window to sink lower until the visible body touches the floor.
+        let floorY = visible.minY - frame.height * 0.68
+
+        // Gravity pulls Lucy down. Positive y is upward in AppKit screen coords.
+        gravityVelocityY -= 1.15
+
+        // Light horizontal drift for life.
+        gravityVelocityX *= 0.96
+
+        let onGround = frame.origin.y <= floorY + 1
+
+        if onGround {
+            frame.origin.y = floorY
+            gravityVelocityY = max(0, gravityVelocityY)
+
+            // Friction on ground.
+            gravityVelocityX *= 0.82
+
+            // Occasionally try to jump.
+            if Date() > nextGravityJumpTime {
+                nextGravityJumpTime = Date().addingTimeInterval(Double.random(in: 2.2...6.5))
+
+                gravityVelocityY = CGFloat.random(in: 13.0...24.0)
+                gravityVelocityX += CGFloat.random(in: -4.5...4.5)
+
+                petView.setState(.hop, mood: "hop!")
+            } else {
+                petView.setState(.idle, mood: "")
+            }
+        }
+
+        frame.origin.x += gravityVelocityX
+        frame.origin.y += gravityVelocityY
+
+        // Bounce softly off left/right screen edges.
+        if frame.origin.x < visible.minX {
+            frame.origin.x = visible.minX
+            gravityVelocityX = abs(gravityVelocityX) * 0.65
+        }
+
+        if frame.origin.x > visible.maxX - frame.width {
+            frame.origin.x = visible.maxX - frame.width
+            gravityVelocityX = -abs(gravityVelocityX) * 0.65
+        }
+
+        // Land on floor.
+        if frame.origin.y < floorY {
+            frame.origin.y = floorY
+            gravityVelocityY = 0
+        }
+
+        // Custom gravity clamp:
+        // Allow Lucy's transparent window to sink below visibleFrame
+        // so her actual visible body can touch the bottom of the screen.
+        frame.origin.x = max(visible.minX, min(frame.origin.x, visible.maxX - frame.width))
+        frame.origin.y = max(floorY, min(frame.origin.y, visible.maxY - frame.height))
+
+        window.setFrame(frame, display: true)
+    }
+
+
     func setAutoPerchEnabled(_ enabled: Bool) {
         autoPerchEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: "lucy.autoPerchEnabled")
@@ -251,23 +578,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let spot = PerchSpot.allCases.randomElement() ?? .topRight
 
-        // Offset makes Lucy appear to sit on the window edge rather than overlap the center.
+        // Lucy's actual visible 3D body is smaller than the 180x180 transparent window.
+        // These visual anchor values estimate where her visible body sits inside the window.
+        let visualBodyWidth = frame.width * 0.58
+        let visualBodyHeight = frame.height * 0.58
+        let visualBodyLeftInset = (frame.width - visualBodyWidth) / 2
+        let visualBodyBottomInset = frame.height * 0.18
+
+        func setVisualBodyBottomLeft(x: CGFloat, y: CGFloat) {
+            frame.origin.x = x - visualBodyLeftInset
+            frame.origin.y = y - visualBodyBottomInset
+        }
+
         switch spot {
         case .topLeft:
-            frame.origin.x = activeWindow.minX + 20
-            frame.origin.y = activeWindow.maxY - frame.height * 0.28
+            // Put Lucy's visible feet/body on the top-left edge.
+            setVisualBodyBottomLeft(
+                x: activeWindow.minX + 18,
+                y: activeWindow.maxY - visualBodyHeight * 1.05
+            )
+
         case .topCenter:
-            frame.origin.x = activeWindow.midX - frame.width / 2
-            frame.origin.y = activeWindow.maxY - frame.height * 0.28
+            setVisualBodyBottomLeft(
+                x: activeWindow.midX - visualBodyWidth / 2,
+                y: activeWindow.maxY - visualBodyHeight * 1.05
+            )
+
         case .topRight:
-            frame.origin.x = activeWindow.maxX - frame.width - 20
-            frame.origin.y = activeWindow.maxY - frame.height * 0.28
+            setVisualBodyBottomLeft(
+                x: activeWindow.maxX - visualBodyWidth - 18,
+                y: activeWindow.maxY - visualBodyHeight * 1.05
+            )
+
         case .leftSide:
-            frame.origin.x = activeWindow.minX - frame.width * 0.55
-            frame.origin.y = activeWindow.midY - frame.height / 2
+            setVisualBodyBottomLeft(
+                x: activeWindow.minX - visualBodyWidth * 0.45,
+                y: activeWindow.midY - visualBodyHeight * 0.85
+            )
+
         case .rightSide:
-            frame.origin.x = activeWindow.maxX - frame.width * 0.45
-            frame.origin.y = activeWindow.midY - frame.height / 2
+            setVisualBodyBottomLeft(
+                x: activeWindow.maxX - visualBodyWidth * 0.55,
+                y: activeWindow.midY - visualBodyHeight * 0.85
+            )
         }
 
         return clampFrameToScreen(frame)
@@ -403,7 +756,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func startCursorAwareness() {
         cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.06, repeats: true) { _ in
-            if self.isHidden { return }
+            if self.isHidden || self.isSoftHidden { return }
+
+            if self.gravityModeEnabled {
+                self.applyGravityStep()
+                return
+            }
 
             let mouse = NSEvent.mouseLocation
             let frame = self.window.frame
@@ -449,6 +807,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.sceneView.lookToward(dx: 0, dy: 0)
                 self.maybeDoIdleScoot()
                 self.maybeAutoPerch()
+                self.maybeRoam()
                 self.petView.setState(.idle, mood: "")
                 return
             }
@@ -512,7 +871,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func startWandering() {
         wanderTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
-            if self.isHidden { return }
+            if self.isHidden || self.isSoftHidden { return }
             guard let screen = NSScreen.main?.visibleFrame else { return }
 
             var frame = self.window.frame
@@ -598,7 +957,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func startIdleMoods() {
         moodTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
-            if self.isHidden { return }
+            if self.isHidden || self.isSoftHidden { return }
             let moods = ["Lucy", "watching 👀", "tiny spider", "thinking", "ready"]
             self.petView.setState(.idle, mood: moods.randomElement() ?? "Lucy")
         }

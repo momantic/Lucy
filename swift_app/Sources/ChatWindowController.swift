@@ -71,8 +71,15 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     var onUse3DChanged: ((Bool) -> Void)?
     var onReal3DChanged: ((Bool) -> Void)?
     var onRenderInfoRequested: (() -> String)?
+    var onModelBoundsRequested: (() -> String)?
     var onPerchRequested: (() -> Void)?
     var onAutoPerchChanged: ((Bool) -> Void)?
+    var onDockPerchRequested: (() -> Void)?
+    var onJumpRequested: (() -> Void)?
+    var onRoamChanged: ((Bool) -> Void)?
+    var onGravityChanged: ((Bool) -> Void)?
+    var onSoftHideRequested: (() -> Void)?
+    var onComeBackRequested: (() -> Void)?
     var onSpriteInfoRequested: (() -> String)?
 
     override init() {
@@ -142,6 +149,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /real3d on
         /real3d off
         /renderinfo
+        /modelbounds
 
         """
 
@@ -426,6 +434,68 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
+
+        if lowered == "/perch dock" {
+            onDockPerchRequested?()
+            append("Lucy: perching near the Dock.\n\n")
+            return
+        }
+
+        if lowered == "/jump" {
+            onJumpRequested?()
+            append("Lucy: jumping away!\n\n")
+            return
+        }
+
+
+
+        if lowered == "/hide"
+            || lowered == "hide"
+            || lowered == "hide lucy"
+            || lowered.contains("hide until")
+            || lowered.contains("go hide")
+            || lowered.contains("disappear") {
+            onSoftHideRequested?()
+            append("Lucy: okay, I’ll hide. Say `come back` when you want me back.\n\n")
+            return
+        }
+
+        if lowered == "/comeback"
+            || lowered == "/come back"
+            || lowered == "come back"
+            || lowered == "come back lucy"
+            || lowered == "lucy come back"
+            || lowered == "show yourself"
+            || lowered == "show lucy" {
+            onComeBackRequested?()
+            append("Lucy: I’m back.\n\n")
+            return
+        }
+
+        if lowered == "/gravity on" {
+            onGravityChanged?(true)
+            append("Lucy: gravity mode is on. I’ll try to jump, but I keep falling back down.\n\n")
+            return
+        }
+
+        if lowered == "/gravity off" {
+            onGravityChanged?(false)
+            append("Lucy: gravity mode is off.\n\n")
+            return
+        }
+
+        if lowered == "/roam on" {
+            onRoamChanged?(true)
+            append("Lucy: roam mode is on. I’ll occasionally perch or jump around.\n\n")
+            return
+        }
+
+        if lowered == "/roam off" {
+            onRoamChanged?(false)
+            append("Lucy: roam mode is off.\n\n")
+            return
+        }
+
         if lowered == "/perch" || lowered == "perch" {
             onPerchRequested?()
             append("Lucy: finding a place to perch.\n\n")
@@ -441,6 +511,13 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         if lowered == "/perch off" {
             onAutoPerchChanged?(false)
             append("Lucy: auto-perch is off.\n\n")
+            return
+        }
+
+
+        if lowered == "/modelbounds" {
+            let result = onModelBoundsRequested?() ?? "Model bounds are not wired."
+            append("Lucy Model Bounds:\n\(result)\n\n")
             return
         }
 
