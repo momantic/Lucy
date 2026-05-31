@@ -80,7 +80,7 @@ class LucySceneView: SCNView {
         let modelURL = LucyPaths.root
             .appendingPathComponent("assets")
             .appendingPathComponent("scenekit")
-            .appendingPathComponent("lucy_spider_colored.obj")
+            .appendingPathComponent("lucy_spider_v1.obj")
 
         guard FileManager.default.fileExists(atPath: modelURL.path) else {
             addFallbackCube(reason: "model missing at \(modelURL.path)")
@@ -246,7 +246,7 @@ class LucySceneView: SCNView {
         let modelURL = LucyPaths.root
             .appendingPathComponent("assets")
             .appendingPathComponent("scenekit")
-            .appendingPathComponent("lucy_spider_colored.obj")
+            .appendingPathComponent("lucy_spider_v1.obj")
 
         let bbox = modelNode.boundingBox
 
