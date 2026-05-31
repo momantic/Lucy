@@ -8,6 +8,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var lastManualInteraction = Date.distantPast
     var fleeVelocityX: CGFloat = 0
     var fleeVelocityY: CGFloat = 0
+    var fleeDodgeBias: CGFloat = 0
+    var fleeSpeedBias: CGFloat = 1
+    var nextFleePersonalityChange = Date.distantPast
+    var fleeBurstUntil = Date.distantPast
+    var nextIdleScootTime = Date().addingTimeInterval(Double.random(in: 5.0...12.0))
     var window: NSWindow!
     var petView: ClickablePetView!
     var chatController: ChatWindowController?
@@ -189,11 +194,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+
+    func maybeDoIdleScoot() {
+        let now = Date()
+        guard now > nextIdleScootTime else {
+            return
+        }
+
+        nextIdleScootTime = now.addingTimeInterval(Double.random(in: 7.0...16.0))
+
+        // Small self-directed shift. Feels alive, not like fleeing.
+        var frame = window.frame
+        frame.origin.x += CGFloat.random(in: -18...18)
+        frame.origin.y += CGFloat.random(in: -10...14)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Double.random(in: 0.35...0.65)
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.window.animator().setFrame(self.clampFrameToScreen(frame), display: true)
+        }
+    }
+
+
     func runAwayFromCursor(mouse: NSPoint, distance: CGFloat) {
         guard distance > 1 else {
             return
         }
 
+        let now = Date()
         let frame = window.frame
         let center = NSPoint(x: frame.midX, y: frame.midY)
 
@@ -204,27 +232,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let normalizedX = awayX / length
         let normalizedY = awayY / length
 
-        // Closer cursor = stronger flee.
-        let closeness = max(0, min(1, (150 - distance) / 150))
+        // Update personality less often so she curves naturally instead of jittering.
+        if now > nextFleePersonalityChange {
+            nextFleePersonalityChange = now.addingTimeInterval(Double.random(in: 0.45...1.15))
+            fleeDodgeBias = CGFloat.random(in: -0.42...0.42)
+            fleeSpeedBias = CGFloat.random(in: 0.88...1.22)
 
-        // Slight randomness makes Lucy feel less robotic.
-        let randomSpeed = CGFloat.random(in: 0.75...1.35)
-        let burstChance = CGFloat.random(in: 0...1)
-        let burst = burstChance < 0.10 ? CGFloat.random(in: 1.4...2.2) : 1.0
+            // Rare little "panic hop" burst.
+            if CGFloat.random(in: 0...1) < 0.18 {
+                fleeBurstUntil = now.addingTimeInterval(Double.random(in: 0.16...0.32))
+            }
+        }
 
-        // Perpendicular drift makes her dodge/curve instead of always running straight.
-        let dodge = CGFloat.random(in: -0.55...0.55) * closeness
+        let closeness = max(0, min(1, (165 - distance) / 165))
+
+        // Curved path: persistent side bias, stronger when cursor is close.
+        let dodge = fleeDodgeBias * closeness
         let dodgeX = -normalizedY * dodge
         let dodgeY = normalizedX * dodge
 
-        let desiredSpeed = CGFloat(2.2 + closeness * 8.5) * randomSpeed * burst
+        var desiredSpeed = CGFloat(1.8 + closeness * 7.2) * fleeSpeedBias
 
-        let targetVX = (normalizedX + dodgeX) * desiredSpeed
-        let targetVY = (normalizedY + dodgeY) * desiredSpeed
+        if now < fleeBurstUntil {
+            desiredSpeed *= CGFloat.random(in: 1.35...1.65)
+        }
 
-        // Quicker acceleration than before, still smoothed.
-        fleeVelocityX += (targetVX - fleeVelocityX) * 0.30
-        fleeVelocityY += (targetVY - fleeVelocityY) * 0.30
+        // Normalize after dodge so diagonal dodges do not become too fast.
+        let moveX = normalizedX + dodgeX
+        let moveY = normalizedY + dodgeY
+        let moveLength = max(0.001, sqrt(moveX * moveX + moveY * moveY))
+
+        let targetVX = (moveX / moveLength) * desiredSpeed
+        let targetVY = (moveY / moveLength) * desiredSpeed
+
+        // Smooth acceleration/deceleration.
+        let acceleration = CGFloat(0.18 + closeness * 0.12)
+        fleeVelocityX += (targetVX - fleeVelocityX) * acceleration
+        fleeVelocityY += (targetVY - fleeVelocityY) * acceleration
+
+        // Tiny natural damping so she settles instead of sliding forever.
+        fleeVelocityX *= 0.985
+        fleeVelocityY *= 0.985
 
         var newFrame = frame
         newFrame.origin.x += fleeVelocityX
@@ -281,6 +329,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.fleeVelocityX *= 0.90
                 self.fleeVelocityY *= 0.90
                 self.sceneView.lookToward(dx: 0, dy: 0)
+                self.maybeDoIdleScoot()
                 self.petView.setState(.idle, mood: "")
                 return
             }
