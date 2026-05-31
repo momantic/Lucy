@@ -7,6 +7,13 @@ class LucySceneView: SCNView {
     var idleTimer: Timer?
     var lookTargetX: CGFloat = 0
     var lookTargetY: CGFloat = 0
+    var curiosityOffsetX: CGFloat = 0
+    var curiosityOffsetY: CGFloat = 0
+    var targetCuriosityOffsetX: CGFloat = 0
+    var targetCuriosityOffsetY: CGFloat = 0
+    var nextFidgetTime: TimeInterval = 0
+    var runEnergy: CGFloat = 0
+    var baseModelScale = SCNVector3(1, 1, 1)
     var onDoubleClick: (() -> Void)?
     var onDrag: ((CGFloat, CGFloat) -> Void)?
     var modelLoaded = false
@@ -101,6 +108,7 @@ class LucySceneView: SCNView {
             }
 
             normalize(node: modelContainer)
+            baseModelScale = modelContainer.scale
             applyFallbackMaterials(to: modelContainer)
 
             // Base orientation for Blender/OBJ converted Lucy.
@@ -212,22 +220,64 @@ class LucySceneView: SCNView {
     func tickIdle() {
         let now = CACurrentMediaTime()
 
-        let bob = CGFloat(sin(now * 2.0) * 0.06)
-        modelNode.position.y = bob
+        // Occasionally choose a tiny curiosity/fidget target.
+        if now > nextFidgetTime {
+            nextFidgetTime = now + Double.random(in: 1.4...3.8)
+            targetCuriosityOffsetX = CGFloat.random(in: -0.16...0.16)
+            targetCuriosityOffsetY = CGFloat.random(in: -0.10...0.10)
+        }
+
+        curiosityOffsetX += (targetCuriosityOffsetX - curiosityOffsetX) * 0.035
+        curiosityOffsetY += (targetCuriosityOffsetY - curiosityOffsetY) * 0.035
+
+        let attention = min(1.0, abs(lookTargetX) + abs(lookTargetY))
+
+        // Breathing + little life motion.
+        let breath = CGFloat(sin(now * 2.0) * 0.055)
+        let tinyTremble = CGFloat(sin(now * 7.0) * 0.007) * attention
+        let curiousLift = attention * 0.05
+
+        modelNode.position.y = breath + tinyTremble + curiousLift
 
         // Base yaw controls Lucy's default facing direction.
-        // The lookTargetX value is then added on top so she can still look toward the cursor.
         let baseYaw = CGFloat(-Double.pi / 2)
-        let targetYaw = baseYaw + lookTargetX * 0.65
-        let targetPitch = -lookTargetY * 0.20
 
-        modelNode.eulerAngles.y = modelNode.eulerAngles.y + (targetYaw - modelNode.eulerAngles.y) * 0.12
-        modelNode.eulerAngles.x = modelNode.eulerAngles.x + (targetPitch - modelNode.eulerAngles.x) * 0.08
+        // Softer non-linear look: small movements show, but extremes do not snap too hard.
+        let softenedLookX = tanh(lookTargetX * 1.15)
+        let softenedLookY = tanh(lookTargetY * 1.05)
+
+        let targetYaw = baseYaw + softenedLookX * 1.25 + curiosityOffsetX
+        let targetPitch = -softenedLookY * 0.46 + curiosityOffsetY
+
+        // Organic roll/tilt.
+        let idleRoll = CGFloat(sin(now * 1.25) * 0.025)
+        let targetRoll = -softenedLookX * 0.22 + idleRoll
+
+        // Faster when paying attention, slower when idle.
+        let yawEase = 0.13 + attention * 0.12
+        let pitchEase = 0.10 + attention * 0.09
+        let rollEase = 0.09 + attention * 0.08
+
+        modelNode.eulerAngles.y = modelNode.eulerAngles.y + (targetYaw - modelNode.eulerAngles.y) * yawEase
+        modelNode.eulerAngles.x = modelNode.eulerAngles.x + (targetPitch - modelNode.eulerAngles.x) * pitchEase
+        modelNode.eulerAngles.z = modelNode.eulerAngles.z + (targetRoll - modelNode.eulerAngles.z) * rollEase
+
+        // Very subtle breathing scale, preserving the normalized model scale.
+        let scalePulse = CGFloat(1.0 + sin(now * 2.0) * 0.012)
+        modelNode.scale = SCNVector3(
+            baseModelScale.x * scalePulse,
+            baseModelScale.y * scalePulse,
+            baseModelScale.z * scalePulse
+        )
     }
 
     func lookToward(dx: CGFloat, dy: CGFloat) {
-        lookTargetX = max(-1.0, min(1.0, dx / 180.0))
-        lookTargetY = max(-1.0, min(1.0, dy / 180.0))
+        let targetX = max(-1.0, min(1.0, dx / 80.0))
+        let targetY = max(-1.0, min(1.0, dy / 105.0))
+
+        // Smooth target itself so cursor tracking feels alive, not robotic.
+        lookTargetX += (targetX - lookTargetX) * 0.28
+        lookTargetY += (targetY - lookTargetY) * 0.24
     }
 
 

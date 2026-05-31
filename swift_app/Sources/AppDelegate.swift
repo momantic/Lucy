@@ -6,6 +6,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var real3DMode = UserDefaults.standard.bool(forKey: "lucy.real3DMode")
     var isDraggingLucy = false
     var lastManualInteraction = Date.distantPast
+    var fleeVelocityX: CGFloat = 0
+    var fleeVelocityY: CGFloat = 0
     var window: NSWindow!
     var petView: ClickablePetView!
     var chatController: ChatWindowController?
@@ -174,6 +176,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func dragLucyBy(dx: CGFloat, dy: CGFloat) {
         isDraggingLucy = true
         lastManualInteraction = Date()
+        fleeVelocityX = 0
+        fleeVelocityY = 0
 
         var frame = window.frame
         frame.origin.x += dx
@@ -200,13 +204,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let normalizedX = awayX / length
         let normalizedY = awayY / length
 
-        // Gentle speed: closer cursor = slightly faster, but never teleporting.
-        let closeness = max(0, min(1, (130 - distance) / 130))
-        let step = CGFloat(2.0 + closeness * 7.0)
+        // Gentle acceleration: close cursor adds energy, but motion stays pet-like.
+        let closeness = max(0, min(1, (145 - distance) / 145))
+        let desiredSpeed = CGFloat(1.2 + closeness * 4.8)
+
+        let targetVX = normalizedX * desiredSpeed
+        let targetVY = normalizedY * desiredSpeed
+
+        fleeVelocityX += (targetVX - fleeVelocityX) * 0.18
+        fleeVelocityY += (targetVY - fleeVelocityY) * 0.18
 
         var newFrame = frame
-        newFrame.origin.x += normalizedX * step
-        newFrame.origin.y += normalizedY * step
+        newFrame.origin.x += fleeVelocityX
+        newFrame.origin.y += fleeVelocityY
 
         LucyRuntime.shared.facingRight = normalizedX >= 0
         window.setFrame(clampFrameToScreen(newFrame), display: true)
@@ -240,6 +250,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let touchZone = normalizedX * normalizedX + normalizedY * normalizedY <= 1.0
 
             if touchZone || self.isDraggingLucy {
+                self.fleeVelocityX *= 0.65
+                self.fleeVelocityY *= 0.65
                 self.sceneView.lookToward(dx: dx, dy: dy)
                 self.petView.setState(.idle, mood: "hi")
                 return
