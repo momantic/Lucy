@@ -56,6 +56,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             chatController?.onHideRequested = {
                 self.hideLucyTemporarily()
             }
+
+            chatController?.onUse3DChanged = { enabled in
+                self.petView.setUse3DSprites(enabled)
+            }
+
+            chatController?.onSpriteInfoRequested = {
+                return self.petView.spriteInfoText()
+            }
+
+
         }
 
         chatController?.show()

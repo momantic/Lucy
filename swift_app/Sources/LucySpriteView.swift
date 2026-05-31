@@ -2,6 +2,10 @@ import Cocoa
 import Foundation
 
 class LucySpriteView: NSView {
+
+    var use3DSprites = UserDefaults.standard.bool(forKey: "lucy.use3DSprites")
+    var spriteFrames: [LucyState: [NSImage]] = [:]
+
     var state: LucyState = .idle
     var frameIndex = 0
     var mood = "Lucy"
@@ -34,8 +38,164 @@ class LucySpriteView: NSView {
         needsDisplay = true
     }
 
+
+
+    func spriteInfoText() -> String {
+        loadSpriteFrames()
+
+        let root = LucyPaths.root
+            .appendingPathComponent("assets")
+            .appendingPathComponent("sprites")
+            .appendingPathComponent("lucy")
+
+        let idleCount = spriteFrames[.idle]?.count ?? 0
+        let crawlCount = spriteFrames[.crawl]?.count ?? 0
+        let hopCount = spriteFrames[.hop]?.count ?? 0
+
+        return """
+        3D sprite mode: \(use3DSprites)
+        Sprite root: \(root.path)
+        Idle frames: \(idleCount)
+        Crawl frames: \(crawlCount)
+        Hop frames: \(hopCount)
+        Root exists: \(FileManager.default.fileExists(atPath: root.path))
+        """
+    }
+
+
+    func setUse3DSprites(_ enabled: Bool) {
+        use3DSprites = enabled
+        UserDefaults.standard.set(enabled, forKey: "lucy.use3DSprites")
+
+        if enabled {
+            loadSpriteFrames()
+        }
+
+        needsDisplay = true
+    }
+
+    func spriteDirectory(for state: LucyState) -> String {
+        switch state {
+        case .crawl:
+            return "crawl"
+        case .hop:
+            return "hop"
+        default:
+            return "idle"
+        }
+    }
+
+    func spritePrefix(for state: LucyState) -> String {
+        switch state {
+        case .crawl:
+            return "crawl"
+        case .hop:
+            return "hop"
+        default:
+            return "idle"
+        }
+    }
+
+    func loadSpriteFrames() {
+        spriteFrames.removeAll()
+
+        let root = LucyPaths.root
+            .appendingPathComponent("assets")
+            .appendingPathComponent("sprites")
+            .appendingPathComponent("lucy")
+
+        let mappings: [(LucyState, String, String)] = [
+            (.idle, "idle", "idle"),
+            (.crawl, "crawl", "crawl"),
+            (.hop, "hop", "hop"),
+            (.thinking, "idle", "idle"),
+            (.hidden, "idle", "idle")
+        ]
+
+        for (state, folder, prefix) in mappings {
+            let dir = root.appendingPathComponent(folder)
+
+            guard let files = try? FileManager.default.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: nil
+            ) else {
+                continue
+            }
+
+            let pngs = files
+                .filter { $0.pathExtension.lowercased() == "png" }
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+            let preferred = pngs.filter { $0.lastPathComponent.lowercased().hasPrefix(prefix + "_") }
+            let selected = preferred.isEmpty ? pngs : preferred
+
+            let images = selected.compactMap { NSImage(contentsOf: $0) }
+
+            if !images.isEmpty {
+                spriteFrames[state] = images
+            }
+        }
+
+        needsDisplay = true
+    }
+
+    func drawSpriteFrame(in dirtyRect: NSRect) -> Bool {
+        guard use3DSprites else {
+            return false
+        }
+
+        let frames = spriteFrames[state] ?? spriteFrames[.idle] ?? []
+
+        guard !frames.isEmpty else {
+            return false
+        }
+
+        let image = frames[frameIndex % frames.count]
+
+        NSGraphicsContext.current?.imageInterpolation = .high
+
+        let padding: CGFloat = 6
+        let targetRect = bounds.insetBy(dx: padding, dy: padding)
+
+        if LucyRuntime.shared.facingRight {
+            image.draw(in: targetRect)
+        } else {
+            NSGraphicsContext.saveGraphicsState()
+
+            let transform = NSAffineTransform()
+            transform.translateX(by: bounds.width, yBy: 0)
+            transform.scaleX(by: -1, yBy: 1)
+            transform.concat()
+
+            image.draw(in: targetRect)
+            NSGraphicsContext.restoreGraphicsState()
+        }
+
+        drawMoodText()
+        return true
+    }
+
+    func drawMoodText() {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: 13),
+            .foregroundColor: NSColor.white,
+            .paragraphStyle: paragraph
+        ]
+
+        let textRect = NSRect(x: 0, y: bounds.height - 26, width: bounds.width, height: 20)
+        mood.draw(in: textRect, withAttributes: attributes)
+    }
+
+
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+
+        if state != .hidden && drawSpriteFrame(in: dirtyRect) {
+            return
+        }
 
         if state == .hidden {
             drawHiddenState()
@@ -285,29 +445,4 @@ class LucySpriteView: NSView {
         NSBezierPath(ovalIn: NSRect(x: centerX + 22 + eyeOffsetX, y: eyeY + 10, width: 2.2, height: 2.2)).fill()
     }
 
-    func drawMoodText() {
-        let style = NSMutableParagraphStyle()
-        style.alignment = .center
-
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 17),
-            .foregroundColor: NSColor.labelColor,
-            .paragraphStyle: style
-        ]
-
-        let displayMood: String
-
-        if state == .thinking {
-            let dots = ["", ".", "..", "..."][frameIndex % 4]
-            displayMood = "\(mood)\(dots)"
-        } else {
-            displayMood = mood
-        }
-
-        let text = displayMood as NSString
-        text.draw(
-            in: NSRect(x: 0, y: 12, width: bounds.width, height: 24),
-            withAttributes: attrs
-        )
-    }
 }

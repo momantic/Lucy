@@ -68,6 +68,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     var preferredBrowser = LucySettings.shared.browserPreference()
 
     var onHideRequested: (() -> Void)?
+    var onUse3DChanged: ((Bool) -> Void)?
+    var onSpriteInfoRequested: (() -> String)?
 
     override init() {
         super.init()
@@ -130,6 +132,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /autodev next
         /build your goal here
         /develop your goal here
+        /use3d on
+        /use3d off
 
         """
 
@@ -397,6 +401,28 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             append("Lucy: The current time is \(now).\n\n")
             return
         }
+
+
+
+        if lowered == "/spriteinfo" {
+            let result = onSpriteInfoRequested?() ?? "Sprite info is not wired."
+            append("Lucy Sprite Info:\n\(result)\n\n")
+            return
+        }
+
+
+        if lowered == "/use3d on" {
+            onUse3DChanged?(true)
+            append("Lucy: 3D sprite mode is on.\n\n")
+            return
+        }
+
+        if lowered == "/use3d off" {
+            onUse3DChanged?(false)
+            append("Lucy: 3D sprite mode is off. I will use my old drawn body.\n\n")
+            return
+        }
+
 
         if lowered == "/ping" || lowered == "ping" {
             append("Lucy: pong\n\n")
