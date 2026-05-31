@@ -118,9 +118,9 @@ class LucySceneView: SCNView {
         bodyMaterial.name = "LucyDarkBody"
         bodyMaterial.diffuse.contents = NSColor(calibratedRed: 0.055, green: 0.045, blue: 0.075, alpha: 1.0)
         bodyMaterial.ambient.contents = NSColor(calibratedRed: 0.055, green: 0.045, blue: 0.075, alpha: 1.0)
-        bodyMaterial.specular.contents = NSColor(calibratedWhite: 0.25, alpha: 1.0)
-        bodyMaterial.emission.contents = NSColor(calibratedRed: 0.018, green: 0.015, blue: 0.025, alpha: 1.0)
-        bodyMaterial.shininess = 0.18
+        bodyMaterial.specular.contents = NSColor(calibratedWhite: 0.35, alpha: 1.0)
+        bodyMaterial.emission.contents = NSColor(calibratedRed: 0.012, green: 0.010, blue: 0.018, alpha: 1.0)
+        bodyMaterial.shininess = 0.22
         bodyMaterial.lightingModel = .blinn
         bodyMaterial.isDoubleSided = true
 
@@ -139,7 +139,7 @@ class LucySceneView: SCNView {
         }
 
         apply(to: node)
-        print("LucySceneView: applied fallback material to \(geometryCount) geometries")
+        print("LucySceneView: forced dark stylized material on \(geometryCount) geometries")
     }
 
 
