@@ -225,9 +225,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let dy = mouse.y - center.y
             let distance = sqrt(dx * dx + dy * dy)
 
-            // If the cursor is actually over Lucy's body/window, stop running.
-            // This lets you double-click or drag her.
-            let touchZone = frame.insetBy(dx: -8, dy: -8).contains(mouse)
+            // If the cursor is actually over Lucy's approximate body area, stop running.
+            // The pet window is 180x180, but much of it is transparent space.
+            // This smaller oval-ish body zone makes Lucy easier to avoid/catch naturally.
+            let bodyZone = NSRect(
+                x: frame.midX - frame.width * 0.28,
+                y: frame.midY - frame.height * 0.26,
+                width: frame.width * 0.56,
+                height: frame.height * 0.52
+            )
+
+            let normalizedX = (mouse.x - bodyZone.midX) / max(1, bodyZone.width / 2)
+            let normalizedY = (mouse.y - bodyZone.midY) / max(1, bodyZone.height / 2)
+            let touchZone = normalizedX * normalizedX + normalizedY * normalizedY <= 1.0
 
             if touchZone || self.isDraggingLucy {
                 self.sceneView.lookToward(dx: dx, dy: dy)
