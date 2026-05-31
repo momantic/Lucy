@@ -71,6 +71,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     var onUse3DChanged: ((Bool) -> Void)?
     var onReal3DChanged: ((Bool) -> Void)?
     var onRenderInfoRequested: (() -> String)?
+    var onScreenInfoRequested: (() -> String)?
     var onModelBoundsRequested: (() -> String)?
     var onPerchRequested: (() -> Void)?
     var onAutoPerchChanged: ((Bool) -> Void)?
@@ -347,6 +348,74 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         input.stringValue = ""
         append("You: \(userText)\n")
+
+        if let ollamaIntent = LucyOllamaIntentRouter.shared.routeSync(userText) {
+            let reply = ollamaIntent.reply.isEmpty ? nil : ollamaIntent.reply
+
+            switch ollamaIntent.action {
+            case "soft_hide":
+                onSoftHideRequested?()
+                append("Lucy: \(reply ?? "Okay, I’ll hide. Say `come back` when you want me back.")\n\n")
+                return
+
+            case "come_back":
+                onComeBackRequested?()
+                append("Lucy: \(reply ?? "I’m back.")\n\n")
+                return
+
+            case "gravity_on":
+                onGravityChanged?(true)
+                append("Lucy: \(reply ?? "Gravity mode is on.")\n\n")
+                return
+
+            case "gravity_off":
+                onGravityChanged?(false)
+                append("Lucy: \(reply ?? "Gravity mode is off.")\n\n")
+                return
+
+            case "jump":
+                onJumpRequested?()
+                append("Lucy: \(reply ?? "Jumping away!")\n\n")
+                return
+
+            case "dock_perch":
+                onDockPerchRequested?()
+                append("Lucy: \(reply ?? "Perching near the Dock.")\n\n")
+                return
+
+            case "roam_on":
+                onRoamChanged?(true)
+                append("Lucy: \(reply ?? "Roam mode is on.")\n\n")
+                return
+
+            case "roam_off":
+                onRoamChanged?(false)
+                append("Lucy: \(reply ?? "Roam mode is off.")\n\n")
+                return
+
+            case "screen_info":
+                let result = onScreenInfoRequested?() ?? "Screen info is not wired."
+                append("Lucy Screen Info:\n\(result)\n\n")
+                return
+
+            case "render_info":
+                let result = onRenderInfoRequested?() ?? "Render info is not wired."
+                append("Lucy Render Info:\n\(result)\n\n")
+                return
+
+            case "model_bounds":
+                let result = onModelBoundsRequested?() ?? "Model bounds are not wired."
+                append("Lucy Model Bounds:\n\(result)\n\n")
+                return
+
+            case "normal_chat":
+                break
+
+            default:
+                break
+            }
+        }
+
 
         let lowered = userText.lowercased()
 
