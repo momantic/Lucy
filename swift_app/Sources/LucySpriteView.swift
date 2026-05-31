@@ -5,6 +5,7 @@ class LucySpriteView: NSView {
 
     var use3DSprites = UserDefaults.standard.bool(forKey: "lucy.use3DSprites")
     var spriteFrames: [LucyState: [NSImage]] = [:]
+    var spriteFrameTick = 0
 
     var state: LucyState = .idle
     var frameIndex = 0
@@ -38,6 +39,26 @@ class LucySpriteView: NSView {
         needsDisplay = true
     }
 
+
+
+
+    func advanceSpriteFrame() {
+        spriteFrameTick += 1
+        needsDisplay = true
+    }
+
+    func spritePlaybackDivisor(for state: LucyState) -> Int {
+        switch state {
+        case .crawl:
+            return 1
+        case .hop:
+            return 1
+        case .thinking:
+            return 3
+        default:
+            return 2
+        }
+    }
 
 
     func spriteInfoText() -> String {
@@ -150,7 +171,9 @@ class LucySpriteView: NSView {
             return false
         }
 
-        let image = frames[frameIndex % frames.count]
+        let divisor = max(1, spritePlaybackDivisor(for: state))
+        let index = (spriteFrameTick / divisor) % frames.count
+        let image = frames[index]
 
         NSGraphicsContext.current?.imageInterpolation = .high
 
