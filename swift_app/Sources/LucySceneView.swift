@@ -14,6 +14,10 @@ class LucySceneView: SCNView {
     var nextFidgetTime: TimeInterval = 0
     var runEnergy: CGFloat = 0
     var baseModelScale = SCNVector3(1, 1, 1)
+    var hopImpulse: CGFloat = 0
+    var nextMicroHopTime: TimeInterval = 0
+    var settleEnergy: CGFloat = 0
+    var lastAttention: CGFloat = 0
     var onDoubleClick: (() -> Void)?
     var onDrag: ((CGFloat, CGFloat) -> Void)?
     var modelLoaded = false
@@ -222,48 +226,67 @@ class LucySceneView: SCNView {
 
         // Occasionally choose a tiny curiosity/fidget target.
         if now > nextFidgetTime {
-            nextFidgetTime = now + Double.random(in: 1.4...3.8)
-            targetCuriosityOffsetX = CGFloat.random(in: -0.16...0.16)
-            targetCuriosityOffsetY = CGFloat.random(in: -0.10...0.10)
+            nextFidgetTime = now + Double.random(in: 1.2...3.4)
+            targetCuriosityOffsetX = CGFloat.random(in: -0.13...0.13)
+            targetCuriosityOffsetY = CGFloat.random(in: -0.08...0.08)
         }
 
-        curiosityOffsetX += (targetCuriosityOffsetX - curiosityOffsetX) * 0.035
-        curiosityOffsetY += (targetCuriosityOffsetY - curiosityOffsetY) * 0.035
+        curiosityOffsetX += (targetCuriosityOffsetX - curiosityOffsetX) * 0.028
+        curiosityOffsetY += (targetCuriosityOffsetY - curiosityOffsetY) * 0.028
 
         let attention = min(1.0, abs(lookTargetX) + abs(lookTargetY))
 
-        // Breathing + little life motion.
-        let breath = CGFloat(sin(now * 2.0) * 0.055)
-        let tinyTremble = CGFloat(sin(now * 7.0) * 0.007) * attention
-        let curiousLift = attention * 0.05
+        // Detect sudden attention changes for a little "noticed you!" settle.
+        let attentionDelta = max(0, attention - lastAttention)
+        if attentionDelta > 0.25 {
+            settleEnergy = min(1.0, settleEnergy + attentionDelta * 0.55)
+        }
+        lastAttention = attention
+        settleEnergy *= 0.94
 
-        modelNode.position.y = breath + tinyTremble + curiousLift
+        // Occasional micro-hop when idle or curious.
+        if now > nextMicroHopTime {
+            nextMicroHopTime = now + Double.random(in: 4.0...8.5)
+
+            if attention < 0.45 {
+                hopImpulse = CGFloat.random(in: 0.055...0.11)
+            }
+        }
+
+        hopImpulse *= 0.88
+
+        // Breathing + tiny life motion.
+        let breath = CGFloat(sin(now * 2.0) * 0.050)
+        let tinyTremble = CGFloat(sin(now * 8.0) * 0.006) * attention
+        let curiousLift = attention * 0.045
+        let settleBounce = CGFloat(sin(now * 8.5)) * settleEnergy * 0.035
+
+        modelNode.position.y = breath + tinyTremble + curiousLift + hopImpulse + settleBounce
 
         // Base yaw controls Lucy's default facing direction.
         let baseYaw = CGFloat(-Double.pi / 2)
 
-        // Softer non-linear look: small movements show, but extremes do not snap too hard.
-        let softenedLookX = tanh(lookTargetX * 1.15)
-        let softenedLookY = tanh(lookTargetY * 1.05)
+        // Softer non-linear look: visible but not snappy.
+        let softenedLookX = tanh(lookTargetX * 1.10)
+        let softenedLookY = tanh(lookTargetY * 1.00)
 
-        let targetYaw = baseYaw + softenedLookX * 1.25 + curiosityOffsetX
-        let targetPitch = -softenedLookY * 0.46 + curiosityOffsetY
+        let targetYaw = baseYaw + softenedLookX * 1.10 + curiosityOffsetX
+        let targetPitch = -softenedLookY * 0.38 + curiosityOffsetY
 
-        // Organic roll/tilt.
-        let idleRoll = CGFloat(sin(now * 1.25) * 0.025)
-        let targetRoll = -softenedLookX * 0.22 + idleRoll
+        // Organic tilt: curiosity + tiny idle sway.
+        let idleRoll = CGFloat(sin(now * 1.15) * 0.022)
+        let targetRoll = -softenedLookX * 0.18 + idleRoll + settleEnergy * 0.045
 
-        // Faster when paying attention, slower when idle.
-        let yawEase = 0.13 + attention * 0.12
-        let pitchEase = 0.10 + attention * 0.09
-        let rollEase = 0.09 + attention * 0.08
+        let yawEase = 0.10 + attention * 0.09
+        let pitchEase = 0.08 + attention * 0.07
+        let rollEase = 0.07 + attention * 0.07
 
         modelNode.eulerAngles.y = modelNode.eulerAngles.y + (targetYaw - modelNode.eulerAngles.y) * yawEase
         modelNode.eulerAngles.x = modelNode.eulerAngles.x + (targetPitch - modelNode.eulerAngles.x) * pitchEase
         modelNode.eulerAngles.z = modelNode.eulerAngles.z + (targetRoll - modelNode.eulerAngles.z) * rollEase
 
-        // Very subtle breathing scale, preserving the normalized model scale.
-        let scalePulse = CGFloat(1.0 + sin(now * 2.0) * 0.012)
+        // Breathing scale, preserving the normalized model scale.
+        let scalePulse = CGFloat(1.0 + sin(now * 2.0) * 0.010 + settleEnergy * 0.012)
         modelNode.scale = SCNVector3(
             baseModelScale.x * scalePulse,
             baseModelScale.y * scalePulse,
@@ -272,12 +295,12 @@ class LucySceneView: SCNView {
     }
 
     func lookToward(dx: CGFloat, dy: CGFloat) {
-        let targetX = max(-1.0, min(1.0, dx / 80.0))
-        let targetY = max(-1.0, min(1.0, dy / 105.0))
+        let targetX = max(-1.0, min(1.0, dx / 88.0))
+        let targetY = max(-1.0, min(1.0, dy / 115.0))
 
         // Smooth target itself so cursor tracking feels alive, not robotic.
-        lookTargetX += (targetX - lookTargetX) * 0.28
-        lookTargetY += (targetY - lookTargetY) * 0.24
+        lookTargetX += (targetX - lookTargetX) * 0.22
+        lookTargetY += (targetY - lookTargetY) * 0.20
     }
 
 

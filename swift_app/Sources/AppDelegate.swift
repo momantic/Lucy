@@ -204,15 +204,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let normalizedX = awayX / length
         let normalizedY = awayY / length
 
-        // Gentle acceleration: close cursor adds energy, but motion stays pet-like.
+        // Gentle acceleration; close cursor adds urgency but no teleporting.
         let closeness = max(0, min(1, (145 - distance) / 145))
-        let desiredSpeed = CGFloat(1.2 + closeness * 4.8)
+        let desiredSpeed = CGFloat(0.9 + closeness * 4.2)
 
         let targetVX = normalizedX * desiredSpeed
         let targetVY = normalizedY * desiredSpeed
 
-        fleeVelocityX += (targetVX - fleeVelocityX) * 0.18
-        fleeVelocityY += (targetVY - fleeVelocityY) * 0.18
+        fleeVelocityX += (targetVX - fleeVelocityX) * 0.15
+        fleeVelocityY += (targetVY - fleeVelocityY) * 0.15
 
         var newFrame = frame
         newFrame.origin.x += fleeVelocityX
@@ -250,8 +250,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let touchZone = normalizedX * normalizedX + normalizedY * normalizedY <= 1.0
 
             if touchZone || self.isDraggingLucy {
-                self.fleeVelocityX *= 0.65
-                self.fleeVelocityY *= 0.65
+                self.fleeVelocityX *= 0.55
+                self.fleeVelocityY *= 0.55
                 self.sceneView.lookToward(dx: dx, dy: dy)
                 self.petView.setState(.idle, mood: "hi")
                 return
@@ -277,6 +277,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.petView.setState(.crawl, mood: "eep!")
                 return
             }
+
+            self.fleeVelocityX *= 0.92
+            self.fleeVelocityY *= 0.92
 
             if distance < 220 {
                 self.petView.setState(.idle, mood: "watching 👀")
