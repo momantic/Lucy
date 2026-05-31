@@ -85,7 +85,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         output.isEditable = false
         output.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         output.string = """
-        Lucy: Hi, I’m Lucy. Dev Mode v0.5 is active.
+        Lucy: Hi, I’m Lucy. Dev Mode v0.5 is active. Click Listen to speak with me.
 
         You can use flexible wording. I will try to understand typos and different phrasings:\n        \n        Examples:
         - open google
@@ -120,15 +120,21 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         /autodev roadmap
         /autodev next
         /build your goal here
+        /develop your goal here
 
         """
 
 
         scroll.documentView = output
 
-        input = NSTextField(frame: NSRect(x: 15, y: 20, width: 490, height: 30))
+        input = NSTextField(frame: NSRect(x: 15, y: 20, width: 390, height: 30))
         input.placeholderString = "Message Lucy..."
         input.delegate = self
+
+        let listenButton = NSButton(frame: NSRect(x: 415, y: 20, width: 90, height: 30))
+        listenButton.title = "Listen"
+        listenButton.target = self
+        listenButton.action = #selector(startDictation)
 
         let sendButton = NSButton(frame: NSRect(x: 515, y: 20, width: 90, height: 30))
         sendButton.title = "Send"
@@ -137,6 +143,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         root.addSubview(scroll)
         root.addSubview(input)
+        root.addSubview(listenButton)
         root.addSubview(sendButton)
 
         window.contentView = root
@@ -157,6 +164,32 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         sendMessage()
+    }
+
+
+
+    @objc func startDictation() {
+        input.becomeFirstResponder()
+
+        let started = NSApp.sendAction(
+            Selector(("startDictation:")),
+            to: nil,
+            from: input
+        )
+
+        if started {
+            append("Lucy: Listening... Speak now. Press Enter when the text appears.\n\n")
+        } else {
+            append("""
+            Lucy: I could not start macOS Dictation from here.
+
+            Try enabling Dictation:
+            System Settings → Keyboard → Dictation → On
+
+            You can also use your Mac's dictation shortcut while the Lucy input box is selected.
+
+            """)
+        }
     }
 
 
@@ -245,6 +278,16 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+
+        if lowered == "/time" || lowered == "time" || lowered == "what time is it" {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .full
+            formatter.timeStyle = .medium
+            let now = formatter.string(from: Date())
+
+            append("Lucy: The current time is \(now).\n\n")
+            return
+        }
 
         if lowered == "/ping" || lowered == "ping" {
             append("Lucy: pong\n\n")
@@ -357,6 +400,31 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
                 DispatchQueue.main.async {
                     self.append("Lucy Self Loop:\n\(result)\n\n")
+                }
+            }
+
+            return
+        }
+
+
+
+        if lowered.hasPrefix("/develop ") {
+            let goal = String(userText.dropFirst("/develop ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if goal.isEmpty {
+                append("Lucy: Tell me what to develop. Example: /develop add a safer notes manager\n\n")
+                return
+            }
+
+            append("Lucy: I will try to develop this capability myself:\n\(goal)\n\n")
+            append("Lucy: I will generate a dev task, run it, compile myself, and report back.\n\n")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = self.runLucyDeveloper(goal: goal)
+
+                DispatchQueue.main.async {
+                    self.append("Lucy Developer:\n\(result)\n\n")
                 }
             }
 
@@ -1995,6 +2063,48 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         return runDevAgentApply(task: taskName)
+    }
+
+
+
+    func runLucyDeveloper(goal: String) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["python3", "tools/lucy_developer.py", goal]
+        process.currentDirectoryURL = LucyPaths.root
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+
+            let timeoutSeconds = 300.0
+            let deadline = Date().addingTimeInterval(timeoutSeconds)
+
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.2)
+            }
+
+            if process.isRunning {
+                process.terminate()
+                return "Lucy Developer timed out after \(Int(timeoutSeconds)) seconds. I stopped it safely."
+            }
+
+            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+            let combined = [out, err]
+                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .joined(separator: "\n")
+
+            return combined.isEmpty ? "Lucy Developer finished with no output." : combined
+        } catch {
+            return "Could not run Lucy Developer: \(error.localizedDescription)"
+        }
     }
 
 
