@@ -722,6 +722,12 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+
+        if !userText.hasPrefix("/"), let unsupported = unsupportedCapabilityResponse(for: userText) {
+            append("Lucy:\n\(unsupported)\n\n")
+            return
+        }
+
         if !userText.hasPrefix("/") && routeNaturalSelfBuild(userText) {
             return
         }
@@ -1113,6 +1119,122 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         default:
             return false
         }
+    }
+
+
+
+    func unsupportedCapabilityResponse(for userText: String) -> String? {
+        let lowered = userText.lowercased()
+
+        let mentionsNote = lowered.contains("note") || lowered.contains("notes")
+        let destructive = lowered.contains("delete")
+            || lowered.contains("remove")
+            || lowered.contains("erase")
+            || lowered.contains("destroy")
+            || lowered.contains("clear")
+
+        let wantsEdit = lowered.contains("edit")
+            || lowered.contains("update")
+            || lowered.contains("change")
+            || lowered.contains("modify")
+            || lowered.contains("rewrite")
+
+        if mentionsNote && destructive {
+            return """
+            I understand you want me to delete a note.
+
+            I can create new Apple Notes notes, but I do not have a safe Notes deletion capability yet.
+
+            Deleting notes is risky because I could delete the wrong one. A safe Notes Manager should:
+            1. list matching notes first
+            2. show the exact title/date/content preview
+            3. ask you to confirm the exact note
+            4. delete only after confirmation
+
+            I did not delete anything.
+
+            Possible future selfbuild:
+            /selfbuild add notes manager
+            """
+        }
+
+        if mentionsNote && wantsEdit {
+            return """
+            I understand you want me to edit or update a note.
+
+            I can create new Apple Notes notes, but I do not have a safe Notes editing capability yet.
+
+            Editing notes is risky because I need to identify the exact note first. A safe Notes Manager should:
+            1. list candidate notes
+            2. ask which note you mean
+            3. preview the change
+            4. update only after confirmation
+
+            I did not edit anything.
+
+            Possible future selfbuild:
+            /selfbuild add notes manager
+            """
+        }
+
+        if lowered.contains("send") && (lowered.contains("email") || lowered.contains("gmail") || lowered.contains("mail")) {
+            return """
+            I understand you want me to send an email.
+
+            I can draft emails and open Gmail compose with the recipient, subject, and body filled in.
+            I will not click Send automatically yet.
+
+            Sending messages is a high-impact action, so the current safe flow is:
+            1. I draft the email.
+            2. I open Gmail compose.
+            3. You review it.
+            4. You click Send manually.
+
+            I did not send anything.
+            """
+        }
+
+        if lowered.contains("delete") && (lowered.contains("file") || lowered.contains("folder") || lowered.contains("project")) {
+            return """
+            I understand you want me to delete a file or folder.
+
+            I do not have a safe file deletion capability.
+            I can work inside my own project with backups and rollback, but I should not delete arbitrary files.
+
+            I did not delete anything.
+            """
+        }
+
+        if lowered.contains("buy")
+            || lowered.contains("purchase")
+            || lowered.contains("order ")
+            || lowered.contains("checkout")
+            || lowered.contains("pay ") {
+            return """
+            I understand this may involve buying, ordering, paying, or checking out.
+
+            I do not have a purchase/payment capability, and I should not make purchases automatically.
+
+            I did not buy or pay for anything.
+            """
+        }
+
+        if lowered.contains("password")
+            || lowered.contains("login for me")
+            || lowered.contains("sign in for me")
+            || lowered.contains("2fa")
+            || lowered.contains("verification code") {
+            return """
+            I understand this may involve credentials, login, passwords, or verification codes.
+
+            I should not handle sensitive credentials directly.
+            I can help explain steps, but you should enter passwords and verification codes yourself.
+
+            I did not access or submit credentials.
+            """
+        }
+
+        return nil
     }
 
 
