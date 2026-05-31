@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" 
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Lucy</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>Lucy</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>local.lucy.desktoppet</string>
+
+    <key>CFBundleVersion</key>
+    <string>0.5</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>0.5</string>
+
+    <key>CFBundleExecutable</key>
+    <string>Lucy</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Lucy needs microphone access so you can speak with your desktop pet.</string>
+
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Lucy needs speech recognition access to transcribe your voice into chat messages.</string>
+
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Lucy uses Apple Events to open apps, create notes, and help with approved local automation.</string>
+</dict>
+</plist>
