@@ -4,6 +4,8 @@ import Foundation
 class AppDelegate: NSObject, NSApplicationDelegate {
     var sceneView: LucySceneView!
     var real3DMode = UserDefaults.standard.bool(forKey: "lucy.real3DMode")
+    var isDraggingLucy = false
+    var lastManualInteraction = Date.distantPast
     var window: NSWindow!
     var petView: ClickablePetView!
     var chatController: ChatWindowController?
@@ -69,20 +71,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         sceneView = LucySceneView(frame: NSRect(x: 0, y: 0, width: 180, height: 180))
 
-        petView.onClick = {
-            self.openChat()
-        }
-
         petView.onDoubleClick = {
-            self.closeChat()
+            self.lastManualInteraction = Date()
+            self.toggleChat()
         }
 
-        sceneView.onClick = {
-            self.openChat()
+        petView.onDrag = { dx, dy in
+            self.dragLucyBy(dx: dx, dy: dy)
         }
 
         sceneView.onDoubleClick = {
-            self.closeChat()
+            self.lastManualInteraction = Date()
+            self.toggleChat()
+        }
+
+        sceneView.onDrag = { dx, dy in
+            self.dragLucyBy(dx: dx, dy: dy)
         }
 
         applyPetRenderMode()
@@ -155,8 +159,62 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+
+    func clampFrameToScreen(_ frame: NSRect) -> NSRect {
+        guard let screen = NSScreen.main?.visibleFrame else {
+            return frame
+        }
+
+        var newFrame = frame
+        newFrame.origin.x = max(screen.minX, min(newFrame.origin.x, screen.maxX - newFrame.width))
+        newFrame.origin.y = max(screen.minY, min(newFrame.origin.y, screen.maxY - newFrame.height))
+        return newFrame
+    }
+
+    func dragLucyBy(dx: CGFloat, dy: CGFloat) {
+        isDraggingLucy = true
+        lastManualInteraction = Date()
+
+        var frame = window.frame
+        frame.origin.x += dx
+        frame.origin.y -= dy
+        window.setFrame(clampFrameToScreen(frame), display: true)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            self.isDraggingLucy = false
+        }
+    }
+
+    func runAwayFromCursor(mouse: NSPoint, distance: CGFloat) {
+        guard distance > 1 else {
+            return
+        }
+
+        let frame = window.frame
+        let center = NSPoint(x: frame.midX, y: frame.midY)
+
+        let awayX = center.x - mouse.x
+        let awayY = center.y - mouse.y
+
+        let length = max(1, sqrt(awayX * awayX + awayY * awayY))
+        let normalizedX = awayX / length
+        let normalizedY = awayY / length
+
+        // Gentle speed: closer cursor = slightly faster, but never teleporting.
+        let closeness = max(0, min(1, (130 - distance) / 130))
+        let step = CGFloat(2.0 + closeness * 7.0)
+
+        var newFrame = frame
+        newFrame.origin.x += normalizedX * step
+        newFrame.origin.y += normalizedY * step
+
+        LucyRuntime.shared.facingRight = normalizedX >= 0
+        window.setFrame(clampFrameToScreen(newFrame), display: true)
+    }
+
+
     func startCursorAwareness() {
-        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
+        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
             if self.isHidden { return }
 
             let mouse = NSEvent.mouseLocation
@@ -167,6 +225,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let dy = mouse.y - center.y
             let distance = sqrt(dx * dx + dy * dy)
 
+            // If the cursor is actually over Lucy's body/window, stop running.
+            // This lets you double-click or drag her.
+            let touchZone = frame.insetBy(dx: -8, dy: -8).contains(mouse)
+
+            if touchZone || self.isDraggingLucy {
+                self.sceneView.lookToward(dx: dx, dy: dy)
+                self.petView.setState(.idle, mood: "hi")
+                return
+            }
+
+            // Short grace period after dragging/clicking so she does not instantly flee.
+            if Date().timeIntervalSince(self.lastManualInteraction) < 0.45 {
+                self.sceneView.lookToward(dx: dx, dy: dy)
+                return
+            }
+
+            // Real 3D Lucy watches the cursor from farther away.
             if distance < 700 {
                 LucyRuntime.shared.facingRight = dx >= 0
                 self.sceneView.lookToward(dx: dx, dy: dy)
@@ -174,11 +249,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.sceneView.lookToward(dx: 0, dy: 0)
             }
 
-            if distance < 90 {
-                LucyRuntime.shared.facingRight = dx >= 0
-                self.petView.setState(.thinking, mood: "boop?")
-            } else if distance < 170 {
-                LucyRuntime.shared.facingRight = dx >= 0
+            // If cursor gets close but is not touching her, Lucy gently avoids it.
+            if distance < 145 {
+                self.runAwayFromCursor(mouse: mouse, distance: distance)
+                self.petView.setState(.crawl, mood: "eep!")
+                return
+            }
+
+            if distance < 220 {
                 self.petView.setState(.idle, mood: "watching 👀")
             }
         }
