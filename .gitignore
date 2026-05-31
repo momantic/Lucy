@@ -9,3 +9,6 @@ app/
 
 # macOS junk
 .DS_Store
+
+# Build artifacts
+dist/Lucy.app/Contents/MacOS/
