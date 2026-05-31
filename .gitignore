@@ -12,3 +12,6 @@ app/
 
 # Build artifacts
 dist/Lucy.app/Contents/MacOS/
+
+# Temporary icon build output
+appicon.iconset/
