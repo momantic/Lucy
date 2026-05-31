@@ -342,6 +342,71 @@ class LucySceneView: SCNView {
     }
 
 
+
+    func modelBoundsInView() -> CGRect? {
+        let bounds = modelNode.boundingBox
+        let min = bounds.min
+        let max = bounds.max
+
+        let corners = [
+            SCNVector3(min.x, min.y, min.z),
+            SCNVector3(min.x, min.y, max.z),
+            SCNVector3(min.x, max.y, min.z),
+            SCNVector3(min.x, max.y, max.z),
+            SCNVector3(max.x, min.y, min.z),
+            SCNVector3(max.x, min.y, max.z),
+            SCNVector3(max.x, max.y, min.z),
+            SCNVector3(max.x, max.y, max.z)
+        ]
+
+        let projected = corners.map { corner -> CGPoint in
+            let world = modelNode.convertPosition(corner, to: nil)
+            let projectedPoint = projectPoint(world)
+            return CGPoint(x: CGFloat(projectedPoint.x), y: CGFloat(projectedPoint.y))
+        }
+
+        guard let first = projected.first else {
+            return nil
+        }
+
+        var minX = first.x
+        var maxX = first.x
+        var minY = first.y
+        var maxY = first.y
+
+        for point in projected {
+            minX = Swift.min(minX, point.x)
+            maxX = Swift.max(maxX, point.x)
+            minY = Swift.min(minY, point.y)
+            maxY = Swift.max(maxY, point.y)
+        }
+
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
+    func modelBoundsInfoText() -> String {
+        guard let bounds = modelBoundsInView() else {
+            return "Model bounds unavailable."
+        }
+
+        let bottomEmpty = bounds.minY
+        let topEmpty = self.bounds.height - bounds.maxY
+        let leftEmpty = bounds.minX
+        let rightEmpty = self.bounds.width - bounds.maxX
+
+        return """
+        View size: \(Int(self.bounds.width))x\(Int(self.bounds.height))
+        Model bounds in view:
+          x \(Int(bounds.minX)), y \(Int(bounds.minY)), w \(Int(bounds.width)), h \(Int(bounds.height))
+        Empty space:
+          bottom \(Int(bottomEmpty))
+          top \(Int(topEmpty))
+          left \(Int(leftEmpty))
+          right \(Int(rightEmpty))
+        """
+    }
+
+
     func renderInfoText() -> String {
         let modelURL = LucyPaths.root
             .appendingPathComponent("assets")
