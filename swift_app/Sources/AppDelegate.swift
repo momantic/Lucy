@@ -224,7 +224,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
     func startCursorAwareness() {
-        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.06, repeats: true) { _ in
             if self.isHidden { return }
 
             let mouse = NSEvent.mouseLocation
@@ -236,8 +236,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let distance = sqrt(dx * dx + dy * dy)
 
             // If the cursor is actually over Lucy's approximate body area, stop running.
-            // The pet window is 180x180, but much of it is transparent space.
-            // This smaller oval-ish body zone makes Lucy easier to avoid/catch naturally.
+            // This lets you double-click or drag her.
             let bodyZone = NSRect(
                 x: frame.midX - frame.width * 0.28,
                 y: frame.midY - frame.height * 0.26,
@@ -252,38 +251,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if touchZone || self.isDraggingLucy {
                 self.fleeVelocityX *= 0.55
                 self.fleeVelocityY *= 0.55
-                self.sceneView.lookToward(dx: dx, dy: dy)
+                self.sceneView.setAliveMotionPaused(true)
                 self.petView.setState(.idle, mood: "hi")
                 return
+            } else {
+                self.sceneView.setAliveMotionPaused(false)
             }
 
             // Short grace period after dragging/clicking so she does not instantly flee.
             if Date().timeIntervalSince(self.lastManualInteraction) < 0.45 {
-                self.sceneView.lookToward(dx: dx, dy: dy)
+                self.sceneView.lookToward(dx: 0, dy: 0)
                 return
             }
 
-            // Real 3D Lucy watches the cursor from farther away.
-            if distance < 700 {
-                LucyRuntime.shared.facingRight = dx >= 0
-                self.sceneView.lookToward(dx: dx, dy: dy)
-            } else {
+            // Far away: Lucy does her own thing. No cursor tracking.
+            if distance > 300 {
+                self.fleeVelocityX *= 0.90
+                self.fleeVelocityY *= 0.90
                 self.sceneView.lookToward(dx: 0, dy: 0)
+                self.petView.setState(.idle, mood: "")
+                return
             }
 
-            // If cursor gets close but is not touching her, Lucy gently avoids it.
-            if distance < 145 {
+            // Wary zone: she notices the cursor and looks at it, but does not run yet.
+            if distance > 150 {
+                LucyRuntime.shared.facingRight = dx >= 0
+                self.sceneView.lookToward(dx: dx * 0.55, dy: dy * 0.45)
+                self.fleeVelocityX *= 0.92
+                self.fleeVelocityY *= 0.92
+                self.petView.setState(.idle, mood: "watching")
+                return
+            }
+
+            // Close zone: she actively avoids the cursor.
+            if distance > 95 {
+                LucyRuntime.shared.facingRight = dx >= 0
+                self.sceneView.lookToward(dx: dx, dy: dy)
                 self.runAwayFromCursor(mouse: mouse, distance: distance)
                 self.petView.setState(.crawl, mood: "eep!")
                 return
             }
 
-            self.fleeVelocityX *= 0.92
-            self.fleeVelocityY *= 0.92
-
-            if distance < 220 {
-                self.petView.setState(.idle, mood: "watching 👀")
-            }
+            // Very close but not touching the body zone: panic scoot, still gentle.
+            LucyRuntime.shared.facingRight = dx >= 0
+            self.sceneView.lookToward(dx: dx, dy: dy)
+            self.runAwayFromCursor(mouse: mouse, distance: distance)
+            self.petView.setState(.crawl, mood: "!")
         }
     }
 

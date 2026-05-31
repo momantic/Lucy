@@ -18,6 +18,7 @@ class LucySceneView: SCNView {
     var nextMicroHopTime: TimeInterval = 0
     var settleEnergy: CGFloat = 0
     var lastAttention: CGFloat = 0
+    var pauseAliveMotion = false
     var onDoubleClick: (() -> Void)?
     var onDrag: ((CGFloat, CGFloat) -> Void)?
     var modelLoaded = false
@@ -221,14 +222,40 @@ class LucySceneView: SCNView {
         }
     }
 
+
+    func setAliveMotionPaused(_ paused: Bool) {
+        pauseAliveMotion = paused
+
+        if paused {
+            lookTargetX *= 0.65
+            lookTargetY *= 0.65
+            settleEnergy *= 0.5
+            hopImpulse = 0
+        }
+    }
+
+
     func tickIdle() {
         let now = CACurrentMediaTime()
 
+        if pauseAliveMotion {
+            // Freeze most motion while the cursor is on Lucy so she is easy to click/drag.
+            let baseYaw = CGFloat(-Double.pi / 2)
+
+            modelNode.position.y = modelNode.position.y + (0 - modelNode.position.y) * 0.18
+            modelNode.eulerAngles.y = modelNode.eulerAngles.y + (baseYaw - modelNode.eulerAngles.y) * 0.16
+            modelNode.eulerAngles.x = modelNode.eulerAngles.x + (0 - modelNode.eulerAngles.x) * 0.16
+            modelNode.eulerAngles.z = modelNode.eulerAngles.z + (0 - modelNode.eulerAngles.z) * 0.16
+            modelNode.scale = baseModelScale
+
+            return
+        }
+
         // Occasionally choose a tiny curiosity/fidget target.
         if now > nextFidgetTime {
-            nextFidgetTime = now + Double.random(in: 1.2...3.4)
-            targetCuriosityOffsetX = CGFloat.random(in: -0.13...0.13)
-            targetCuriosityOffsetY = CGFloat.random(in: -0.08...0.08)
+            nextFidgetTime = now + Double.random(in: 2.0...5.0)
+            targetCuriosityOffsetX = CGFloat.random(in: -0.20...0.20)
+            targetCuriosityOffsetY = CGFloat.random(in: -0.12...0.12)
         }
 
         curiosityOffsetX += (targetCuriosityOffsetX - curiosityOffsetX) * 0.028
