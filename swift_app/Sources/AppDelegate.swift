@@ -13,6 +13,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var nextFleePersonalityChange = Date.distantPast
     var fleeBurstUntil = Date.distantPast
     var nextIdleScootTime = Date().addingTimeInterval(Double.random(in: 5.0...12.0))
+    var autoPerchEnabled = UserDefaults.standard.bool(forKey: "lucy.autoPerchEnabled")
+    var nextAutoPerchTime = Date().addingTimeInterval(Double.random(in: 8.0...18.0))
+    var isPerching = false
     var window: NSWindow!
     var petView: ClickablePetView!
     var chatController: ChatWindowController?
@@ -144,6 +147,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return self.currentRenderInfo()
             }
 
+            chatController?.onPerchRequested = {
+                self.perchOnActiveWindow()
+            }
+
+            chatController?.onAutoPerchChanged = { enabled in
+                self.setAutoPerchEnabled(enabled)
+            }
+
 
         }
 
@@ -192,6 +203,113 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             self.isDraggingLucy = false
         }
+    }
+
+
+
+    func setAutoPerchEnabled(_ enabled: Bool) {
+        autoPerchEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "lucy.autoPerchEnabled")
+        nextAutoPerchTime = Date().addingTimeInterval(Double.random(in: 4.0...10.0))
+    }
+
+    func activeWindowAsScreenRect() -> NSRect? {
+        guard let frontWindow = LucyScreenAwareness.frontmostWindowInfo() else {
+            return nil
+        }
+
+        let appName = frontWindow.appName.lowercased()
+        if appName.contains("lucy") {
+            return nil
+        }
+
+        guard let screen = NSScreen.main else {
+            return nil
+        }
+
+        let screenHeight = screen.frame.height
+        let cg = frontWindow.bounds
+
+        return NSRect(
+            x: cg.minX,
+            y: screenHeight - cg.minY - cg.height,
+            width: cg.width,
+            height: cg.height
+        )
+    }
+
+    func choosePerchFrame(on activeWindow: NSRect) -> NSRect {
+        var frame = window.frame
+
+        enum PerchSpot: CaseIterable {
+            case topLeft
+            case topCenter
+            case topRight
+            case leftSide
+            case rightSide
+        }
+
+        let spot = PerchSpot.allCases.randomElement() ?? .topRight
+
+        // Offset makes Lucy appear to sit on the window edge rather than overlap the center.
+        switch spot {
+        case .topLeft:
+            frame.origin.x = activeWindow.minX + 20
+            frame.origin.y = activeWindow.maxY - frame.height * 0.28
+        case .topCenter:
+            frame.origin.x = activeWindow.midX - frame.width / 2
+            frame.origin.y = activeWindow.maxY - frame.height * 0.28
+        case .topRight:
+            frame.origin.x = activeWindow.maxX - frame.width - 20
+            frame.origin.y = activeWindow.maxY - frame.height * 0.28
+        case .leftSide:
+            frame.origin.x = activeWindow.minX - frame.width * 0.55
+            frame.origin.y = activeWindow.midY - frame.height / 2
+        case .rightSide:
+            frame.origin.x = activeWindow.maxX - frame.width * 0.45
+            frame.origin.y = activeWindow.midY - frame.height / 2
+        }
+
+        return clampFrameToScreen(frame)
+    }
+
+    func perchOnActiveWindow() {
+        guard !isPerching else {
+            return
+        }
+
+        guard let activeWindow = activeWindowAsScreenRect() else {
+            return
+        }
+
+        let targetFrame = choosePerchFrame(on: activeWindow)
+
+        isPerching = true
+        fleeVelocityX = 0
+        fleeVelocityY = 0
+        sceneView.setAliveMotionPaused(false)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Double.random(in: 0.55...0.95)
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.window.animator().setFrame(targetFrame, display: true)
+        } completionHandler: {
+            self.isPerching = false
+            self.lastManualInteraction = Date()
+        }
+    }
+
+    func maybeAutoPerch() {
+        guard autoPerchEnabled else {
+            return
+        }
+
+        guard Date() > nextAutoPerchTime else {
+            return
+        }
+
+        nextAutoPerchTime = Date().addingTimeInterval(Double.random(in: 16.0...36.0))
+        perchOnActiveWindow()
     }
 
 
@@ -330,6 +448,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.fleeVelocityY *= 0.90
                 self.sceneView.lookToward(dx: 0, dy: 0)
                 self.maybeDoIdleScoot()
+                self.maybeAutoPerch()
                 self.petView.setState(.idle, mood: "")
                 return
             }

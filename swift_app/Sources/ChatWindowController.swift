@@ -71,6 +71,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     var onUse3DChanged: ((Bool) -> Void)?
     var onReal3DChanged: ((Bool) -> Void)?
     var onRenderInfoRequested: (() -> String)?
+    var onPerchRequested: (() -> Void)?
+    var onAutoPerchChanged: ((Bool) -> Void)?
     var onSpriteInfoRequested: (() -> String)?
 
     override init() {
@@ -420,6 +422,25 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         if lowered == "/real3d off" {
             onReal3DChanged?(false)
             append("Lucy: Real 3D SceneKit mode is off.\n\n")
+            return
+        }
+
+
+        if lowered == "/perch" || lowered == "perch" {
+            onPerchRequested?()
+            append("Lucy: finding a place to perch.\n\n")
+            return
+        }
+
+        if lowered == "/perch auto" {
+            onAutoPerchChanged?(true)
+            append("Lucy: auto-perch is on. I’ll occasionally sit on active windows.\n\n")
+            return
+        }
+
+        if lowered == "/perch off" {
+            onAutoPerchChanged?(false)
+            append("Lucy: auto-perch is off.\n\n")
             return
         }
 
