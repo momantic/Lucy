@@ -350,6 +350,98 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         input.stringValue = ""
         append("You: \(userText)\n")
+
+        let loweredEarly = userText
+            .lowercased()
+            .replacingOccurrences(of: "`", with: "")
+            .replacingOccurrences(of: ".", with: " ")
+            .replacingOccurrences(of: ",", with: " ")
+            .replacingOccurrences(of: "!", with: " ")
+            .replacingOccurrences(of: "?", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Priority local intent commands before any fuzzy/LLM routing.
+        // These EXECUTE actions, not just chat about them.
+
+        if loweredEarly.contains("come back")
+            || loweredEarly.contains("come abck")
+            || loweredEarly.contains("comeback")
+            || loweredEarly.contains("come here")
+            || loweredEarly.contains("show yourself")
+            || loweredEarly.contains("show lucy")
+            || loweredEarly.contains("bring lucy back") {
+            onComeBackRequested?()
+            append("Lucy: I’m back.\n\n")
+            return
+        }
+
+        if loweredEarly.contains("roam off")
+            || loweredEarly.contains("turn off roam")
+            || loweredEarly.contains("stop roaming")
+            || loweredEarly.contains("stop roam")
+            || loweredEarly.contains("disable roam")
+            || loweredEarly.contains("stop wandering") {
+            onRoamChanged?(false)
+            append("Lucy: roam mode is off.\n\n")
+            return
+        }
+
+        if loweredEarly.contains("roam on")
+            || loweredEarly.contains("turn on roam")
+            || loweredEarly.contains("start roaming")
+            || loweredEarly.contains("enable roam")
+            || loweredEarly.contains("wander around") {
+            onRoamChanged?(true)
+            append("Lucy: roam mode is on.\n\n")
+            return
+        }
+
+        if loweredEarly.contains("hide until")
+            || loweredEarly == "hide"
+            || loweredEarly.contains("hide lucy")
+            || loweredEarly.contains("go hide")
+            || loweredEarly.contains("disappear")
+            || loweredEarly.contains("go away for now") {
+            onSoftHideRequested?()
+            append("Lucy: okay, I’ll hide. Say `come back` when you want me back.\n\n")
+            return
+        }
+
+        if loweredEarly.contains("gravity off")
+            || loweredEarly.contains("turn off gravity")
+            || loweredEarly.contains("stop gravity")
+            || loweredEarly.contains("stop falling") {
+            onGravityChanged?(false)
+            append("Lucy: gravity mode is off.\n\n")
+            return
+        }
+
+        if loweredEarly.contains("gravity on")
+            || loweredEarly.contains("turn on gravity")
+            || loweredEarly.contains("fall down")
+            || loweredEarly.contains("falling physics")
+            || loweredEarly.contains("physics thing") {
+            onGravityChanged?(true)
+            append("Lucy: gravity mode is on.\n\n")
+            return
+        }
+
+        if loweredEarly.contains("jump")
+            || loweredEarly.contains("hop away")
+            || loweredEarly.contains("move somewhere far")
+            || loweredEarly.contains("go somewhere far") {
+            onJumpRequested?()
+            append("Lucy: jumping away!\n\n")
+            return
+        }
+
+        if loweredEarly.contains("dock")
+            && (loweredEarly.contains("sit") || loweredEarly.contains("perch") || loweredEarly.contains("go")) {
+            onDockPerchRequested?()
+            append("Lucy: perching near the Dock.\n\n")
+            return
+        }
+
         conversationHistory.append(LucyChatMessage(role: "User", content: userText))
 
         let lowered = userText.lowercased()
@@ -791,8 +883,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         if lowered == "/hide" || lowered.contains("hide lucy") || lowered.contains("go hide") {
-            append("Lucy: okay, I’ll hide for 5 seconds.\n\n")
-            onHideRequested?()
+            append("Lucy: okay, I’ll hide. Say `come back` when you want me back.\n\n")
+            onSoftHideRequested?()
             return
         }
 
@@ -1115,6 +1207,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             let answer = self.askOllama(userText)
 
             DispatchQueue.main.async {
+                self.conversationHistory.append(LucyChatMessage(role: "Lucy", content: answer))
                 self.append("Lucy: \(answer)\n\n")
             }
         }
@@ -1459,8 +1552,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return true
 
         case "hide":
-            append("Lucy: okay, I’ll hide for 5 seconds.\n\n")
-            onHideRequested?()
+            append("Lucy: okay, I’ll hide. Say `come back` when you want me back.\n\n")
+            onSoftHideRequested?()
             return true
 
         case "selfbuild":
@@ -1739,8 +1832,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             || lowered == "go hide"
             || lowered == "disappear"
             || lowered == "hide lucy" {
-            append("Lucy: okay, I’ll hide for 5 seconds.\n\n")
-            onHideRequested?()
+            append("Lucy: okay, I’ll hide. Say `come back` when you want me back.\n\n")
+            onSoftHideRequested?()
             return true
         }
 
