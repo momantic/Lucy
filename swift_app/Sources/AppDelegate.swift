@@ -17,6 +17,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var fleeBurstUntil = Date.distantPast
     var isPouncing = false
     var nextPounceAllowedAt = Date.distantPast
+    var lastCuriosityMousePosition = NSEvent.mouseLocation
+    var lastCuriosityAppName = ""
+    var lastCuriosityWindowSignature = ""
+    var nextCuriosityPounceAllowedAt = Date.distantPast
     var nextIdleScootTime = Date().addingTimeInterval(Double.random(in: 5.0...12.0))
     var autoPerchEnabled = UserDefaults.standard.bool(forKey: "lucy.autoPerchEnabled")
     var nextAutoPerchTime = Date().addingTimeInterval(Double.random(in: 8.0...18.0))
@@ -842,6 +846,168 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
 
+
+
+    func maybePounceAtCuriousScreenMovement(mouse: NSPoint) {
+        guard !isPouncing else {
+            return
+        }
+
+        guard Date() > nextCuriosityPounceAllowedAt else {
+            return
+        }
+
+        // Do not make curiosity pounces too spammy.
+        nextCuriosityPounceAllowedAt = Date().addingTimeInterval(Double.random(in: 1.8...4.5))
+
+        var target: NSPoint?
+        var curiosityReason = ""
+
+        // 1. Mouse moved quickly or meaningfully.
+        let mouseDX = mouse.x - lastCuriosityMousePosition.x
+        let mouseDY = mouse.y - lastCuriosityMousePosition.y
+        let mouseMoveDistance = sqrt(mouseDX * mouseDX + mouseDY * mouseDY)
+
+        if mouseMoveDistance > 90 && CGFloat.random(in: 0...1) < 0.20 {
+            target = mouse
+            curiosityReason = "mouse"
+        }
+
+        lastCuriosityMousePosition = mouse
+
+        // 2. Front app changed.
+        let appName = LucyScreenAwareness.frontmostAppName()
+        if !appName.isEmpty && appName != "Unknown" && appName != lastCuriosityAppName {
+            lastCuriosityAppName = appName
+
+            if let screen = NSScreen.main, CGFloat.random(in: 0...1) < 0.18 {
+                let visible = screen.visibleFrame
+                target = NSPoint(
+                    x: CGFloat.random(in: visible.minX...visible.maxX),
+                    y: CGFloat.random(in: visible.minY...visible.maxY)
+                )
+                curiosityReason = "app"
+            }
+        }
+
+        // 3. Active/top window changed size/position.
+        if let windowInfo = LucyScreenAwareness.frontmostWindowInfo(),
+           let screen = NSScreen.main {
+            let cg = windowInfo.bounds
+            let signature = "\(windowInfo.appName)-\(Int(cg.minX))-\(Int(cg.minY))-\(Int(cg.width))-\(Int(cg.height))"
+
+            if !lastCuriosityWindowSignature.isEmpty
+                && signature != lastCuriosityWindowSignature
+                && CGFloat.random(in: 0...1) < 0.24 {
+
+                let screenHeight = screen.frame.height
+                let activeWindow = NSRect(
+                    x: cg.minX,
+                    y: screenHeight - cg.minY - cg.height,
+                    width: cg.width,
+                    height: cg.height
+                )
+
+                target = NSPoint(
+                    x: activeWindow.midX + CGFloat.random(in: -60...60),
+                    y: activeWindow.midY + CGFloat.random(in: -40...40)
+                )
+                curiosityReason = "window"
+            }
+
+            lastCuriosityWindowSignature = signature
+        }
+
+        guard let target else {
+            return
+        }
+
+        // Only pounce if target is not too close to Lucy already.
+        let frame = window.frame
+        let lucyCenter = NSPoint(x: frame.midX, y: frame.midY)
+        let dist = hypot(target.x - lucyCenter.x, target.y - lucyCenter.y)
+
+        guard dist > 120 else {
+            return
+        }
+
+        setHopMood(curiosityReason == "mouse" ? "gotcha!" : "what's that?")
+        pounceTowardMouse(mouse: target)
+    }
+
+
+    func pounceTowardMouse(mouse: NSPoint) {
+        guard !isPouncing else {
+            return
+        }
+
+        guard Date() > nextPounceAllowedAt else {
+            return
+        }
+
+        guard let screen = NSScreen.main else {
+            return
+        }
+
+        isPouncing = true
+        nextPounceAllowedAt = Date().addingTimeInterval(Double.random(in: 2.0...4.5))
+        fleeVelocityX = 0
+        fleeVelocityY = 0
+
+        let visible = screen.visibleFrame
+        let current = window.frame
+
+        // Land near the mouse, but offset slightly so Lucy does not cover the cursor perfectly.
+        var targetFrame = current
+        targetFrame.origin.x = mouse.x - current.width / 2 + CGFloat.random(in: -12...12)
+        targetFrame.origin.y = mouse.y - current.height / 2 + CGFloat.random(in: -10...10)
+
+        targetFrame.origin.x = max(visible.minX, min(targetFrame.origin.x, visible.maxX - targetFrame.width))
+        targetFrame.origin.y = max(visible.minY, min(targetFrame.origin.y, visible.maxY - targetFrame.height))
+
+        var crouchFrame = current
+        crouchFrame.origin.y -= 6
+
+        // Arc point above the path for a little jump feel.
+        var arcFrame = current
+        arcFrame.origin.x = (current.origin.x + targetFrame.origin.x) / 2
+        arcFrame.origin.y = max(current.origin.y, targetFrame.origin.y) + CGFloat.random(in: 65...120)
+        arcFrame.origin.x = max(visible.minX, min(arcFrame.origin.x, visible.maxX - arcFrame.width))
+        arcFrame.origin.y = max(visible.minY, min(arcFrame.origin.y, visible.maxY - arcFrame.height))
+
+        setHopMood("gotcha!")
+
+        sceneView.setPounceVisualPhase(.crouch)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.11
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.window.animator().setFrame(self.clampFrameToScreen(crouchFrame), display: true)
+        } completionHandler: {
+            self.sceneView.setPounceVisualPhase(.stretch)
+
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Double.random(in: 0.20...0.32)
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                self.window.animator().setFrame(self.clampFrameToScreen(arcFrame), display: true)
+            } completionHandler: {
+                self.sceneView.setPounceVisualPhase(.land)
+
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = Double.random(in: 0.14...0.22)
+                    context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                    self.window.animator().setFrame(self.clampFrameToScreen(targetFrame), display: true)
+                } completionHandler: {
+                    self.sceneView.setPounceVisualPhase(.normal)
+                    self.isPouncing = false
+                    self.lastManualInteraction = Date()
+                    self.setHappyMood()
+                }
+            }
+        }
+    }
+
+
     func pounceAwayFromCursor(mouse: NSPoint) {
         guard !isPouncing else {
             return
@@ -1017,6 +1183,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let dy = mouse.y - center.y
             let distance = sqrt(dx * dx + dy * dy)
 
+            // Curiosity: occasionally pounce toward interesting movement on screen.
+            // This runs lightly and respects pounce cooldowns.
+            if distance > 180 {
+                self.maybePounceAtCuriousScreenMovement(mouse: mouse)
+            }
+
             // If the cursor is actually over Lucy's approximate body area, stop running.
             // This lets you double-click or drag her.
             let bodyZone = NSRect(
@@ -1072,12 +1244,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if distance > 95 {
                 LucyRuntime.shared.facingRight = dx >= 0
                 self.sceneView.lookToward(dx: dx, dy: dy)
-                if distance < 140
+                if distance < 220
                     && !self.isPouncing
-                    && Date() > self.nextPounceAllowedAt
-                    && CGFloat.random(in: 0...1) < 0.35 {
-                    self.pounceAwayFromCursor(mouse: mouse)
-                    return
+                    && Date() > self.nextPounceAllowedAt {
+
+                    let roll = CGFloat.random(in: 0...1)
+
+                    if roll < 0.55 {
+                        self.pounceTowardMouse(mouse: mouse)
+                        return
+                    }
+
+                    if roll < 0.80 {
+                        self.pounceAwayFromCursor(mouse: mouse)
+                        return
+                    }
                 }
 
                 self.runAwayFromCursor(mouse: mouse, distance: distance)
