@@ -3,6 +3,9 @@ import Foundation
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var sceneView: LucySceneView!
+    var moodLabel: NSTextField!
+    var lastMoodBubbleText = ""
+    var lastMoodBubbleChange = Date.distantPast
     var real3DMode = UserDefaults.standard.bool(forKey: "lucy.real3DMode")
     var isDraggingLucy = false
     var lastManualInteraction = Date.distantPast
@@ -204,6 +207,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
     func softHideLucy() {
+        setIdleMood("hiding...")
         isSoftHidden = true
         fleeVelocityX = 0
         fleeVelocityY = 0
@@ -214,6 +218,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func comeBackLucy() {
         isSoftHidden = false
+        setHappyMood()
 
         if let screen = NSScreen.main {
             var frame = window.frame
@@ -228,6 +233,116 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+
+
+
+    func setupMoodLabel() {
+        moodLabel = NSTextField(labelWithString: "")
+        moodLabel.alignment = .center
+        moodLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        moodLabel.textColor = NSColor.white
+        moodLabel.backgroundColor = NSColor(calibratedWhite: 0.05, alpha: 0.62)
+        moodLabel.wantsLayer = true
+        moodLabel.layer?.cornerRadius = 8
+        moodLabel.layer?.masksToBounds = true
+        moodLabel.isHidden = true
+        moodLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        window.contentView?.addSubview(moodLabel)
+
+        NSLayoutConstraint.activate([
+            moodLabel.centerXAnchor.constraint(equalTo: window.contentView!.centerXAnchor),
+            moodLabel.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 8),
+            moodLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            moodLabel.heightAnchor.constraint(equalToConstant: 22)
+        ])
+    }
+
+    func showMoodBubble(_ mood: String, force: Bool = false) {
+        guard moodLabel != nil else {
+            return
+        }
+
+        let trimmed = mood.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed.isEmpty {
+            return
+        }
+
+        let now = Date()
+
+        // Prevent rapid flickering when cursor timer updates mood many times per second.
+        if !force {
+            if trimmed == lastMoodBubbleText {
+                return
+            }
+
+            if now.timeIntervalSince(lastMoodBubbleChange) < 1.35 {
+                return
+            }
+        }
+
+        lastMoodBubbleText = trimmed
+        lastMoodBubbleChange = now
+
+        moodLabel.stringValue = " \(trimmed) "
+        moodLabel.alphaValue = 1.0
+        moodLabel.isHidden = false
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            if self.lastMoodBubbleText == trimmed {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.25
+                    self.moodLabel.animator().alphaValue = 0
+                } completionHandler: {
+                    if self.lastMoodBubbleText == trimmed {
+                        self.moodLabel.isHidden = true
+                        self.moodLabel.alphaValue = 1.0
+                    }
+                }
+            }
+        }
+    }
+
+
+    func setIdleMood(_ mood: String) {
+        petView.setState(.idle, mood: mood)
+        showMoodBubble(mood)
+    }
+
+    func setHopMood(_ mood: String) {
+        petView.setState(.hop, mood: mood)
+        showMoodBubble(mood)
+    }
+
+    func setRandomIdleMood() {
+        let moods = ["", "hmm", "｡｡｡", "watching", "tiny thoughts", "soft idle", "curious"]
+        let mood = moods.randomElement() ?? ""
+        petView.setState(.idle, mood: mood)
+        showMoodBubble(mood)
+    }
+
+    func setScaredMood() {
+        let moods = ["eep!", "ah!", "no touch!", "scary!", "run!", "!!"]
+        let mood = moods.randomElement() ?? "eep!"
+        petView.setState(.crawl, mood: mood)
+        showMoodBubble(mood)
+    }
+
+    func setCuriousMood() {
+        let moods = ["?", "hmm?", "watching", "curious", "what's that?"]
+        let mood = moods.randomElement() ?? "?"
+        petView.setState(.thinking, mood: mood)
+        showMoodBubble(mood)
+    }
+
+    func setHappyMood() {
+        let moods = ["hi!", "yay", "hello!", "I'm here", "hehe"]
+        let mood = moods.randomElement() ?? "hi!"
+        petView.setState(.idle, mood: mood)
+        showMoodBubble(mood)
     }
 
 
@@ -383,6 +498,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        setHopMood("perch!")
+
         isPerching = true
         fleeVelocityX = 0
         fleeVelocityY = 0
@@ -403,6 +520,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isPerching else {
             return
         }
+
+        setHopMood("jump!")
 
         guard let screen = NSScreen.main else {
             return
@@ -477,6 +596,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setGravityModeEnabled(_ enabled: Bool) {
         gravityModeEnabled = enabled
+        
+        if enabled {
+            setHopMood("gravity!")
+        } else {
+            setIdleMood("free")
+        }
         UserDefaults.standard.set(enabled, forKey: "lucy.gravityModeEnabled")
 
         fleeVelocityX = 0
@@ -829,7 +954,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.fleeVelocityX *= 0.55
                 self.fleeVelocityY *= 0.55
                 self.sceneView.setAliveMotionPaused(true)
-                self.petView.setState(.idle, mood: "hi")
+                self.setHappyMood()
                 return
             } else {
                 self.sceneView.setAliveMotionPaused(false)
@@ -849,7 +974,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.maybeDoIdleScoot()
                 self.maybeAutoPerch()
                 self.maybeRoam()
-                self.petView.setState(.idle, mood: "")
+                self.setRandomIdleMood()
                 return
             }
 
@@ -859,7 +984,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.sceneView.lookToward(dx: dx * 0.55, dy: dy * 0.45)
                 self.fleeVelocityX *= 0.92
                 self.fleeVelocityY *= 0.92
-                self.petView.setState(.idle, mood: "watching")
+                self.setCuriousMood()
                 return
             }
 
@@ -868,7 +993,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 LucyRuntime.shared.facingRight = dx >= 0
                 self.sceneView.lookToward(dx: dx, dy: dy)
                 self.runAwayFromCursor(mouse: mouse, distance: distance)
-                self.petView.setState(.crawl, mood: "eep!")
+                self.setScaredMood()
                 return
             }
 
@@ -884,6 +1009,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applyPetRenderMode() {
         if real3DMode {
             window.contentView = sceneView
+        setupMoodLabel()
         } else {
             window.contentView = petView
         }
