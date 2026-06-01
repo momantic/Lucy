@@ -1200,17 +1200,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         return
-
-
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            let answer = self.askOllama(userText)
-
-            DispatchQueue.main.async {
-                self.conversationHistory.append(LucyChatMessage(role: "Lucy", content: answer))
-                self.append("Lucy: \(answer)\n\n")
-            }
-        }
     }
 
     func append(_ text: String) {
