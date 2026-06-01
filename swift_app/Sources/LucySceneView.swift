@@ -1,6 +1,14 @@
 import Cocoa
 import SceneKit
 
+enum LucyPounceVisualPhase {
+    case normal
+    case crouch
+    case stretch
+    case land
+}
+
+
 class LucySceneView: SCNView {
     var containerNode = SCNNode()
     var modelNode = SCNNode()
@@ -19,6 +27,7 @@ class LucySceneView: SCNView {
     var settleEnergy: CGFloat = 0
     var lastAttention: CGFloat = 0
     var pauseAliveMotion = false
+    var pounceVisualPhase: LucyPounceVisualPhase = .normal
     var onDoubleClick: (() -> Void)?
     var onDrag: ((CGFloat, CGFloat) -> Void)?
     var modelLoaded = false
@@ -235,6 +244,12 @@ class LucySceneView: SCNView {
     }
 
 
+
+    func setPounceVisualPhase(_ phase: LucyPounceVisualPhase) {
+        pounceVisualPhase = phase
+    }
+
+
     func tickIdle() {
         let now = CACurrentMediaTime()
 
@@ -313,11 +328,34 @@ class LucySceneView: SCNView {
         modelNode.eulerAngles.z = modelNode.eulerAngles.z + (targetRoll - modelNode.eulerAngles.z) * rollEase
 
         // Breathing scale, preserving the normalized model scale.
-        let scalePulse = CGFloat(1.0 + sin(now * 2.0) * 0.010 + settleEnergy * 0.012)
+        var scaleX = CGFloat(1.0 + sin(now * 2.0) * 0.010 + settleEnergy * 0.012)
+        var scaleY = scaleX
+        var scaleZ = scaleX
+
+        switch pounceVisualPhase {
+        case .normal:
+            break
+        case .crouch:
+            scaleX *= 1.08
+            scaleY *= 0.82
+            scaleZ *= 1.08
+            modelNode.position.y -= 0.05
+        case .stretch:
+            scaleX *= 0.90
+            scaleY *= 1.18
+            scaleZ *= 0.92
+            modelNode.eulerAngles.x += 0.10
+        case .land:
+            scaleX *= 1.12
+            scaleY *= 0.78
+            scaleZ *= 1.10
+            modelNode.position.y -= 0.06
+        }
+
         modelNode.scale = SCNVector3(
-            baseModelScale.x * scalePulse,
-            baseModelScale.y * scalePulse,
-            baseModelScale.z * scalePulse
+            baseModelScale.x * scaleX,
+            baseModelScale.y * scaleY,
+            baseModelScale.z * scaleZ
         )
     }
 

@@ -15,6 +15,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var fleeSpeedBias: CGFloat = 1
     var nextFleePersonalityChange = Date.distantPast
     var fleeBurstUntil = Date.distantPast
+    var isPouncing = false
+    var nextPounceAllowedAt = Date.distantPast
     var nextIdleScootTime = Date().addingTimeInterval(Double.random(in: 5.0...12.0))
     var autoPerchEnabled = UserDefaults.standard.bool(forKey: "lucy.autoPerchEnabled")
     var nextAutoPerchTime = Date().addingTimeInterval(Double.random(in: 8.0...18.0))
@@ -839,6 +841,84 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
 
+
+    func pounceAwayFromCursor(mouse: NSPoint) {
+        guard !isPouncing else {
+            return
+        }
+
+        guard Date() > nextPounceAllowedAt else {
+            return
+        }
+
+        guard let screen = NSScreen.main else {
+            return
+        }
+
+        isPouncing = true
+        nextPounceAllowedAt = Date().addingTimeInterval(Double.random(in: 2.5...5.0))
+        fleeVelocityX = 0
+        fleeVelocityY = 0
+
+        let visible = screen.visibleFrame
+        let current = window.frame
+        let center = NSPoint(x: current.midX, y: current.midY)
+
+        let awayX = center.x - mouse.x
+        let awayY = center.y - mouse.y
+        let length = max(1, sqrt(awayX * awayX + awayY * awayY))
+        let normalizedX = awayX / length
+        let normalizedY = awayY / length
+
+        var crouchFrame = current
+        crouchFrame.origin.y -= 6
+
+        var launchFrame = current
+        launchFrame.origin.x += normalizedX * CGFloat.random(in: 180...320)
+        launchFrame.origin.y += max(60, normalizedY * CGFloat.random(in: 90...180)) + CGFloat.random(in: 40...90)
+
+        launchFrame.origin.x = max(visible.minX, min(launchFrame.origin.x, visible.maxX - launchFrame.width))
+        launchFrame.origin.y = max(visible.minY, min(launchFrame.origin.y, visible.maxY - launchFrame.height))
+
+        var landFrame = launchFrame
+        landFrame.origin.y -= CGFloat.random(in: 35...80)
+        landFrame.origin.y = max(visible.minY, min(landFrame.origin.y, visible.maxY - landFrame.height))
+
+        setHopMood("pounce!")
+
+        // Crouch.
+        sceneView.setPounceVisualPhase(.crouch)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.12
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            self.window.animator().setFrame(self.clampFrameToScreen(crouchFrame), display: true)
+        } completionHandler: {
+            // Launch/stretch.
+            self.sceneView.setPounceVisualPhase(.stretch)
+
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Double.random(in: 0.28...0.42)
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                self.window.animator().setFrame(self.clampFrameToScreen(launchFrame), display: true)
+            } completionHandler: {
+                // Land/bounce.
+                self.sceneView.setPounceVisualPhase(.land)
+
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = Double.random(in: 0.18...0.28)
+                    context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                    self.window.animator().setFrame(self.clampFrameToScreen(landFrame), display: true)
+                } completionHandler: {
+                    self.sceneView.setPounceVisualPhase(.normal)
+                    self.isPouncing = false
+                    self.lastManualInteraction = Date()
+                }
+            }
+        }
+    }
+
+
     func runAwayFromCursor(mouse: NSPoint, distance: CGFloat) {
         guard distance > 1 else {
             return
@@ -992,6 +1072,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if distance > 95 {
                 LucyRuntime.shared.facingRight = dx >= 0
                 self.sceneView.lookToward(dx: dx, dy: dy)
+                if distance < 140
+                    && !self.isPouncing
+                    && Date() > self.nextPounceAllowedAt
+                    && CGFloat.random(in: 0...1) < 0.35 {
+                    self.pounceAwayFromCursor(mouse: mouse)
+                    return
+                }
+
                 self.runAwayFromCursor(mouse: mouse, distance: distance)
                 self.setScaredMood()
                 return
