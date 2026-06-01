@@ -766,12 +766,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Smooth acceleration/deceleration.
         // Keep high flee speed, but smooth the acceleration so she feels alive instead of teleporty.
-        let acceleration = CGFloat(0.16 + closeness * 0.10)
+        let acceleration = CGFloat(0.11 + closeness * 0.08)
         fleeVelocityX += (targetVX - fleeVelocityX) * acceleration
         fleeVelocityY += (targetVY - fleeVelocityY) * acceleration
 
         // Cap max velocity to avoid sudden huge jumps from random bursts.
-        let maxSpeed = CGFloat(18.0)
+        let maxSpeed = CGFloat(16.5)
         let currentSpeed = max(0.001, sqrt(fleeVelocityX * fleeVelocityX + fleeVelocityY * fleeVelocityY))
         if currentSpeed > maxSpeed {
             fleeVelocityX = fleeVelocityX / currentSpeed * maxSpeed
@@ -782,9 +782,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         fleeVelocityX *= 0.975
         fleeVelocityY *= 0.975
 
+        // Smaller per-frame movement because cursor timer runs faster now.
+        // This keeps the same fast feel but makes motion smoother.
+        let frameStep = CGFloat(0.42)
+
         var newFrame = frame
-        newFrame.origin.x += fleeVelocityX
-        newFrame.origin.y += fleeVelocityY
+        newFrame.origin.x += fleeVelocityX * frameStep
+        newFrame.origin.y += fleeVelocityY * frameStep
 
         LucyRuntime.shared.facingRight = normalizedX >= 0
         window.setFrame(clampFrameToScreen(newFrame), display: true)
@@ -792,7 +796,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
     func startCursorAwareness() {
-        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.06, repeats: true) { _ in
+        cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
             if self.isHidden || self.isSoftHidden { return }
 
             if self.gravityModeEnabled {
