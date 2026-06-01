@@ -113,7 +113,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .filter { $0.processIdentifier != currentPID }
 
         if let existingLucy = otherLucys.first {
-            existingLucy.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            existingLucy.activate(options: [.activateAllWindows])
             NSApp.terminate(nil)
             return true
         }
