@@ -352,74 +352,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         append("You: \(userText)\n")
         conversationHistory.append(LucyChatMessage(role: "User", content: userText))
 
-        if let ollamaIntent = LucyOllamaIntentRouter.shared.routeSync(userText) {
-            let reply = ollamaIntent.reply.isEmpty ? nil : ollamaIntent.reply
-
-            switch ollamaIntent.action {
-            case "soft_hide":
-                onSoftHideRequested?()
-                append("Lucy: \(reply ?? "Okay, I’ll hide. Say `come back` when you want me back.")\n\n")
-                return
-
-            case "come_back":
-                onComeBackRequested?()
-                append("Lucy: \(reply ?? "I’m back.")\n\n")
-                return
-
-            case "gravity_on":
-                onGravityChanged?(true)
-                append("Lucy: \(reply ?? "Gravity mode is on.")\n\n")
-                return
-
-            case "gravity_off":
-                onGravityChanged?(false)
-                append("Lucy: \(reply ?? "Gravity mode is off.")\n\n")
-                return
-
-            case "jump":
-                onJumpRequested?()
-                append("Lucy: \(reply ?? "Jumping away!")\n\n")
-                return
-
-            case "dock_perch":
-                onDockPerchRequested?()
-                append("Lucy: \(reply ?? "Perching near the Dock.")\n\n")
-                return
-
-            case "roam_on":
-                onRoamChanged?(true)
-                append("Lucy: \(reply ?? "Roam mode is on.")\n\n")
-                return
-
-            case "roam_off":
-                onRoamChanged?(false)
-                append("Lucy: \(reply ?? "Roam mode is off.")\n\n")
-                return
-
-            case "screen_info":
-                let result = onScreenInfoRequested?() ?? "Screen info is not wired."
-                append("Lucy Screen Info:\n\(result)\n\n")
-                return
-
-            case "render_info":
-                let result = onRenderInfoRequested?() ?? "Render info is not wired."
-                append("Lucy Render Info:\n\(result)\n\n")
-                return
-
-            case "model_bounds":
-                let result = onModelBoundsRequested?() ?? "Model bounds are not wired."
-                append("Lucy Model Bounds:\n\(result)\n\n")
-                return
-
-            case "normal_chat":
-                break
-
-            default:
-                break
-            }
-        }
-
-
         let lowered = userText.lowercased()
 
 
@@ -1159,11 +1091,25 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         append("Lucy: thinking...\n")
 
-        if let reply = LucyOllamaIntentRouter.shared.chatSync(history: conversationHistory, userText: userText) {
-            conversationHistory.append(LucyChatMessage(role: "Lucy", content: reply))
-            append("Lucy: \(reply)\n\n")
-            return
+        let historySnapshot = conversationHistory
+        let userTextSnapshot = userText
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let reply = LucyOllamaIntentRouter.shared.chatSync(
+                history: historySnapshot,
+                userText: userTextSnapshot,
+                timeout: 12.0
+            ) ?? "Hmm, I had trouble thinking for a second."
+
+            DispatchQueue.main.async {
+                self.conversationHistory.append(LucyChatMessage(role: "Lucy", content: reply))
+                self.append("Lucy: \(reply)\n\n")
+            }
         }
+
+        return
+
+
 
         DispatchQueue.global(qos: .userInitiated).async {
             let answer = self.askOllama(userText)
