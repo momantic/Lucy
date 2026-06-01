@@ -97,7 +97,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
 
+
+    func quitIfAnotherLucyIsAlreadyRunning() -> Bool {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else {
+            return false
+        }
+
+        let currentPID = ProcessInfo.processInfo.processIdentifier
+
+        let otherLucys = NSRunningApplication
+            .runningApplications(withBundleIdentifier: bundleIdentifier)
+            .filter { $0.processIdentifier != currentPID }
+
+        if let existingLucy = otherLucys.first {
+            existingLucy.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            NSApp.terminate(nil)
+            return true
+        }
+
+        return false
+    }
+
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+
+        if quitIfAnotherLucyIsAlreadyRunning() {
+            return
+        }
+
 
         NSApp.setActivationPolicy(.regular)
         installAppMenu()

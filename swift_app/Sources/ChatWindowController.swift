@@ -54,6 +54,8 @@ class LucySettings {
 
 
 class ChatWindowController: NSObject, NSTextFieldDelegate {
+    var conversationHistory: [LucyChatMessage] = []
+
 
     var audioEngine = AVAudioEngine()
     var speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
@@ -348,6 +350,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         input.stringValue = ""
         append("You: \(userText)\n")
+        conversationHistory.append(LucyChatMessage(role: "User", content: userText))
 
         if let ollamaIntent = LucyOllamaIntentRouter.shared.routeSync(userText) {
             let reply = ollamaIntent.reply.isEmpty ? nil : ollamaIntent.reply
@@ -1153,7 +1156,14 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+
         append("Lucy: thinking...\n")
+
+        if let reply = LucyOllamaIntentRouter.shared.chatSync(history: conversationHistory, userText: userText) {
+            conversationHistory.append(LucyChatMessage(role: "Lucy", content: reply))
+            append("Lucy: \(reply)\n\n")
+            return
+        }
 
         DispatchQueue.global(qos: .userInitiated).async {
             let answer = self.askOllama(userText)
