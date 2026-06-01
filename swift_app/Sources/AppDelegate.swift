@@ -749,7 +749,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let dodgeX = -normalizedY * dodge
         let dodgeY = normalizedX * dodge
 
-        var desiredSpeed = CGFloat(1.8 + closeness * 7.2) * fleeSpeedBias
+        // Faster flee speed: about 3x previous movement.
+        var desiredSpeed = CGFloat(5.4 + closeness * 21.6) * fleeSpeedBias
 
         if now < fleeBurstUntil {
             desiredSpeed *= CGFloat.random(in: 1.35...1.65)
@@ -764,13 +765,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let targetVY = (moveY / moveLength) * desiredSpeed
 
         // Smooth acceleration/deceleration.
-        let acceleration = CGFloat(0.18 + closeness * 0.12)
+        // Keep high flee speed, but smooth the acceleration so she feels alive instead of teleporty.
+        let acceleration = CGFloat(0.16 + closeness * 0.10)
         fleeVelocityX += (targetVX - fleeVelocityX) * acceleration
         fleeVelocityY += (targetVY - fleeVelocityY) * acceleration
 
-        // Tiny natural damping so she settles instead of sliding forever.
-        fleeVelocityX *= 0.985
-        fleeVelocityY *= 0.985
+        // Cap max velocity to avoid sudden huge jumps from random bursts.
+        let maxSpeed = CGFloat(18.0)
+        let currentSpeed = max(0.001, sqrt(fleeVelocityX * fleeVelocityX + fleeVelocityY * fleeVelocityY))
+        if currentSpeed > maxSpeed {
+            fleeVelocityX = fleeVelocityX / currentSpeed * maxSpeed
+            fleeVelocityY = fleeVelocityY / currentSpeed * maxSpeed
+        }
+
+        // Natural damping so she settles instead of sliding forever.
+        fleeVelocityX *= 0.975
+        fleeVelocityY *= 0.975
 
         var newFrame = frame
         newFrame.origin.x += fleeVelocityX
