@@ -36,7 +36,7 @@ class LucyDevTools {
         result += "- Floating native Mac pet window\n"
         result += "- Click and double-click interactions\n"
         result += "- Placeholder animation states\n"
-        result += "- Local Ollama chat\n"
+        result += "- Local MLX chat\n"
         result += "- Local memory file\n"
         result += "- Dev Mode proposal writing\n"
         result += "- Safe built-in apply flow for /apply hide-command\n"
@@ -61,7 +61,7 @@ class LucyDevTools {
         return "Preview of swift_app/Lucy.swift, first 80 lines:\n\n\(preview)"
     }
 
-    func createSelfUpdateProposal(request: String, ollamaAnswer: String) -> String {
+    func createSelfUpdateProposal(request: String, mlxAnswer: String) -> String {
         ensureDirs()
 
         let formatter = DateFormatter()
@@ -79,7 +79,7 @@ class LucyDevTools {
 
         ## Lucy's Proposal
 
-        \(ollamaAnswer)
+        \(mlxAnswer)
 
         ## Safety Rule
 

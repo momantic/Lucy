@@ -850,23 +850,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
-        if lowered.hasPrefix("/agent ") {
-            let goal = String(userText.dropFirst("/agent ".count))
-            append("Lucy: starting my MLX agent loop. I will plan, use safe tools, observe results, and stop before irreversible actions.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucyAgentLoop(goal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Self Loop:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-
         if lowered == "/dev diagnose" {
             append("Lucy: checking my build safely. I will not modify any files.\n")
 
@@ -1024,10 +1007,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             append("Lucy: drafting a self-update proposal...\n")
 
             DispatchQueue.global(qos: .userInitiated).async {
-                let proposal = self.askMLXForSelfUpdate(request)
+                let proposal = self.askOllamaForSelfUpdate(request)
                 let saved = LucyDevTools.shared.createSelfUpdateProposal(
                     request: request,
-                    mlxAnswer: proposal
+                    ollamaAnswer: proposal
                 )
 
                 DispatchQueue.main.async {
@@ -1075,36 +1058,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
             let result = openYouTubeSearch(query)
             append("Lucy: \(result)\n\n")
-            return
-        }
-
-
-        if isAgentRetryRequest(userText), let previousGoal = loadLastAgentGoal() {
-            append("Lucy: retrying the last task with my MLX self-loop.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucySelfLoop(previousGoal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Self Loop:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-        if shouldRouteToAgentLoop(userText) {
-            saveLastAgentGoal(userText)
-            append("Lucy: I understand this as a task, so I am using my MLX self-loop.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucySelfLoop(userText)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Self Loop:\n\(result)\n\n")
-                }
-            }
-
             return
         }
 
@@ -1278,7 +1231,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         let userTextSnapshot = userText
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let reply = LucyMLXIntentRouter.shared.chatSync(
+            let reply = LucyOllamaIntentRouter.shared.chatSync(
                 history: historySnapshot,
                 userText: userTextSnapshot,
                 timeout: 12.0
@@ -1298,22 +1251,22 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         output.scrollToEndOfDocument(nil)
     }
 
-    func mlxPathAndArgs() -> (String, [String]) {
+    func ollamaPathAndArgs() -> (String, [String]) {
         let possiblePaths = [
-            "/usr/local/bin/mlx",
-            "/opt/homebrew/bin/mlx"
+            "/usr/local/bin/ollama",
+            "/opt/homebrew/bin/ollama"
         ]
 
-        if let mlxPath = possiblePaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
-            return (mlxPath, ["run", model])
+        if let ollamaPath = possiblePaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
+            return (ollamaPath, ["run", model])
         }
 
-        return ("/usr/bin/env", ["mlx", "run", model])
+        return ("/usr/bin/env", ["ollama", "run", model])
     }
 
-    func runMLX(prompt: String) -> String {
+    func runOllama(prompt: String) -> String {
         let process = Process()
-        let (path, args) = mlxPathAndArgs()
+        let (path, args) = ollamaPathAndArgs()
 
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = args
@@ -1340,15 +1293,15 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
             if process.terminationStatus != 0 {
-                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown MLX error."
-                return "I had trouble talking to MLX:\n\(errorText)"
+                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown Ollama error."
+                return "I had trouble talking to Ollama:\n\(errorText)"
             }
 
             let rawText = String(data: data, encoding: .utf8) ?? "I did not get a response."
             return stripTerminalEscapes(rawText)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            return "I could not start MLX. Error: \(error.localizedDescription)"
+            return "I could not start Ollama. Error: \(error.localizedDescription)"
         }
     }
 
@@ -1538,7 +1491,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         \(userText)
         """
 
-        let raw = runMLX(prompt: prompt)
+        let raw = runOllama(prompt: prompt)
 
         guard let jsonText = extractJSONBlock(raw),
               let data = jsonText.data(using: .utf8),
@@ -2474,7 +2427,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         My current architecture:
         - Swift/AppKit floating desktop pet
-        - local MLX chat
+        - local Ollama chat
         - local memory
         - capability registry
         - dev task system
@@ -2631,7 +2584,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - output only the note body
         """
 
-        let noteBody = stripTerminalEscapes(runMLX(prompt: prompt))
+        let noteBody = stripTerminalEscapes(runOllama(prompt: prompt))
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let finalBody = noteBody.isEmpty
@@ -2992,269 +2945,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
-
-
-    func lastAgentGoalURL() -> URL {
-        LucyPaths.root.appendingPathComponent(".lucy/last_agent_goal.txt")
-    }
-
-    func saveLastAgentGoal(_ goal: String) {
-        let url = lastAgentGoalURL()
-        try? FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? goal.write(to: url, atomically: true, encoding: .utf8)
-    }
-
-    func loadLastAgentGoal() -> String? {
-        let url = lastAgentGoalURL()
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-            return nil
-        }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    func isAgentRetryRequest(_ text: String) -> Bool {
-        let lowered = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let retryPhrases = [
-            "try again",
-            "retry",
-            "again",
-            "continue",
-            "keep going",
-            "nothing happened",
-            "it didn't work",
-            "it did not work",
-            "do it again",
-            "rerun",
-            "run it again"
-        ]
-
-        return retryPhrases.contains { lowered == $0 || lowered.contains($0) }
-    }
-
-
-    func shouldRouteToAgentLoop(_ text: String) -> Bool {
-        let lowered = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if lowered.isEmpty {
-            return false
-        }
-
-        // Explicit slash commands should keep their own routers.
-        if lowered.hasPrefix("/") {
-            return false
-        }
-
-        // Strong task/action signals. These should use Lucy's agent loop.
-        let strongPatterns = [
-            "open ",
-            "launch ",
-            "start ",
-            "write ",
-            "draft ",
-            "prepare ",
-            "send ",
-            "message ",
-            "imessage",
-            "text ",
-            "email ",
-            "mail ",
-            "find ",
-            "search ",
-            "look up ",
-            "read ",
-            "summarize ",
-            "inspect ",
-            "check ",
-            "analyze ",
-            "tell me about ",
-            "what model",
-            "what time",
-            "whats the time",
-            "current time",
-            "time is it",
-            "today",
-            "date today",
-            "model provider",
-            "project status",
-            "create ",
-            "make ",
-            "build ",
-            "edit ",
-            "update ",
-            "delete ",
-            "move ",
-            "copy ",
-            "paste ",
-            "schedule ",
-            "set up a meeting",
-            "create a meeting",
-            "calendar event",
-            "add to calendar",
-            "put on my calendar",
-            "zoom meeting",
-            "remind ",
-            "call ",
-            "facetime",
-            "use ",
-            "go to ",
-            "navigate "
-        ]
-
-        for pattern in strongPatterns {
-            if lowered.hasPrefix(pattern) || lowered.contains(" " + pattern) {
-                return true
-            }
-        }
-
-        // App-specific action hints.
-        let appHints = [
-            "messages",
-            "contacts",
-            "calendar",
-            "safari",
-            "chrome",
-            "finder",
-            "notes",
-            "terminal",
-            "project",
-            "status",
-            "model provider",
-            "mlx",
-            "qwen"
-        ]
-
-        let actionWords = [
-            "open",
-            "write",
-            "draft",
-            "prepare",
-            "send",
-            "find",
-            "search",
-            "create",
-            "make",
-            "edit",
-            "update"
-        ]
-
-        let hasAppHint = appHints.contains { lowered.contains($0) }
-        let hasActionWord = actionWords.contains { lowered.contains($0) }
-
-        return hasAppHint && hasActionWord
-    }
-
-
-
-    func runLucySelfLoop(_ goal: String) -> String {
-        let trimmedGoal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if trimmedGoal.isEmpty {
-            return "Please give me a goal."
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "python3",
-            "tools/lucy_self_loop.py",
-            trimmedGoal,
-            "--max-cycles",
-            "2",
-            "--agent-steps",
-            "8",
-            "--dev-attempts",
-            "2"
-        ]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Self-loop finished with no output."
-            }
-
-            return """
-            Exit code: \(process.terminationStatus)
-
-            \(combined)
-            """
-        } catch {
-            return "Could not run Lucy self-loop: \(error.localizedDescription)"
-        }
-    }
-
-
-    func runLucyAgentLoop(_ goal: String) -> String {
-        let trimmedGoal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if trimmedGoal.isEmpty {
-            return "Please give me a goal. Example:\n/agent open Messages and prepare a draft to Andy saying hello"
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "python3",
-            "tools/lucy_agent_loop.py",
-            trimmedGoal,
-            "--max-steps",
-            "8"
-        ]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Agent loop finished with no output."
-            }
-
-            return """
-            Exit code: \(process.terminationStatus)
-
-            \(combined)
-            """
-        } catch {
-            return "Could not run Lucy agent loop: \(error.localizedDescription)"
-        }
-    }
-
-
-
     func runLucyAutonomousBuild(_ goal: String) -> String {
         let trimmedGoal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -3474,7 +3164,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Mo
         """
 
-        let draft = runMLX(prompt: prompt)
+        let draft = runOllama(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
         let parsed = parseEmailDraft(cleanDraft)
 
@@ -3563,7 +3253,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Mo
         """
 
-        let draft = runMLX(prompt: prompt)
+        let draft = runOllama(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
         saveLastEmailDraft(cleanDraft)
 
@@ -3614,7 +3304,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - Include the subject if the current draft includes one.
         """
 
-        let revised = stripTerminalEscapes(runMLX(prompt: prompt))
+        let revised = stripTerminalEscapes(runOllama(prompt: prompt))
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         saveLastEmailDraft(revised)
@@ -3697,7 +3387,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
-    func askMLX(_ userText: String) -> String {
+    func askOllama(_ userText: String) -> String {
         let memoryText = LucyMemory.shared.memoryPromptText()
 
         let prompt = """
@@ -3723,10 +3413,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Lucy:
         """
 
-        return runMLX(prompt: prompt)
+        return runOllama(prompt: prompt)
     }
 
-    func askMLXForSelfUpdate(_ request: String) -> String {
+    func askOllamaForSelfUpdate(_ request: String) -> String {
         let project = LucyDevTools.shared.projectSummary()
         let swiftPreview = LucyDevTools.shared.readSwiftPreview()
 
@@ -3757,6 +3447,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Keep it concise and grounded in the actual project.
         """
 
-        return runMLX(prompt: prompt)
+        return runOllama(prompt: prompt)
     }
 }

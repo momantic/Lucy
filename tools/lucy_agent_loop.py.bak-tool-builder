@@ -1,0 +1,645 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+import textwrap
+from datetime import datetime
+from pathlib import Path
+
+
+PROJECT_ROOT = Path("/Users/michaelzheng/lucy").resolve()
+MODEL = "mlx-community/Qwen2.5-3B-Instruct-4bit"
+MAX_STEPS = 8
+
+
+def run(cmd: list[str], timeout: int = 30) -> tuple[int, str]:
+    proc = subprocess.run(
+        cmd,
+        cwd=str(PROJECT_ROOT),
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+    )
+    combined = "\n".join(
+        part for part in [proc.stdout.strip(), proc.stderr.strip()] if part
+    )
+    return proc.returncode, combined.strip()
+
+
+def call_mlx(prompt: str, max_tokens: int = 1200) -> str:
+    code, out = run(
+        [
+            sys.executable,
+            "-m",
+            "mlx_lm",
+            "generate",
+            "--model",
+            MODEL,
+            "--prompt",
+            prompt,
+            "--max-tokens",
+            str(max_tokens),
+            "--verbose",
+            "False",
+        ],
+        timeout=600,
+    )
+    if code != 0:
+        return json.dumps({
+            "thought": "MLX call failed.",
+            "action": "final",
+            "args": {
+                "reply": "I had trouble using my MLX brain:\n" + out
+            }
+        })
+    return out.strip()
+
+
+def extract_json(text: str) -> dict:
+    text = text.strip()
+
+    try:
+        obj = json.loads(text)
+        if isinstance(obj, dict):
+            return obj
+    except Exception:
+        pass
+
+    match = re.search(r"\{.*\}", text, flags=re.S)
+    if not match:
+        return {
+            "thought": "The model did not return JSON.",
+            "action": "final",
+            "args": {
+                "reply": "I got confused and did not produce a valid action."
+            }
+        }
+
+    try:
+        obj = json.loads(match.group(0))
+        if isinstance(obj, dict):
+            return obj
+    except Exception as e:
+        return {
+            "thought": "The model returned malformed JSON.",
+            "action": "final",
+            "args": {
+                "reply": f"I got malformed JSON from my MLX brain: {e}"
+            }
+        }
+
+    return {
+        "thought": "Unknown JSON parsing failure.",
+        "action": "final",
+        "args": {
+            "reply": "I could not parse my own plan."
+        }
+    }
+
+
+
+def tool_get_current_time(args: dict) -> dict:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    timezone = str(args.get("timezone", "America/New_York")).strip() or "America/New_York"
+
+    try:
+        now = datetime.now(ZoneInfo(timezone))
+    except Exception:
+        timezone = "America/New_York"
+        now = datetime.now(ZoneInfo(timezone))
+
+    return {
+        "ok": True,
+        "timezone": timezone,
+        "date": now.strftime("%A, %B %-d, %Y"),
+        "time_12h": now.strftime("%-I:%M %p"),
+        "time_24h": now.strftime("%H:%M"),
+        "iso": now.isoformat()
+    }
+
+
+
+def tool_create_calendar_event(args: dict) -> dict:
+    title = str(args.get("title", "Untitled event")).strip() or "Untitled event"
+    start = str(args.get("start", "")).strip()
+    end = str(args.get("end", "")).strip()
+    location = str(args.get("location", "")).strip()
+    notes = str(args.get("notes", "")).strip()
+
+    if not start:
+        return {
+            "ok": False,
+            "error": "Missing start datetime. Use a natural date like: June 11, 2026 3:30 PM"
+        }
+
+    if not end:
+        return {
+            "ok": False,
+            "error": "Missing end datetime. If duration is not specified, default to one hour."
+        }
+
+    def esc(s: str) -> str:
+        return s.replace("\\", "\\\\").replace('"', '\\"')
+
+    title_e = esc(title)
+    start_e = esc(start)
+    end_e = esc(end)
+    location_e = esc(location)
+    notes_e = esc(notes)
+
+    apple_script = (
+        f'set eventTitle to "{title_e}"\n'
+        f'set startText to "{start_e}"\n'
+        f'set endText to "{end_e}"\n'
+        f'set eventLocation to "{location_e}"\n'
+        f'set eventNotes to "{notes_e}"\n'
+        'set startDate to date startText\n'
+        'set endDate to date endText\n'
+        'tell application "Calendar"\n'
+        '    activate\n'
+        '    set targetCalendar to missing value\n'
+        '    try\n'
+        '        set targetCalendar to calendar "Home"\n'
+        '    end try\n'
+        '    if targetCalendar is missing value then\n'
+        '        set targetCalendar to first calendar\n'
+        '    end if\n'
+        '    tell targetCalendar\n'
+        '        make new event with properties {summary:eventTitle, start date:startDate, end date:endDate, location:eventLocation, description:eventNotes}\n'
+        '    end tell\n'
+        'end tell\n'
+    )
+
+    code, out = run(["osascript", "-e", apple_script], timeout=30)
+
+    if code != 0:
+        return {
+            "ok": False,
+            "error": out,
+            "hint": "macOS may require Calendar permission for Lucy or osascript. This creates a local Calendar event only."
+        }
+
+    return {
+        "ok": True,
+        "title": title,
+        "start": start,
+        "end": end,
+        "location": location,
+        "notes": notes,
+        "safety": "Created a local Apple Calendar event. No invitations were sent and no real Zoom link was created."
+    }
+
+
+def tool_find_app(args: dict) -> dict:
+    name = str(args.get("name", "")).strip()
+    if not name:
+        return {"ok": False, "error": "Missing app name."}
+
+    candidates = [
+        f"/Applications/{name}.app",
+        f"/System/Applications/{name}.app",
+        f"{PROJECT_ROOT}/dist/{name}.app",
+    ]
+
+    found = [p for p in candidates if Path(p).exists()]
+
+    code, out = run(["/bin/zsh", "-lc", f"mdfind 'kMDItemKind == \"Application\" && kMDItemDisplayName == \"{name}.app\"' | head -10"], timeout=15)
+    spotlight = [line for line in out.splitlines() if line.strip()] if out else []
+
+    all_found = list(dict.fromkeys(found + spotlight))
+    return {
+        "ok": True,
+        "app": name,
+        "found": all_found,
+        "exists": bool(all_found),
+    }
+
+
+def tool_open_app(args: dict) -> dict:
+    name = str(args.get("name", "")).strip()
+    if not name:
+        return {"ok": False, "error": "Missing app name."}
+
+    code, out = run(["open", "-a", name], timeout=20)
+    return {
+        "ok": code == 0,
+        "app": name,
+        "output": out or f"Tried to open {name}.",
+    }
+
+
+def tool_search_contacts(args: dict) -> dict:
+    query = str(args.get("query", "")).strip()
+    if not query:
+        return {"ok": False, "error": "Missing contact query."}
+
+    # This may trigger macOS Contacts permission. That is good; user should approve explicitly.
+    script = f'''
+    tell application "Contacts"
+        set q to "{query}"
+        set matches to people whose name contains q
+        set output to ""
+        repeat with p in matches
+            set n to name of p
+            set phoneText to ""
+            set emailText to ""
+            try
+                repeat with ph in phones of p
+                    set phoneText to phoneText & (value of ph as text) & " "
+                end repeat
+            end try
+            try
+                repeat with em in emails of p
+                    set emailText to emailText & (value of em as text) & " "
+                end repeat
+            end try
+            set output to output & n & " | phones: " & phoneText & " | emails: " & emailText & linefeed
+        end repeat
+        return output
+    end tell
+    '''
+
+    code, out = run(["osascript", "-e", script], timeout=30)
+
+    if code != 0:
+        return {
+            "ok": False,
+            "error": out,
+            "hint": "macOS may need Contacts permission for Lucy/Terminal."
+        }
+
+    lines = [line.strip() for line in out.splitlines() if line.strip()]
+    return {
+        "ok": True,
+        "query": query,
+        "matches": lines[:10],
+        "count": len(lines),
+    }
+
+
+def tool_prepare_imessage(args: dict) -> dict:
+    recipient = str(args.get("recipient", "")).strip()
+    body = str(args.get("body", "")).strip()
+
+    if not body:
+        return {"ok": False, "error": "Missing message body."}
+
+    # Safe fallback: always copy message body.
+    subprocess.run(["pbcopy"], input=body, text=True, timeout=10)
+
+    open_code, open_out = run(["open", "-a", "Messages"], timeout=20)
+
+    # Escape values for AppleScript strings.
+    escaped_recipient = recipient.replace("\\", "\\\\").replace('"', '\\"')
+    escaped_body = body.replace("\\", "\\\\").replace('"', '\\"')
+
+    apple_script = (
+        'tell application "Messages" to activate\n'
+        'delay 1.0\n'
+        f'set theRecipient to "{escaped_recipient}"\n'
+        f'set theBody to "{escaped_body}"\n'
+        'tell application "System Events"\n'
+        '    tell process "Messages"\n'
+        '        keystroke "n" using command down\n'
+        '        delay 1.0\n'
+        '        if theRecipient is not "" and theRecipient is not "me" and theRecipient is not "unknown/not selected" then\n'
+        '            set the clipboard to theRecipient\n'
+        '            keystroke "v" using command down\n'
+        '            delay 1.0\n'
+        '            key code 36\n'
+        '            delay 1.0\n'
+        '        end if\n'
+        '        key code 48\n'
+        '        delay 0.8\n'
+        '        key code 48\n'
+        '        delay 0.8\n'
+        '        set the clipboard to theBody\n'
+        '        keystroke "v" using command down\n'
+        '        delay 0.5\n'
+        '    end tell\n'
+        'end tell\n'
+    )
+
+    ui_code, ui_out = run(["osascript", "-e", apple_script], timeout=30)
+
+    if ui_code != 0:
+        return {
+            "ok": False,
+            "recipient": recipient or "unknown/not selected",
+            "body": body,
+            "copied_to_clipboard": True,
+            "opened_messages": open_code == 0,
+            "error": ui_out,
+            "hint": "macOS blocked UI automation. Enable Accessibility for Lucy in System Settings > Privacy & Security > Accessibility, then say 'try again'. The body is still copied to clipboard."
+        }
+
+    return {
+        "ok": True,
+        "recipient": recipient or "unknown/not selected",
+        "body": body,
+        "copied_to_clipboard": True,
+        "opened_messages": open_code == 0,
+        "safety": "I attempted to fill a visible Messages draft using UI automation but did not send it.",
+        "next_user_action": "Review recipient and body carefully before manually sending."
+    }
+
+
+def tool_copy_to_clipboard(args: dict) -> dict:
+    text = str(args.get("text", "")).strip()
+
+    if not text:
+        return {"ok": False, "error": "Missing text."}
+
+    subprocess.run(["pbcopy"], input=text, text=True, timeout=10)
+
+    return {
+        "ok": True,
+        "copied_to_clipboard": True,
+        "text": text,
+        "safety": "Copied text to clipboard only. No message was sent."
+    }
+
+
+def tool_request_new_tool(args: dict) -> dict:
+    tool_name = re.sub(r"[^a-zA-Z0-9_\\-]", "_", str(args.get("tool_name", "unnamed_tool")).strip())
+    purpose = str(args.get("purpose", "")).strip()
+    needed_capability = str(args.get("needed_capability", "")).strip()
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    path = PROJECT_ROOT / ".lucy" / "tool_requests" / f"{stamp}_{tool_name}.md"
+
+    path.write_text(textwrap.dedent(f"""\
+    # Lucy Tool Request: {tool_name}
+
+    Purpose:
+    {purpose}
+
+    Needed capability:
+    {needed_capability}
+
+    Status:
+    proposed_by_agent_loop
+
+    Safety note:
+    This file is a request/proposal only. It does not execute code.
+    """))
+
+    return {
+        "ok": True,
+        "created": str(path),
+        "message": "I created a tool request. A developer/autonomous-build step can turn this into a real safe tool.",
+    }
+
+
+def tool_read_project_status(args: dict) -> dict:
+    status_files = []
+    for rel in ["README.md", "data/model_provider.json"]:
+        p = PROJECT_ROOT / rel
+        if p.exists():
+            status_files.append({
+                "path": rel,
+                "content_tail": "\n".join(p.read_text(errors="ignore").splitlines()[-20:])
+            })
+
+    return {
+        "ok": True,
+        "project_root": str(PROJECT_ROOT),
+        "status_files": status_files,
+    }
+
+
+TOOLS = {
+    "create_calendar_event": tool_create_calendar_event,
+    "get_current_time": tool_get_current_time,
+    "find_app": tool_find_app,
+    "open_app": tool_open_app,
+    "search_contacts": tool_search_contacts,
+    "prepare_imessage": tool_prepare_imessage,
+    "copy_to_clipboard": tool_copy_to_clipboard,
+    "request_new_tool": tool_request_new_tool,
+    "read_project_status": tool_read_project_status,
+}
+
+
+SYSTEM_PROMPT = """
+You are Lucy's local MLX agent loop.
+
+You are not just a chat bot. You can reason step by step, choose tools, observe results, and continue.
+
+Important safety rules:
+- Never send an iMessage, email, payment, deletion, or irreversible action by yourself.
+- For messages, only prepare drafts, copy to clipboard, open the app, and ask the user to approve/send.
+- If you lack a tool, use request_new_tool.
+- If you need Contacts or app permissions, explain exactly which macOS permission is needed and stop safely.
+- Do not create a request_new_tool for macOS permissions. Permissions must be granted by the user in System Settings.
+- If Messages UI automation fails with Accessibility permission errors, final answer should say: enable Accessibility for Lucy in System Settings > Privacy & Security > Accessibility, then say "try again".
+- Prefer practical progress over asking the user to code.
+- If a tool fails because of macOS permission, do not repeat the same failing tool more than once. Explain the permission needed and stop safely.
+- Never call a tool that is not listed in Available tools.
+- If an attempted tool is unavailable, use request_new_tool or final instead of repeating it.
+- Keep responses short and action-oriented.
+- For current time/date questions, always use get_current_time. Never answer with placeholders like [current time].
+- For scheduling/calendar requests, use create_calendar_event when the user provides a date and time.
+- If duration is not specified, default to one hour.
+- If the user says "Zoom meeting" but provides no Zoom link, create a Calendar event with location "Zoom" and notes "Zoom link not provided"; do not claim to create a real Zoom meeting link.
+- Do not request open_app for Zoom meeting scheduling unless the user specifically asks to open Zoom.
+
+Available tools:
+
+0. get_current_time
+Args: {"timezone": "America/New_York"}
+Purpose: Get the real current local time from the computer. Use this for "what time is it", "current time", "date", or "today".
+
+0.5 create_calendar_event
+Args: {"title": "Zoom meeting", "start": "June 11, 2026 3:30 PM", "end": "June 11, 2026 4:30 PM", "location": "Zoom", "notes": "Zoom link not provided"}
+Purpose: Create a local Apple Calendar event. Does not send invitations. Does not create a real Zoom meeting link.
+
+1. find_app
+Args: {"name": "Messages"}
+Purpose: Check whether a Mac app exists.
+
+2. open_app
+Args: {"name": "Messages"}
+Purpose: Open a Mac app.
+
+3. search_contacts
+Args: {"query": "John"}
+Purpose: Search macOS Contacts for a person. May require permission.
+
+4. prepare_imessage
+Args: {"recipient": "John or phone/email if known", "body": "message body"}
+Purpose: Safely prepare an iMessage draft by copying the body to clipboard and opening Messages. Does NOT send.
+
+5. copy_to_clipboard
+Args: {"text": "text to copy"}
+Purpose: Copy text to clipboard. Safe fallback when UI automation is blocked.
+
+6. request_new_tool
+Args: {"tool_name": "...", "purpose": "...", "needed_capability": "..."}
+Purpose: Create a proposal for a new local tool when current tools are insufficient.
+
+7. read_project_status
+Args: {}
+Purpose: Read basic Lucy project status.
+
+Return ONLY valid JSON in this schema:
+{
+  "thought": "brief reasoning",
+  "action": "tool_name_or_final",
+  "args": { ... }
+}
+
+When finished, use:
+{
+  "thought": "done",
+  "action": "final",
+  "args": {
+    "reply": "message to user"
+  }
+}
+"""
+
+
+def make_prompt(goal: str, transcript: list[dict]) -> str:
+    return SYSTEM_PROMPT + "\n\nUSER GOAL:\n" + goal + "\n\nTRANSCRIPT:\n" + json.dumps(transcript, indent=2)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("goal", nargs="+")
+    parser.add_argument("--max-steps", type=int, default=MAX_STEPS)
+    args = parser.parse_args()
+
+    goal = " ".join(args.goal).strip()
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = PROJECT_ROOT / ".lucy" / "agent_runs" / f"agent_loop_{stamp}.md"
+
+    transcript: list[dict] = []
+    print(f"# Lucy Agent Loop {stamp}")
+    print(f"Goal: {goal}")
+    print(f"Model: {MODEL}")
+    print("")
+
+    for step in range(1, args.max_steps + 1):
+        prompt = make_prompt(goal, transcript)
+        raw = call_mlx(prompt)
+        decision = extract_json(raw)
+
+        thought = str(decision.get("thought", "")).strip()
+        action = str(decision.get("action", "")).strip()
+        tool_args = decision.get("args", {})
+        if not isinstance(tool_args, dict):
+            tool_args = {}
+
+        print(f"STEP {step}")
+        print(f"Thought: {thought}")
+        print(f"Action: {action}")
+        print(f"Args: {json.dumps(tool_args, ensure_ascii=False)}")
+
+        transcript.append({
+            "step": step,
+            "type": "model_decision",
+            "thought": thought,
+            "action": action,
+            "args": tool_args,
+        })
+
+        if action == "final":
+            reply = str(tool_args.get("reply", "")).strip() or "Done."
+            print("")
+            print("FINAL:")
+            print(reply)
+            transcript.append({"type": "final", "reply": reply})
+            break
+
+        tool = TOOLS.get(action)
+        if not tool:
+            observation = {
+                "ok": False,
+                "error": f"Unknown tool: {action}",
+                "available_tools": list(TOOLS.keys()),
+            }
+        else:
+            try:
+                observation = tool(tool_args)
+            except Exception as e:
+                observation = {"ok": False, "error": repr(e)}
+
+        print(f"Observation: {json.dumps(observation, ensure_ascii=False)}")
+        print("")
+
+        transcript.append({
+            "step": step,
+            "type": "observation",
+            "tool": action,
+            "observation": observation,
+        })
+
+        if isinstance(observation, dict) and not observation.get("ok"):
+            error_text = json.dumps(observation, ensure_ascii=False).lower()
+            if (
+                "not allowed to send keystrokes" in error_text
+                or "osascript is not allowed" in error_text
+                or "accessibility" in error_text
+                or "privacy & security" in error_text
+                or "automation" in error_text
+            ):
+                reply = (
+                    "I am blocked by macOS Accessibility/Automation permission. "
+                    "Please enable Accessibility for Lucy and osascript in System Settings > Privacy & Security > Accessibility. "
+                    "I copied the message body to your clipboard, but I did not send anything."
+                )
+                print("FINAL:")
+                print(reply)
+                transcript.append({
+                    "type": "final",
+                    "reply": reply,
+                    "permission_blocked": observation
+                })
+                break
+
+        if action == "request_new_tool" and isinstance(observation, dict) and observation.get("ok"):
+            purpose_text = json.dumps(observation, ensure_ascii=False).lower()
+            if "accessibility" in purpose_text or "permission" in purpose_text or "privacy" in purpose_text:
+                reply = (
+                    "This is a macOS permission issue, not a missing tool. "
+                    "Please grant the requested permission in System Settings, then say 'try again'."
+                )
+            else:
+                reply = (
+                    "I found that I am missing a required tool/capability. "
+                    "I created one tool request and will stop the agent loop so the self-loop can decide whether to build it."
+                )
+            print("FINAL:")
+            print(reply)
+            transcript.append({
+                "type": "final",
+                "reply": reply,
+                "missing_tool_request": observation
+            })
+            break
+
+    else:
+        print("FINAL:")
+        print("I reached my step limit. I made partial progress and stopped safely.")
+
+    log_path.write_text("# Lucy Agent Loop Run\n\n" + json.dumps({
+        "goal": goal,
+        "model": MODEL,
+        "transcript": transcript,
+    }, indent=2, ensure_ascii=False))
+
+    print("")
+    print(f"Log: {log_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

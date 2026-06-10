@@ -207,7 +207,7 @@ def run():
             dev_handler + '\n        if lowered == "/dev cursor-aware" {'
         )
 
-    # Route natural commands before memory/normal Ollama chat.
+    # Route natural commands before memory/normal MLX chat.
     route_call = r'''
         if !userText.hasPrefix("/") && routeNaturalCommand(userText) {
             return
