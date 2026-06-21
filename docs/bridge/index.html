@@ -3,19 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lucy Chrome Bridge</title>
+<title>Lucy Bridge</title>
 
 <style>
 body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #0b0b12;
+  background: radial-gradient(circle at top, #141427, #0b0b12 60%);
   color: white;
-  text-align: center;
+  margin: 0;
   padding: 80px 20px;
+  text-align: center;
 }
 
 .card {
-  max-width: 700px;
+  max-width: 720px;
   margin: auto;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
@@ -23,28 +24,35 @@ body {
   padding: 30px;
 }
 
-h1 {
-  font-size: 42px;
-}
-
 .badge {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(0,212,255,0.15);
+  border: 1px solid rgba(0,212,255,0.3);
   font-size: 12px;
+  color: #00d4ff;
   margin-bottom: 10px;
+}
+
+h1 {
+  margin: 10px 0;
+}
+
+.status {
+  color: #00d4ff;
+  font-weight: 600;
 }
 
 .steps {
   text-align: left;
   margin-top: 20px;
   line-height: 1.8;
+  color: #ccc;
 }
 
-.pending {
+a {
   color: #00d4ff;
-  font-weight: bold;
 }
 </style>
 </head>
@@ -57,15 +65,15 @@ h1 {
 
 <h1>Install Lucy Bridge</h1>
 
-<p class="pending">Status: Pending Chrome Web Store Approval</p>
+<p class="status">Status: Pending Chrome Web Store Approval</p>
 
 <div class="steps">
-1. Once approved, click “Install on Chrome Web Store”<br>
-2. Click “Add to Chrome”<br>
+1. Wait for Chrome Web Store approval<br>
+2. Click “Add to Chrome” when available<br>
 3. Open Chrome → Click extension icon<br>
-4. Connect to Lucy desktop app<br><br>
+4. Send webpage → Lucy analyzes it locally<br><br>
 
-<b>Right now:</b> This extension is under review by Google.
+<b>Note:</b> This extension is currently under review by Google.
 </div>
 
 </div>
