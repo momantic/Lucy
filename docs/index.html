@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Lucy — AI Desktop Agent</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 950px;
+      margin: 60px auto;
+      padding: 0 20px;
+      line-height: 1.6;
+      color: #111;
+    }
+
+    h1 { font-size: 52px; margin-bottom: 0; }
+
+    .tagline {
+      font-size: 20px;
+      color: #555;
+      margin-top: 10px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 14px 24px;
+      background: black;
+      color: white;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: #f6f6f6;
+      padding: 18px;
+      border-radius: 14px;
+      margin-top: 25px;
+    }
+
+    code {
+      background: #eee;
+      padding: 4px 6px;
+      border-radius: 6px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Lucy</h1>
+<p class="tagline">A local AI agent for Mac that browses, researches, and writes for you.</p>
+
+<a class="btn"
+href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
+⬇ Download Lucy (Mac Beta)
+</a>
+
+<div class="card">
+<h3>What is Lucy?</h3>
+<p>
+Lucy is a local-first AI desktop agent that runs on your Mac.
+She can browse the web, read LinkedIn pages, analyze content, and write structured posts using local MLX models.
+</p>
+</div>
+
+<div class="grid">
+
+<div class="card">
+<h3>🧠 What she does</h3>
+<ul>
+<li>Reads web pages via Browser Bridge</li>
+<li>Generates LinkedIn posts</li>
+<li>Runs local AI models (MLX)</li>
+<li>Uses multi-step agent workflows</li>
+<li>Works completely locally</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>🔒 Privacy</h3>
+<ul>
+<li>No cloud API required</li>
+<li>No data upload by default</li>
+<li>Browser data stays local</li>
+<li>Runs on your machine</li>
+</ul>
+</div>
+
+</div>
+
+<div class="card">
+<h3>⚙️ How to install</h3>
+
+<ol>
+<li>Download Lucy</li>
+<li>Open <code>Lucy.app</code> (right-click → Open)</li>
+<li>Install Chrome extension (Browser Bridge)</li>
+<li>Enable developer mode in Chrome</li>
+<li>Load unpacked extension from Lucy folder</li>
+</ol>
+</div>
+
+<div class="card">
+<h3>🌐 Example prompt</h3>
+<code>write me a linkedin post about ai agents in stock markets</code>
+</div>
+
+<div class="card">
+<h3>🚀 Architecture</h3>
+<p>
+Lucy uses a multi-agent pipeline:
+Browser Bridge → MLX analysis → Writer agent → Reviewer → Final post
+</p>
+</div>
+
+<p style="margin-top:40px;color:#888">
+Lucy v0.1 • Open Beta • Built for macOS Apple Silicon
+</p>
+
+</body>
+</html>
