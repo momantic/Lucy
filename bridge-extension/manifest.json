@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Lucy Bridge",
+  "version": "0.1",
+  "description": "Connect Chrome to Lucy AI Desktop Agent",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_title": "Send page to Lucy"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
