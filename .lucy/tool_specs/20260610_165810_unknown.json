@@ -1,0 +1,12 @@
+{
+  "goal": "Count the number of files in the Lucy project root.",
+  "spec": {
+    "capability": "unknown",
+    "tool_names": [],
+    "purpose": "Unknown capability.",
+    "safety": [
+      "Do not implement unknown high-risk capabilities automatically."
+    ],
+    "test_goal": "Count the number of files in the Lucy project root."
+  }
+}

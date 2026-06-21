@@ -38,7 +38,7 @@ class LucyRuntime {
         - Hides: \(hideCount)
 
         Current mode:
-        - Dev Mode v0.4
+        - Dev Mode v0.5
         - Local MLX chat
         - Local memory
         - Safe self-update proposal flow

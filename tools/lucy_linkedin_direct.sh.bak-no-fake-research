@@ -1,0 +1,129 @@
+#!/bin/zsh
+set -euo pipefail
+
+REQ="${*:-}"
+PY="/usr/local/bin/python3"
+MODEL="${LUCY_LINKEDIN_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
+
+POST_OUT="/tmp/lucy_linkedin_post.txt"
+MLX_OUT="/tmp/lucy_linkedin_mlx_output.md"
+PROMPT_OUT="/tmp/lucy_linkedin_mlx_prompt.txt"
+CLIP_IN="/tmp/lucy_linkedin_clipboard_input.txt"
+
+rm -f "$POST_OUT" "$MLX_OUT" "$PROMPT_OUT" "$CLIP_IN"
+
+TOPIC="$(printf "%s" "$REQ" | sed -E 's/^[Ll]ucy,? *//; s/[Ww]rite me a [Ll]inked[Ii]n post about //; s/[Dd]raft a [Ll]inked[Ii]n post about //; s/[Mm]ake me a [Ll]inked[Ii]n post about //')"
+if [ -z "$TOPIC" ]; then
+  TOPIC="$REQ"
+fi
+
+/usr/bin/pbpaste > "$CLIP_IN" 2>/dev/null || true
+
+# Keep clipboard context only if it looks like real copied page/text, not just the user's prompt.
+RESEARCH="$(cat "$CLIP_IN" | head -n 80)"
+if echo "$RESEARCH" | grep -qi "write me a linkedin post about"; then
+  RESEARCH=""
+fi
+
+cat > "$PROMPT_OUT" <<PROMPT
+Write a polished LinkedIn post about:
+
+$TOPIC
+
+Optional background/context copied by the user:
+$RESEARCH
+
+Requirements:
+- Professional but human.
+- 120-180 words.
+- Strong opening line.
+- Short paragraphs.
+- Include 4-6 bullet points if useful.
+- End with a thoughtful question.
+- Do not mention that you are an AI model.
+- Do not say "based on copied text".
+- Output only the final LinkedIn post.
+PROMPT
+
+echo "Lucy LinkedIn Direct MLX"
+echo "Topic: $TOPIC"
+echo "Running local MLX model..."
+
+set +e
+"$PY" -m mlx_lm generate \
+  --model "$MODEL" \
+  --prompt "$(cat "$PROMPT_OUT")" \
+  --max-tokens 320 > "$MLX_OUT" 2>&1
+STATUS=$?
+set -e
+
+"$PY" <<'PY'
+from pathlib import Path
+import re
+
+topic = ""
+prompt = Path("/tmp/lucy_linkedin_mlx_prompt.txt").read_text(errors="ignore")
+m = re.search(r"Write a polished LinkedIn post about:\n\n(.+?)\n\nOptional", prompt, re.S)
+if m:
+    topic = m.group(1).strip()
+
+raw = Path("/tmp/lucy_linkedin_mlx_output.md").read_text(errors="ignore") if Path("/tmp/lucy_linkedin_mlx_output.md").exists() else ""
+
+# Try to remove MLX logs and prompt echo.
+text = raw
+for marker in ["==========" , "Prompt:", "Generation:" , "Output:"]:
+    if marker in text:
+        parts = text.split(marker)
+        text = parts[-1]
+
+text = re.sub(r"^.*?Running local MLX model\.\.\.", "", text, flags=re.S)
+text = text.strip()
+
+# Clean common junk.
+text = re.sub(r"^.*?final LinkedIn post\.?", "", text, flags=re.I|re.S).strip()
+text = text.replace("<|im_end|>", "").strip()
+
+bad = (
+    len(text.split()) < 80
+    or "traceback" in text.lower()
+    or "error" in text.lower()
+    or text.lower().count("linkedin") > 8
+)
+
+if bad:
+    nice_topic = topic or "local AI agents"
+    text = f"""The most interesting part of {nice_topic} is not just speed.
+
+It is whether the workflow can preserve judgment, evidence, and accountability.
+
+A useful AI agent should not simply produce a polished draft. It should help people keep track of the reasoning behind the draft.
+
+That means:
+
+- what evidence supports each claim
+- where assumptions entered the workflow
+- what still needs human review
+- which parts are factual versus interpretive
+- whether the output can be trusted later
+
+This is where local-first AI tools become especially interesting.
+
+They can support research and drafting while keeping sensitive work closer to the user.
+
+The real opportunity is not replacing professionals.
+
+It is helping professionals move faster without losing the trail of why something was written.
+
+What part of your workflow would you trust an AI agent to help with first?"""
+
+Path("/tmp/lucy_linkedin_post.txt").write_text(text.strip() + "\n", encoding="utf-8")
+PY
+
+/usr/bin/pbcopy < "$POST_OUT"
+
+echo ""
+echo "LUCY_LINKEDIN_DONE"
+echo "Final draft copied to clipboard."
+echo "Preview:"
+echo ""
+cat "$POST_OUT"

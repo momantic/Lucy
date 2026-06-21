@@ -1,0 +1,8 @@
+{
+  "goal": "Count the number of files in the Lucy project root.",
+  "tool_name": "tool_count_files",
+  "description": "Counts the number of files in the Lucy project root directory.",
+  "args_example": {},
+  "prompt_doc": "This tool counts the number of files in the Lucy project root directory. It does not require any arguments.",
+  "code": "def tool_count_files(args: dict) -> dict:\n  try:\n    count = len([f for f in Path('.').glob('**/*') if f.is_file()])\n    return {\"ok\": True, \"file_count\": count}\n  except Exception as e:\n    return {\"ok\": False, \"error\": str(e)}"
+}

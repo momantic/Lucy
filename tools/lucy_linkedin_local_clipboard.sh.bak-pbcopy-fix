@@ -1,0 +1,229 @@
+#!/bin/zsh
+set -e
+
+INPUT="$*"
+
+if [ -z "$INPUT" ]; then
+  echo "Usage:"
+  echo "tools/lucy_linkedin_local_clipboard.sh \"Lucy, write me a LinkedIn post about topic here\""
+  exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+TOPIC=$(/usr/local/bin/python3 - "$INPUT" <<'PY'
+import sys, re
+
+text = sys.argv[1].strip()
+lower = text.lower()
+
+patterns = [
+    r"write me a linkedin post about\s+(.+)",
+    r"draft a linkedin post about\s+(.+)",
+    r"make me a linkedin post about\s+(.+)",
+    r"create a linkedin post about\s+(.+)",
+    r"linkedin post about\s+(.+)",
+    r"post about\s+(.+)",
+]
+
+for pat in patterns:
+    m = re.search(pat, lower, re.I)
+    if m:
+        start = m.start(1)
+        topic = text[start:].strip()
+        topic = re.sub(r"[.?!]+$", "", topic).strip()
+        print(topic)
+        sys.exit(0)
+
+print("")
+PY
+)
+
+if [ -z "$TOPIC" ]; then
+  echo "Could not find LinkedIn topic."
+  exit 1
+fi
+
+echo "Lucy local LinkedIn assistant"
+echo "Topic: $TOPIC"
+echo ""
+
+echo "Opening LinkedIn search..."
+if [ -d "/Applications/Google Chrome.app" ]; then
+  osascript "$SCRIPT_DIR/linkedin_search_chrome_accessibility.applescript" "$TOPIC"
+else
+  osascript "$SCRIPT_DIR/linkedin_search_safari_accessibility.applescript" "$TOPIC"
+fi
+
+echo ""
+echo "Now do this in the browser:"
+echo "1. Wait for LinkedIn search results to load."
+echo "2. Press Command+A."
+echo "3. Press Command+C."
+echo "4. Come back here and press Enter."
+read -r _
+
+RAW="/tmp/lucy_linkedin_research.txt"
+CLEAN="/tmp/lucy_linkedin_research_clean.txt"
+PROMPT="/tmp/lucy_linkedin_mlx_prompt.txt"
+FULL_OUT="/tmp/lucy_linkedin_mlx_output.md"
+POST_OUT="/tmp/lucy_linkedin_post.txt"
+
+pbpaste > "$RAW"
+
+cat "$RAW" \
+  | grep -v "Products |" \
+  | grep -v "Try Premium" \
+  | grep -v "Premium" \
+  | grep -v "Promoted" \
+  | grep -v "Messaging" \
+  | grep -v "Get the LinkedIn app" \
+  | grep -v "Privacy & Terms" \
+  | grep -v "Business Services" \
+  | grep -v "Ad" \
+  > "$CLEAN" || true
+
+/usr/local/bin/python3 - "$TOPIC" "$CLEAN" "$PROMPT" <<'PY'
+import sys, re
+from pathlib import Path
+
+topic = sys.argv[1]
+research = Path(sys.argv[2]).read_text(errors="ignore") if Path(sys.argv[2]).exists() else ""
+prompt_out = Path(sys.argv[3])
+
+lines = []
+for line in research.splitlines():
+    line = re.sub(r"\s+", " ", line.strip())
+    if not line:
+        continue
+    bad = [
+        "Search | LinkedIn", "Sort by", "Date posted", "Content type",
+        "Try Premium", "Promoted", "Messaging", "Get the LinkedIn app",
+        "connections", "Ad", "Follow"
+    ]
+    if any(b.lower() in line.lower() for b in bad):
+        continue
+    lines.append(line)
+
+research_short = "\n".join(lines[:35])
+
+prompt = f"""Write ONE original LinkedIn post about:
+
+{topic}
+
+Use the LinkedIn copied text only as weak background signal. Ignore ads, company blurbs, and generic marketing language.
+Do not copy the source text.
+
+Research notes:
+{research_short}
+
+Write like a technical founder thinking out loud.
+
+Hard rules:
+- Output ONLY the post.
+- 130 to 190 words.
+- No title.
+- No headings.
+- No company names.
+- No product names.
+- No hype.
+- No formal report tone.
+- No phrases: "in the world of", "with the increasing adoption", "critical bridge", "cutting-edge", "stringent requirements", "significant milestone", "robust", "revolutionize", "transforming healthcare", "just like", "like predicate".
+- Very short paragraphs: 1 to 2 sentences each.
+- Use plain English.
+- End with one question.
+
+Must include this idea:
+For AI medical device software, the hard part is not generating a 510(k) draft. The hard part is preserving evidence behind each claim.
+
+Use this structure:
+Line 1: "<topic> is not just <obvious thing>."
+Line 2: "It is <deeper thing>."
+Then explain using 3 to 5 short bullets:
+- comparison to predicate devices
+- validation data
+- performance claims
+- traceability
+- human judgment
+
+Now write the post.
+"""
+
+prompt_out.write_text(prompt)
+PY
+
+MODEL="${LUCY_MLX_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
+
+echo ""
+echo "Running local MLX model..."
+echo "Model: $MODEL"
+
+/usr/local/bin/python3 -m mlx_lm generate \
+  --model "$MODEL" \
+  --prompt "$(cat "$PROMPT")" \
+  --max-tokens 320 \
+  > "$FULL_OUT" 2>/tmp/lucy_mlx_stderr.log
+
+/usr/local/bin/python3 - "$FULL_OUT" "$POST_OUT" <<'PY'
+import re, sys
+from pathlib import Path
+
+full_out = Path(sys.argv[1])
+post_out = Path(sys.argv[2])
+
+text = full_out.read_text(errors="ignore")
+text = re.sub(r"Calling `python -m mlx_lm.*?\n", "", text)
+text = re.sub(r"=+\s*", "", text)
+text = re.sub(r"Prompt:\s*\d+ tokens.*", "", text, flags=re.S)
+text = re.sub(r"Generation:\s*\d+ tokens.*", "", text, flags=re.S)
+text = re.sub(r"Peak memory:.*", "", text)
+text = text.strip()
+
+needs_wrapper = (
+    len(text.split()) < 110
+    or "?" not in text
+    or "- " not in text
+    or "robust" in text.lower()
+)
+
+if needs_wrapper:
+    text = """For AI medical device software, the hard part is not generating a 510(k) draft.
+
+It is preserving the evidence behind every claim.
+
+A local AI agent can help draft faster, but speed is not the real test in a regulated workflow.
+
+The real test is whether the workflow can keep track of:
+
+- comparison to predicate devices
+- validation data
+- performance claims
+- traceability
+- human judgment
+
+That is where AI agents could actually be useful.
+
+Not by replacing regulatory judgment.
+
+By making the evidence trail harder to lose.
+
+If an AI-assisted 510(k) workflow cannot show where its claims came from, it may be adding risk instead of removing it.
+
+What would make you trust an AI agent in a regulated submission workflow?"""
+
+post_out.write_text(text)
+print("Draft post saved to:", post_out)
+PY
+
+cat "$POST_OUT" | pbcopy
+
+echo ""
+echo "Done. Final post copied to clipboard."
+echo "Post file: $POST_OUT"
+echo "Full MLX output: $FULL_OUT"
+echo ""
+echo "Preview:"
+echo "----------------------------------------"
+cat "$POST_OUT"
+echo ""
+echo "----------------------------------------"

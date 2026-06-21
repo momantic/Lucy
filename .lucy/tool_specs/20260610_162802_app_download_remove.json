@@ -1,0 +1,20 @@
+{
+  "goal": "Download Discord for me.",
+  "spec": {
+    "capability": "app_download_remove",
+    "tool_names": [
+      "open_url",
+      "download_file",
+      "download_known_app",
+      "remove_app_to_trash"
+    ],
+    "purpose": "Download known Mac apps safely and move installed apps to Trash.",
+    "safety": [
+      "Only HTTPS downloads.",
+      "Download to ~/Downloads.",
+      "Do not install or run downloaded apps without explicit user approval.",
+      "Move apps to Trash instead of permanently deleting them."
+    ],
+    "test_goal": "Download Discord for me."
+  }
+}

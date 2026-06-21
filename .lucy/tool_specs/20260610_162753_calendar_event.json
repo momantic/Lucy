@@ -1,0 +1,16 @@
+{
+  "goal": "Schedule a Zoom meeting at 3:30 PM on June 11, 2026.",
+  "spec": {
+    "capability": "calendar_event",
+    "tool_names": [
+      "create_calendar_event"
+    ],
+    "purpose": "Create local Apple Calendar events from a title, start time, end time, location, and notes.",
+    "safety": [
+      "Do not send invitations.",
+      "Do not claim to create a real Zoom link unless one is provided.",
+      "If duration is missing, default to one hour."
+    ],
+    "test_goal": "Schedule a Zoom meeting at 3:30 PM on June 11, 2026."
+  }
+}

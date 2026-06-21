@@ -1,0 +1,12 @@
+{
+  "goal": "write me alinkedin post on the new ai agents in stocks",
+  "spec": {
+    "capability": "unknown",
+    "tool_names": [],
+    "purpose": "Unknown capability.",
+    "safety": [
+      "Do not implement unknown high-risk capabilities automatically."
+    ],
+    "test_goal": "write me alinkedin post on the new ai agents in stocks"
+  }
+}

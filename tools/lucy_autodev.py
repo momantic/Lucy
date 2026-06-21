@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env /usr/local/bin/python3
 import subprocess
 import sys
 from datetime import datetime
@@ -13,7 +13,7 @@ SOURCES = ROOT / "swift_app" / "Sources"
 NEXT_TASKS = [
     {
         "name": "fix-version-label",
-        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "fix-version-label"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "apply", "fix-version-label"],
         "description": "Fix Lucy Terminal startup version label."
     }
 ]
@@ -22,37 +22,37 @@ NEXT_TASKS = [
 ROADMAP = [
     {
         "name": "status",
-        "command": ["python3", "tools/lucy_dev_agent.py", "status"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "status"],
         "description": "Verify Lucy compiles before autodev starts."
     },
     {
         "name": "animation-smoother",
-        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "animation-smoother"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "apply", "animation-smoother"],
         "description": "Make animation timing smoother."
     },
     {
         "name": "cute-eyes",
-        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "cute-eyes"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "apply", "cute-eyes"],
         "description": "Ensure cute eye drawing is applied."
     },
     {
         "name": "better-crawl",
-        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "better-crawl"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "apply", "better-crawl"],
         "description": "Ensure better crawl leg animation is applied."
     },
     {
         "name": "jump-arc",
-        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "jump-arc"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "apply", "jump-arc"],
         "description": "Ensure Lucy uses a two-stage hop arc instead of sliding."
     },
     {
         "name": "cursor-aware",
-        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "cursor-aware"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "apply", "cursor-aware"],
         "description": "Ensure cursor awareness is applied."
     },
     {
         "name": "natural-commands",
-        "command": ["python3", "tools/lucy_dev_agent.py", "apply", "natural-commands"],
+        "command": ["/usr/local/bin/python3", "tools/lucy_dev_agent.py", "apply", "natural-commands"],
         "description": "Ensure natural command routing is applied."
     },
 ]
@@ -216,8 +216,8 @@ def run_next():
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 tools/lucy_autodev.py roadmap")
-        print("  python3 tools/lucy_autodev.py next")
+        print("  /usr/local/bin/python3 tools/lucy_autodev.py roadmap")
+        print("  /usr/local/bin/python3 tools/lucy_autodev.py next")
         sys.exit(1)
 
     command = sys.argv[1].lower()

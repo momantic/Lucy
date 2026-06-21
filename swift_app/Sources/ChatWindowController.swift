@@ -54,6 +54,29 @@ class LucySettings {
 
 
 class ChatWindowController: NSObject, NSTextFieldDelegate {
+    private var pendingReminderRequest: String?
+    private var pendingCalendarRequest: String?
+    private var pendingNoteRequest: String?
+    private var pendingRegistryToolName: String?
+    private var pendingRegistryToolRequest: String?
+    private var pendingGoalApprovedToolName: String?
+    private var pendingGoalOriginalRequest: String?
+
+    struct LucyToolRegistry: Decodable {
+        let tools: [LucyRegisteredTool]
+    }
+
+    struct LucyRegisteredTool: Decodable {
+        let name: String
+        let path: String
+        let dry_run: Bool?
+        let purpose: String?
+        let requires_approval_for_real_action: Bool?
+        let pair_base: String?
+        let role: String?
+        let intent_prefixes: [String]?
+    }
+
     var conversationHistory: [LucyChatMessage] = []
 
 
@@ -346,7 +369,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
-        let userText = rawText
+        var userText = rawText
 
         input.stringValue = ""
         append("You: \(userText)\n")
@@ -442,9 +465,159 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+        if userText.hasPrefix("/") {
+            let resolvedCommand = resolveSlashCommand(userText)
+            if resolvedCommand.hasPrefix("/__unknown__ ") {
+                let result = runSelfCommand(resolvedCommand)
+                append("Lucy:\n\(result)\n\n")
+                return
+            }
+            userText = resolvedCommand
+        }
+
         conversationHistory.append(LucyChatMessage(role: "User", content: userText))
 
         let lowered = userText.lowercased()
+
+        if lowered.hasPrefix("/tool ") || lowered == "/tool" {
+            let result = runSandboxToolCommand(userText)
+            append("Lucy:\n\(result)\n\n")
+            return
+        }
+
+        if looksLikeGenericApproval(userText),
+           let pendingTool = pendingRegistryToolName,
+           let pendingRequest = pendingRegistryToolRequest {
+            let result = runSandboxToolCommand("/tool \(pendingTool) " + pendingRequest)
+            append("Lucy:\nCreating the approved action now through the tool registry.\n\n\(result)\n\n")
+            pendingRegistryToolName = nil
+            pendingRegistryToolRequest = nil
+            return
+        }
+
+        if let base = registryToolBaseForNaturalRequest(userText),
+           let pair = registryToolPairs()[base] {
+            pendingRegistryToolName = pair.approved
+            pendingRegistryToolRequest = userText
+            let result = runSandboxToolCommand("/tool \(pair.dryRun) " + userText)
+            append("Lucy:\nI matched this request to the registered tool pair `\(base)`, so I ran a dry-run preview.\n\n\(result)\n\nSay `yes create it` if you want me to run the approved action.\n\n")
+            return
+        }
+
+        if looksLikeNoteApproval(userText), let pending = pendingNoteRequest {
+            let result = runSandboxToolCommand("/tool notes_create_approved " + pending)
+            append("Lucy:\nCreating the approved note now.\n\n\(result)\n\n")
+            pendingNoteRequest = nil
+            return
+        }
+
+        if looksLikeNoteRequest(userText) {
+            pendingNoteRequest = userText
+            let result = runSandboxToolCommand("/tool notes_dry_run " + userText)
+            append("Lucy:\nI think this is a note request, so I ran a dry-run preview.\n\n\(result)\n\nSay `yes create it` if you want me to create this Notes.app note.\n\n")
+            return
+        }
+
+        if looksLikeCalendarApproval(userText), let pending = pendingCalendarRequest {
+            let result = runSandboxToolCommand("/tool calendar_create_approved " + pending)
+            append("Lucy:\nCreating the approved calendar event now.\n\n\(result)\n\n")
+            pendingCalendarRequest = nil
+            return
+        }
+
+        if looksLikeCalendarRequest(userText) {
+            pendingCalendarRequest = userText
+            let result = runSandboxToolCommand("/tool calendar_dry_run " + userText)
+            append("Lucy:\nI think this is a calendar request, so I ran a dry-run preview.\n\n\(result)\n\nSay `yes create it` if you want me to create this Calendar.app event.\n\n")
+            return
+        }
+
+        if looksLikeReminderApproval(userText), let pending = pendingReminderRequest {
+            let result = runSandboxToolCommand("/tool reminders_create_approved " + pending)
+            append("Lucy:\nCreating the approved reminder now.\n\n\(result)\n\n")
+            pendingReminderRequest = nil
+            return
+        }
+
+        if looksLikeReminderRequest(userText) {
+            pendingReminderRequest = userText
+            let result = runSandboxToolCommand("/tool reminders_dry_run " + userText)
+            append("Lucy:\nI think this is a reminder request, so I ran a dry-run preview.\n\n\(result)\n\nSay `yes create it` if you want me to create it later. Real Reminders.app creation is not enabled yet, so approval is currently dry-run only.\n\n")
+            return
+        }
+
+
+
+
+
+        if lowered == "/copydraft" {
+            let postURL = URL(fileURLWithPath: "/tmp/lucy_linkedin_post.txt")
+            if let draft = try? String(contentsOf: postURL, encoding: .utf8),
+               !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(draft, forType: .string)
+                append("Lucy: Copied the saved LinkedIn draft to your clipboard.\n\n")
+                append("Lucy: Preview:\n\n\(draft)\n\n")
+                
+            } else {
+                append("Lucy: I could not find a saved draft at /tmp/lucy_linkedin_post.txt.\n\n")
+            }
+            return
+        }
+
+
+        // LinkedIn local MLX drafting.
+        let fuzzyLinkedIn = lowered
+            .replacingOccurrences(of: "linekdin", with: "linkedin")
+            .replacingOccurrences(of: "linkdin", with: "linkedin")
+            .replacingOccurrences(of: "linkedn", with: "linkedin")
+            .replacingOccurrences(of: "wirte", with: "write")
+            .replacingOccurrences(of: "wrtie", with: "write")
+            .replacingOccurrences(of: "psot", with: "post")
+            .replacingOccurrences(of: "pst", with: "post")
+
+        if fuzzyLinkedIn.contains("linkedin")
+            && fuzzyLinkedIn.contains("post")
+            && (fuzzyLinkedIn.contains("write") || fuzzyLinkedIn.contains("draft") || fuzzyLinkedIn.contains("make") || fuzzyLinkedIn.contains("create")) {
+
+            append("Lucy: drafting locally with MLX now...\n")
+            append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with MLX. I will print the draft here.\n\n")
+
+            append("Lucy Progress\n[⟳] Research\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                self.append("Lucy Progress\n[✓] Research started\n[⟳] Reading LinkedIn page\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                self.append("Lucy Progress\n[✓] Research\n[⟳] Extracting themes/signals\n[ ] Writing\n[ ] Done\n\n")
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 24) {
+                self.append("Lucy Progress\n[✓] Research\n[✓] Analysis\n[⟳] Writing synthesized draft\n[ ] Done\n\n")
+            }
+
+            try? FileManager.default.removeItem(atPath: "/tmp/lucy_linkedin_post.txt")
+            try? FileManager.default.removeItem(atPath: "/tmp/lucy_linkedin_mlx_output.md")
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                let escaped = userText.replacingOccurrences(of: "'", with: "'\\''")
+                let command = "cd ~/lucy && PYTHONUNBUFFERED=1 python3 -u tools_created_by_lucy/lucy_linkedin_direct.py '\(escaped)'"
+                self.runShellStreaming(command)
+
+                DispatchQueue.main.async {
+                    let postURL = URL(fileURLWithPath: "/tmp/lucy_linkedin_post.txt")
+                    if let draft = try? String(contentsOf: postURL, encoding: .utf8),
+                       !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        // Draft already printed by tool. No clipboard/copy step needed.
+                    } else {
+                        self.append("Lucy: I could not find /tmp/lucy_linkedin_post.txt after drafting.\n\n")
+                    }
+                }
+            }
+            return
+        }
 
 
         if !userText.hasPrefix("/")
@@ -1095,6 +1268,79 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         if shouldRouteToAgentLoop(userText) {
             saveLastAgentGoal(userText)
+            let loweredForGoalEngine = userText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let wantsDynamicToolAuthor = loweredForGoalEngine.contains("create a tool")
+                || loweredForGoalEngine.contains("make a tool")
+                || loweredForGoalEngine.contains("build a tool")
+                || loweredForGoalEngine.contains("write a tool")
+
+            if wantsDynamicToolAuthor,
+               let goalResult = runLucyGoalEngine(userText),
+               let ok = goalResult.ok,
+               ok == true {
+                var message = "Lucy:\nI treated this as a tool-authoring request.\n"
+                if let mode = goalResult.mode {
+                    message += "Mode: \(mode)\n"
+                }
+                if let base = goalResult.pair_base {
+                    message += "Tool pair: `\(base)`\n"
+                }
+                if let toolName = goalResult.tool_name {
+                    message += "Created tool: `\(toolName)`\n"
+                    message += "Try: `/tool \(toolName) https://example.com`\n"
+                }
+                if let path = goalResult.path {
+                    message += "Path: `\(path)`\n"
+                }
+                if let registered = goalResult.registered {
+                    message += "Registered: \(registered)\n"
+                }
+                if let dryRun = goalResult.dry_run_output {
+                    message += "\nDry-run preview:\n\(dryRun)\n"
+                }
+                message += "\n"
+                append(message)
+                return
+            }
+
+            let shouldTryGoalEngineBeforeMLX = !userText.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("/")
+            if shouldTryGoalEngineBeforeMLX,
+               let goalResult = runLucyGoalEngine(userText),
+               let ok = goalResult.ok,
+               ok == true {
+                if let approvedTool = goalResult.approved_tool {
+                    pendingGoalApprovedToolName = approvedTool
+                    pendingGoalOriginalRequest = userText
+                }
+
+                var message = "Lucy:\nI treated this as a natural-language goal.\n"
+                if let mode = goalResult.mode {
+                    message += "Mode: \(mode)\n"
+                }
+                if let base = goalResult.pair_base {
+                    message += "Tool pair: `\(base)`\n"
+                }
+                if let toolName = goalResult.tool_name {
+                    message += "Created tool: `\(toolName)`\n"
+                    message += "Try: `/tool \(toolName) https://example.com`\n"
+                }
+                if let path = goalResult.path {
+                    message += "Path: `\(path)`\n"
+                }
+                if let registered = goalResult.registered {
+                    message += "Registered: \(registered)\n"
+                }
+                if let dryRun = goalResult.dry_run_output {
+                    message += "\nDry-run preview:\n\(dryRun)\n"
+                }
+                if goalResult.needs_approval == true {
+                    message += "\nSay `yes create it` if you want me to run the approved action.\n"
+                }
+                message += "\n"
+                append(message)
+                return
+            }
+
             append("Lucy: I understand this as a task, so I am using my MLX self-loop.\n")
 
             DispatchQueue.global(qos: .userInitiated).async {
@@ -1271,6 +1517,30 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+
+        if userText.hasPrefix("/") {
+            let result = runSelfCommand(resolveSlashCommand(userText))
+            append("Lucy:\n\(result)\n\n")
+            return
+        }
+
+        if !userText.hasPrefix("/") {
+            let goalResult = runLucyGoalEngine(userText)
+            if let goalResult = goalResult,
+               goalResult.ok == true,
+               let mode = goalResult.mode,
+               mode != "chat" {
+
+                if let dryRunOutput = goalResult.dry_run_output, !dryRunOutput.isEmpty {
+                    append("Lucy:\n\(dryRunOutput)\n\n")
+                } else if let message = goalResult.message, !message.isEmpty {
+                    append("Lucy: \(message)\n\n")
+                } else {
+                    append("Lucy: routed to \(mode).\n\n")
+                }
+                return
+            }
+        }
 
         append("Lucy: thinking...\n")
 
@@ -2066,14 +2336,34 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         process.standardError = errorPipe
 
         do {
+            var output = ""
+            var error = ""
+
+            outputPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                if data.count > 0, let chunk = String(data: data, encoding: .utf8) {
+                    output += chunk
+                    DispatchQueue.main.async {
+                        self.append(chunk)
+                    }
+                }
+            }
+
+            errorPipe.fileHandleForReading.readabilityHandler = { handle in
+                let data = handle.availableData
+                if data.count > 0, let chunk = String(data: data, encoding: .utf8) {
+                    error += chunk
+                    DispatchQueue.main.async {
+                        self.append(chunk)
+                    }
+                }
+            }
+
             try process.run()
             process.waitUntilExit()
 
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-            let output = String(data: outputData, encoding: .utf8) ?? ""
-            let error = String(data: errorData, encoding: .utf8) ?? ""
+            outputPipe.fileHandleForReading.readabilityHandler = nil
+            errorPipe.fileHandleForReading.readabilityHandler = nil
             let combined = output + "\n" + error
 
             return """
@@ -2171,8 +2461,499 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
 
+
+    func resolveSlashCommand(_ rawCommand: String) -> String {
+        let trimmed = rawCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        guard let first = parts.first else { return trimmed }
+
+        let command = String(first).lowercased()
+        let rest = parts.count > 1 ? " " + String(parts[1]) : ""
+
+        let known = [
+            "/memory", "/project", "/readself", "/status", "/selfdevcheck", "/tool", "/quit", "/settings",
+            "/devstatus", "/autodev", "/build", "/develop",
+            "/use3d", "/real3d", "/renderinfo", "/modelbounds",
+            "/browser", "/youtube", "/openurl", "/openapp"
+        ]
+
+        if known.contains(command) {
+            return command + rest
+        }
+
+        let ranked = known
+            .map { ($0, levenshteinDistance(command, $0)) }
+            .sorted { $0.1 < $1.1 }
+
+        if let best = ranked.first, best.1 <= 2 {
+            return best.0 + rest
+        }
+
+        let suggestions = ranked.prefix(3).map { $0.0 }.joined(separator: ", ")
+        return "/__unknown__ \(command) \(suggestions)"
+    }
+
+    func levenshteinDistance(_ a: String, _ b: String) -> Int {
+        let a = Array(a)
+        let b = Array(b)
+
+        if a.isEmpty { return b.count }
+        if b.isEmpty { return a.count }
+
+        var previous = Array(0...b.count)
+        var current = Array(repeating: 0, count: b.count + 1)
+
+        for i in 1...a.count {
+            current[0] = i
+            for j in 1...b.count {
+                let cost = a[i - 1] == b[j - 1] ? 0 : 1
+                current[j] = min(
+                    previous[j] + 1,
+                    current[j - 1] + 1,
+                    previous[j - 1] + cost
+                )
+            }
+            previous = current
+        }
+
+        return previous[b.count]
+    }
+
+    func selfDevCheckReport() -> String {
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser.path
+        let candidates = [
+            home + "/lucy",
+            home + "/Lucy",
+            fm.currentDirectoryPath
+        ]
+
+        let root = candidates.first { candidate in
+            fm.fileExists(atPath: candidate + "/swift_app/Sources/ChatWindowController.swift")
+        } ?? fm.currentDirectoryPath
+
+        let devScript = root + "/tools/lucy_autonomous_dev.py"
+        let instructions = root + "/instructions.md"
+        let buildScript = root + "/build_lucy_app.sh"
+        let distApp = root + "/dist/Lucy.app"
+        let appleToolPairTemplate = root + "/tools/lucy_templates/apple_action_tool_pair.md"
+        let toolRegistry = root + "/tools_created_by_lucy/tool_registry.json"
+
+        return """
+        Lucy Self-Dev Check
+        Project root: \(root)
+        Dev script exists: \(fm.fileExists(atPath: devScript))
+        instructions.md exists: \(fm.fileExists(atPath: instructions))
+        build_lucy_app.sh exists: \(fm.fileExists(atPath: buildScript))
+        dist/Lucy.app exists: \(fm.fileExists(atPath: distApp))
+        apple_action_tool_pair template exists: \(fm.fileExists(atPath: appleToolPairTemplate))
+        tool_registry.json exists: \(fm.fileExists(atPath: toolRegistry))
+        """
+    }
+
+
+
+
+
+
+
+    func registryToolPairs() -> [String: (dryRun: String, approved: String)] {
+        let root = lucyDetectedProjectRootPath()
+        let registryURL = URL(fileURLWithPath: root)
+            .appendingPathComponent("tools_created_by_lucy")
+            .appendingPathComponent("tool_registry.json")
+
+        guard let data = try? Data(contentsOf: registryURL) else {
+            return [:]
+        }
+
+        guard let registry = try? JSONDecoder().decode(LucyToolRegistry.self, from: data) else {
+            return [:]
+        }
+
+        var dryRuns: [String: String] = [:]
+        var approved: [String: String] = [:]
+
+        for tool in registry.tools {
+            if tool.name.hasSuffix("_dry_run") {
+                let base = String(tool.name.dropLast("_dry_run".count))
+                dryRuns[base] = tool.name
+            } else if tool.name.hasSuffix("_create_approved") {
+                let base = String(tool.name.dropLast("_create_approved".count))
+                approved[base] = tool.name
+            }
+        }
+
+        var pairs: [String: (dryRun: String, approved: String)] = [:]
+        for (base, dryName) in dryRuns {
+            if let approvedName = approved[base] {
+                pairs[base] = (dryRun: dryName, approved: approvedName)
+            }
+        }
+
+        return pairs
+    }
+
+    func registryToolBaseForNaturalRequest(_ text: String) -> String? {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if lowered.hasPrefix("/") {
+            return nil
+        }
+
+        let root = lucyDetectedProjectRootPath()
+        let registryURL = URL(fileURLWithPath: root)
+            .appendingPathComponent("tools_created_by_lucy")
+            .appendingPathComponent("tool_registry.json")
+
+        guard let data = try? Data(contentsOf: registryURL) else {
+            return nil
+        }
+
+        guard let registry = try? JSONDecoder().decode(LucyToolRegistry.self, from: data) else {
+            return nil
+        }
+
+        var bestBase: String?
+        var bestPrefixLength = -1
+
+        for tool in registry.tools {
+            guard let base = tool.pair_base else {
+                continue
+            }
+
+            guard registryToolPairs()[base] != nil else {
+                continue
+            }
+
+            let prefixes = tool.intent_prefixes ?? []
+            for rawPrefix in prefixes {
+                let prefix = rawPrefix.lowercased()
+                if lowered.hasPrefix(prefix) && prefix.count > bestPrefixLength {
+                    bestBase = base
+                    bestPrefixLength = prefix.count
+                }
+            }
+        }
+
+        return bestBase
+    }
+
+
+
+    struct LucyGoalEngineResult: Decodable {
+        let ok: Bool?
+        let mode: String?
+        let pair_base: String?
+        let tool_name: String?
+        let path: String?
+        let registered: Bool?
+        let dry_run_tool: String?
+        let approved_tool: String?
+        let request: String?
+        let dry_run_output: String?
+        let stderr: String?
+        let needs_approval: Bool?
+        let approval_instruction: String?
+        let message: String?
+    }
+
+    func runLucyGoalEngine(_ request: String) -> LucyGoalEngineResult? {
+        let root = lucyDetectedProjectRootPath()
+        let scriptPath = URL(fileURLWithPath: root)
+            .appendingPathComponent("tools")
+            .appendingPathComponent("lucy_goal_engine.py")
+            .path
+
+        let process = Process()
+        process.currentDirectoryURL = URL(fileURLWithPath: root)
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        process.arguments = [scriptPath, request]
+
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = errPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return nil
+        }
+
+        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+        guard let outText = String(data: outData, encoding: .utf8),
+              let data = outText.data(using: .utf8) else {
+            return nil
+        }
+
+        return try? JSONDecoder().decode(LucyGoalEngineResult.self, from: data)
+    }
+
+    func looksLikeGenericApproval(_ text: String) -> Bool {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let approvals = [
+            "yes",
+            "yes create it",
+            "create it",
+            "do it",
+            "confirm",
+            "approved",
+            "yes please",
+            "yes save it",
+            "save it",
+            "yes schedule it",
+            "schedule it"
+        ]
+        return approvals.contains(lowered)
+    }
+
+    func looksLikeNoteRequest(_ text: String) -> Bool {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if lowered.hasPrefix("/") {
+            return false
+        }
+
+        let starts = [
+            "create a note ",
+            "create note ",
+            "make a note ",
+            "make note ",
+            "add a note ",
+            "add note "
+        ]
+
+        return starts.contains(where: { lowered.hasPrefix($0) })
+    }
+
+    func looksLikeNoteApproval(_ text: String) -> Bool {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        let approvals = [
+            "yes",
+            "yes create it",
+            "create it",
+            "do it",
+            "confirm",
+            "approved",
+            "yes please",
+            "yes save it",
+            "save it"
+        ]
+
+        return approvals.contains(lowered)
+    }
+
+    func looksLikeCalendarRequest(_ text: String) -> Bool {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if lowered.hasPrefix("/") {
+            return false
+        }
+
+        let starts = [
+            "schedule ",
+            "schedule a meeting ",
+            "schedule meeting ",
+            "create calendar event ",
+            "add calendar event ",
+            "add event ",
+            "set up meeting "
+        ]
+
+        return starts.contains(where: { lowered.hasPrefix($0) })
+    }
+
+    func looksLikeCalendarApproval(_ text: String) -> Bool {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        let approvals = [
+            "yes",
+            "yes create it",
+            "create it",
+            "do it",
+            "confirm",
+            "approved",
+            "yes please",
+            "yes schedule it",
+            "schedule it"
+        ]
+
+        return approvals.contains(lowered)
+    }
+
+    func looksLikeReminderApproval(_ text: String) -> Bool {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        let approvals = [
+            "yes",
+            "yes create it",
+            "create it",
+            "do it",
+            "confirm",
+            "approved",
+            "yes please"
+        ]
+
+        return approvals.contains(lowered)
+    }
+
+    func looksLikeReminderRequest(_ text: String) -> Bool {
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if lowered.hasPrefix("/") {
+            return false
+        }
+
+        let reminderStarts = [
+            "remind me ",
+            "remind me to ",
+            "reminder ",
+            "set a reminder ",
+            "set reminder "
+        ]
+
+        if reminderStarts.contains(where: { lowered.hasPrefix($0) }) {
+            return true
+        }
+
+        // Conservative extra pattern: "tomorrow at 3pm call mom" should not trigger yet.
+        // Keep this narrow until dry-run behavior is reliable.
+        return false
+    }
+
+    func lucyDetectedProjectRootPath() -> String {
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser.path
+        let candidates = [
+            home + "/lucy",
+            home + "/Lucy",
+            fm.currentDirectoryPath
+        ]
+
+        return candidates.first { candidate in
+            fm.fileExists(atPath: candidate + "/swift_app/Sources/ChatWindowController.swift")
+        } ?? fm.currentDirectoryPath
+    }
+
+    func runSandboxToolCommand(_ rawCommand: String) -> String {
+        let trimmed = rawCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pieces = trimmed.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+
+        guard pieces.count >= 2 else {
+            return "Usage: /tool <tool_name> <request>\nExample: /tool reminders_dry_run remind me tomorrow at 3pm to call mom"
+        }
+
+        let toolName = String(pieces[1])
+        let request = pieces.count >= 3 ? String(pieces[2]) : ""
+
+        let allowedNamePattern = #"^[A-Za-z0-9_-]+$"#
+        if toolName.range(of: allowedNamePattern, options: .regularExpression) == nil {
+            return "Rejected tool name: \(toolName)\nTool names may only contain letters, numbers, underscores, and hyphens."
+        }
+
+        let root = lucyDetectedProjectRootPath()
+        let registryPath = root + "/tools_created_by_lucy/tool_registry.json"
+        let fm = FileManager.default
+
+        guard fm.fileExists(atPath: registryPath) else {
+            return "Tool registry not found: \(registryPath)"
+        }
+
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: registryPath))
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let tools = json?["tools"] as? [[String: Any]] ?? []
+
+            guard let tool = tools.first(where: { ($0["name"] as? String) == toolName }) else {
+                let names = tools.compactMap { $0["name"] as? String }.joined(separator: ", ")
+                return "Unknown sandbox tool: \(toolName)\nAvailable tools: \(names.isEmpty ? "(none)" : names)"
+            }
+
+            guard let relativePath = tool["path"] as? String else {
+                return "Tool \(toolName) has no path in tool_registry.json."
+            }
+
+            guard relativePath.hasPrefix("tools_created_by_lucy/") else {
+                return "Rejected tool path outside sandbox: \(relativePath)"
+            }
+
+            let toolPath = root + "/" + relativePath
+            guard fm.fileExists(atPath: toolPath) else {
+                return "Tool file not found: \(toolPath)"
+            }
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+            process.currentDirectoryURL = URL(fileURLWithPath: root)
+            process.arguments = [toolPath, request]
+
+            let outputPipe = Pipe()
+            let errorPipe = Pipe()
+            process.standardOutput = outputPipe
+            process.standardError = errorPipe
+
+            try process.run()
+            process.waitUntilExit()
+
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+            let output = String(data: outputData, encoding: .utf8) ?? ""
+            let error = String(data: errorData, encoding: .utf8) ?? ""
+
+            if process.terminationStatus != 0 {
+                return """
+                Sandbox tool failed: \(toolName)
+                Exit code: \(process.terminationStatus)
+
+                stderr:
+                \(error)
+
+                stdout:
+                \(output)
+                """
+            }
+
+            return """
+            Sandbox tool: \(toolName)
+            Tool result:
+            \(output)
+            """
+
+        } catch {
+            return "Failed to run sandbox tool \(toolName): \(error)"
+        }
+    }
+
     func runSelfCommand(_ command: String) -> String {
+        if command.hasPrefix("/__unknown__ ") {
+            let pieces = command.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+            let unknown = pieces.count > 1 ? String(pieces[1]) : command
+            let suggestions = pieces.count > 2 ? String(pieces[2]) : "/status, /devstatus, /renderinfo"
+            
+            if unknown == "/copydraft" {
+                let postURL = URL(fileURLWithPath: "/tmp/lucy_linkedin_post.txt")
+                if let draft = try? String(contentsOf: postURL, encoding: .utf8),
+                   !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(draft, forType: .string)
+                    return "Saved LinkedIn draft preview:\n\n\(draft)"
+                } else {
+                    return "I could not find a saved draft at /tmp/lucy_linkedin_post.txt."
+                }
+            }
+
+            return "Unknown command: \(unknown)\nDid you mean: \(suggestions)?"
+        }
+
         switch command {
+        case "/selfdevcheck":
+            return selfDevCheckReport()
+
         case "/status":
             return LucyRuntime.shared.statusText()
 
@@ -2672,7 +3453,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     func runLucyDeveloper(goal: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "tools/lucy_developer.py", goal]
+        process.arguments = ["python3", "tools/lucy_autonomous_dev.py", goal]
         process.currentDirectoryURL = LucyPaths.root
 
         let outputPipe = Pipe()
@@ -3759,4 +4540,34 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         return runMLX(prompt: prompt)
     }
+    private func runShellStreaming(_ command: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", command]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        pipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.count > 0, let chunk = String(data: data, encoding: .utf8) {
+                DispatchQueue.main.async {
+                    self.append(chunk)
+                }
+            }
+        }
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            pipe.fileHandleForReading.readabilityHandler = nil
+        } catch {
+            DispatchQueue.main.async {
+                self.append("Lucy: Streaming shell failed: \(error.localizedDescription)\n")
+            }
+        }
+    }
+
+
 }

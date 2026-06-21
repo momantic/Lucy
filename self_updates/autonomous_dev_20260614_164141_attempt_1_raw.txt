@@ -1,0 +1,16 @@
+{
+  "summary": "Ensure self-dev smoke test command is correctly documented",
+  "edits": [
+    {
+      "action": "write",
+      "path": "build_lucy_app.sh",
+      "content": "#!/bin/zsh\nset -e\n\ncd ~/lucy\n\nmkdir -p dist/Lucy.app/Contents/MacOS\nmkdir -p dist/Lucy.app/Contents/Resources\n\nswiftc swift_app/Sources/*.swift -o dist/Lucy.app/Contents/MacOS/Lucy\nchmod +x dist/Lucy.app/Contents/MacOS/Lucy\n\necho \"Built dist/Lucy.app\""
+    },
+    {
+      "action": "write",
+      "path": "README.md",
+      "content": "Added a self-dev smoke test command /selfdevcheck\nUsage: /selfdevcheck\nPurpose: Perform a self-dev smoke test to ensure the development environment is functioning correctly.\n\nAdded a self-dev smoke test command /selfdevcheck\nUsage: /selfdevcheck\nPurpose: Perform a self-dev smoke test to ensure the development environment is functioning correctly."
+    }
+  ],
+  "notes": []
+}

@@ -1,0 +1,134 @@
+#!/bin/zsh
+set -euo pipefail
+
+REQ="${*:-}"
+PY="/usr/local/bin/python3"
+MODEL="${LUCY_LINKEDIN_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
+
+RESEARCH_OUT="/tmp/lucy_linkedin_research.txt"
+POST_OUT="/tmp/lucy_linkedin_post.txt"
+MLX_OUT="/tmp/lucy_linkedin_mlx_output.md"
+PROMPT_OUT="/tmp/lucy_linkedin_mlx_prompt.txt"
+
+rm -f "$POST_OUT" "$MLX_OUT" "$PROMPT_OUT"
+
+TOPIC="$(python3 -c 'import sys,re
+low=" ".join(sys.argv[1:]).strip().lower()
+fixes={"wirte":"write","wrtie":"write","wriet":"write","linekdin":"linkedin","linkdin":"linkedin","linkedn":"linkedin","psot":"post","pst":"post"}
+for a,b in fixes.items():
+    low=low.replace(a,b)
+m=re.search(r"(?:write|draft|make|create).*?linkedin\s+post\s+(?:about|on)\s+(.+)", low)
+print(m.group(1).strip() if m else low)
+' "$REQ")"
+[ -z "$TOPIC" ] && TOPIC="$REQ"
+
+echo "Lucy LinkedIn Direct MLX"
+echo "Topic: $TOPIC"
+echo "Opening LinkedIn with Lucy Browser Bridge..."
+
+BROWSER_JSON="/tmp/lucy_browser_state.json"
+python3 tools_created_by_lucy/lucy_browser.py linkedin_search "$TOPIC" > "$BROWSER_JSON" 2>/tmp/lucy_browser_err.log || true
+sleep 4
+python3 tools_created_by_lucy/lucy_browser.py read > "$BROWSER_JSON" 2>/tmp/lucy_browser_err.log || true
+
+RESEARCH_TEXT="$(python3 tools_created_by_lucy/lucy_browser.py page_text 2>/dev/null || true)"
+WORD_COUNT="$(printf "%s" "$RESEARCH_TEXT" | wc -w | tr -d ' ')"
+
+if [ "$WORD_COUNT" -lt 20 ]; then
+  echo "Warning: Browser Bridge research was weak or failed. Drafting from topic only."
+  RESEARCH_TEXT="No useful LinkedIn Browser Bridge research was captured. Draft from the topic only."
+else
+  echo "Captured LinkedIn Browser Bridge research: $WORD_COUNT words"
+fi
+
+cat > "$PROMPT_OUT" <<PROMPT
+You are Lucy, drafting a LinkedIn post.
+
+Topic:
+$TOPIC
+
+Visible LinkedIn search/OCR context:
+$RESEARCH_TEXT
+
+Task:
+First silently analyze the LinkedIn research. Identify:
+- the main trend across multiple posts
+- 3-5 concrete examples or signals
+- tensions, risks, or open questions
+- what angle would make a thoughtful LinkedIn post
+
+Then write ONE polished LinkedIn post that synthesizes the whole research set, not just the first result.
+
+Rules:
+- 180-260 words.
+- Sound like a real founder/operator/engineer reflecting on an emerging trend.
+- Use short paragraphs.
+- Include a strong opening hook.
+- Use at least 3 distinct examples/signals from the LinkedIn context when available.
+- Do not summarize one post only.
+- Do not mention that you analyzed LinkedIn search results.
+- Prefer synthesis words like "pattern", "shift", "signal", "trend", "what stands out".
+- Do not invent names, dates, papers, companies, or first-person claims unless they appear in the context.
+- Never say 'our team', 'we discovered', or imply the user did the research unless the user explicitly says so.
+- If context is noisy, use it only for style and framing.
+- Never copy or adopt a LinkedIn author's identity, job title, profile text, or first-person perspective from OCR.
+- Do not say 'I am a researcher', 'our team', or 'as a member of...' unless the user explicitly says it.
+- End with a thoughtful question.
+- Output only the final post.
+- Do not repeat the same idea twice.
+- Proofread grammar before final output.
+- Do not start a sentence with lowercase 'and'.
+PROMPT
+
+echo "Running local MLX model..."
+
+set +e
+"$PY" -m mlx_lm generate \
+  --model "$MODEL" \
+  --prompt "$(cat "$PROMPT_OUT")" \
+  --max-tokens 650 > "$MLX_OUT" 2>&1
+STATUS=$?
+set -e
+
+"$PY" <<'PY'
+from pathlib import Path
+import re
+
+raw = Path("/tmp/lucy_linkedin_mlx_output.md").read_text(errors="ignore")
+text = raw
+
+if "==========" in text:
+    parts = text.split("==========")
+    if len(parts) >= 3:
+        text = parts[1]
+
+for marker in ["Generation:", "Output:", "Response:"]:
+    if marker in text:
+        text = text.split(marker)[-1]
+
+text = text.replace("<|im_end|>", "").strip()
+text = re.sub(r"^.*?Output only the final post\.", "", text, flags=re.S).strip()
+
+Path("/tmp/lucy_linkedin_post.txt").write_text(text + "\n", encoding="utf-8")
+
+print()
+print("Lucy:")
+print("Draft complete.")
+print()
+print("--- LINKEDIN DRAFT ---")
+bad = [
+    "Lucy LinkedIn Direct MLX",
+    "Opening LinkedIn search. Using existing OCR cache if available...",
+    "As a member of STEM",
+    "as a member of STEM",
+    "freshwater connoisseur",
+    "freshwater enthusiast,",
+]
+for b in bad:
+    text = text.replace(b, "")
+
+text = text.replace("-- END DRAFT --", "").replace("--- END DRAFT ---", "")
+text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
+print(text)
+print("--- END DRAFT ---")
+PY

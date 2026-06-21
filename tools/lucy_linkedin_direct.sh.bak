@@ -1,0 +1,142 @@
+#!/bin/zsh
+set -euo pipefail
+
+REQ="${*:-}"
+PY="/usr/local/bin/python3"
+MODEL="${LUCY_LINKEDIN_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
+
+POST_OUT="/tmp/lucy_linkedin_post.txt"
+MLX_OUT="/tmp/lucy_linkedin_mlx_output.md"
+PROMPT_OUT="/tmp/lucy_linkedin_mlx_prompt.txt"
+CLIP_IN="/tmp/lucy_linkedin_clipboard_input.txt"
+
+rm -f "$POST_OUT" "$MLX_OUT" "$PROMPT_OUT" "$CLIP_IN"
+
+TOPIC="$(printf "%s" "$REQ" | sed -E 's/^[Ll]ucy,? *//; s/[Ww]rite me a [Ll]inked[Ii]n post about //; s/[Dd]raft a [Ll]inked[Ii]n post about //; s/[Mm]ake me a [Ll]inked[Ii]n post about //')"
+if [ -z "$TOPIC" ]; then
+  TOPIC="$REQ"
+fi
+
+ENCODED_TOPIC="$("$PY" - <<PY
+import urllib.parse
+print(urllib.parse.quote("""$TOPIC"""))
+PY
+)"
+SEARCH_URL="https://www.linkedin.com/search/results/content/?keywords=$ENCODED_TOPIC"
+
+# Open LinkedIn search, but do not scrape automatically.
+# User must copy visible results page manually.
+/usr/bin/open "$SEARCH_URL" 2>/dev/null || true
+
+/usr/bin/pbpaste > "$CLIP_IN" 2>/dev/null || true
+RESEARCH="$(cat "$CLIP_IN" | head -n 160)"
+
+# Reject prompt text / empty clipboard / weak clipboard.
+WORD_COUNT="$(printf "%s" "$RESEARCH" | wc -w | tr -d ' ')"
+
+if echo "$RESEARCH" | grep -qi "write me a linkedin post about"; then
+  WORD_COUNT=0
+fi
+
+if [ "$WORD_COUNT" -lt 40 ]; then
+  echo "LUCY_LINKEDIN_NEEDS_RESEARCH"
+  echo "I opened LinkedIn search for: $TOPIC"
+  echo ""
+  echo "Do this:"
+  echo "1. Wait for LinkedIn results to load."
+  echo "2. Press Command+A."
+  echo "3. Press Command+C."
+  echo "4. Ask me the same LinkedIn post request again."
+  echo ""
+  echo "I did not create a draft because I do not have real research yet."
+  exit 0
+fi
+
+cat > "$PROMPT_OUT" <<PROMPT
+You are writing a LinkedIn post using the copied research below.
+
+Topic:
+$TOPIC
+
+Copied research/context:
+$RESEARCH
+
+Write a polished LinkedIn post.
+
+Rules:
+- Use the copied research/context.
+- Do not invent specific facts not supported by the copied text.
+- Do not use generic filler about "speed", "workflow", "evidence trail", "local-first AI", or "trust an AI agent" unless directly relevant.
+- 120-180 words.
+- Short paragraphs.
+- Professional, curious, human.
+- End with a thoughtful question.
+- Output only the final post.
+PROMPT
+
+echo "Lucy LinkedIn Direct MLX"
+echo "Topic: $TOPIC"
+echo "Using copied research: $WORD_COUNT words"
+echo "Running local MLX model..."
+
+set +e
+"$PY" -m mlx_lm generate \
+  --model "$MODEL" \
+  --prompt "$(cat "$PROMPT_OUT")" \
+  --max-tokens 360 > "$MLX_OUT" 2>&1
+STATUS=$?
+set -e
+
+"$PY" <<'PY'
+from pathlib import Path
+import re, sys
+
+raw_path = Path("/tmp/lucy_linkedin_mlx_output.md")
+post_path = Path("/tmp/lucy_linkedin_post.txt")
+
+raw = raw_path.read_text(errors="ignore") if raw_path.exists() else ""
+
+text = raw
+
+# Strip common MLX log/prompt wrappers.
+if "==========" in text:
+    text = text.split("==========")[-1]
+for marker in ["Generation:", "Output:", "Response:"]:
+    if marker in text:
+        text = text.split(marker)[-1]
+
+text = text.replace("<|im_end|>", "").strip()
+text = re.sub(r"^.*?Output only the final post\.", "", text, flags=re.S).strip()
+
+bad_phrases = [
+    "The most interesting part of",
+    "not just speed",
+    "preserve judgment, evidence, and accountability",
+    "local-first AI tools become especially interesting",
+    "What part of your workflow would you trust an AI agent"
+]
+
+bad = (
+    len(text.split()) < 70
+    or "traceback" in text.lower()
+    or "error" in text.lower()
+    or any(p.lower() in text.lower() for p in bad_phrases)
+)
+
+if bad:
+    print("LUCY_LINKEDIN_GENERATION_FAILED")
+    print("MLX did not produce a good research-based draft.")
+    print("No draft was copied. Raw output is saved at /tmp/lucy_linkedin_mlx_output.md")
+    sys.exit(0)
+
+post_path.write_text(text.strip() + "\n", encoding="utf-8")
+print("LUCY_LINKEDIN_DONE")
+print("Final draft copied to clipboard.")
+print("Preview:")
+print()
+print(text.strip())
+PY
+
+if [ -f "$POST_OUT" ]; then
+  /usr/bin/pbcopy < "$POST_OUT"
+fi

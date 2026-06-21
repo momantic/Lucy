@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env /usr/local/bin/python3
 import importlib.util
 import subprocess
 import sys
@@ -81,9 +81,9 @@ def run_task(task_name: str):
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python3 tools/lucy_dev_agent.py status")
-        print("  python3 tools/lucy_dev_agent.py apply animation-smoother")
-        print("  python3 tools/lucy_dev_agent.py apply cute-eyes")
+        print("  /usr/local/bin/python3 tools/lucy_dev_agent.py status")
+        print("  /usr/local/bin/python3 tools/lucy_dev_agent.py apply animation-smoother")
+        print("  /usr/local/bin/python3 tools/lucy_dev_agent.py apply cute-eyes")
         sys.exit(1)
 
     command = sys.argv[1].lower()
@@ -92,7 +92,7 @@ def main():
         cmd_status()
     elif command == "apply":
         if len(sys.argv) < 3:
-            print("Usage: python3 tools/lucy_dev_agent.py apply <task-name>")
+            print("Usage: /usr/local/bin/python3 tools/lucy_dev_agent.py apply <task-name>")
             sys.exit(1)
         run_task(sys.argv[2].lower())
     else:

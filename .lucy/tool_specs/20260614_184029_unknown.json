@@ -1,0 +1,12 @@
+{
+  "goal": "create a tool that extracts links from a webpage",
+  "spec": {
+    "capability": "unknown",
+    "tool_names": [],
+    "purpose": "Unknown capability.",
+    "safety": [
+      "Do not implement unknown high-risk capabilities automatically."
+    ],
+    "test_goal": "create a tool that extracts links from a webpage"
+  }
+}

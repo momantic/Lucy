@@ -1,0 +1,12 @@
+{
+  "goal": "read visible LinkedIn sea turtles",
+  "spec": {
+    "capability": "unknown",
+    "tool_names": [],
+    "purpose": "Unknown capability.",
+    "safety": [
+      "Do not implement unknown high-risk capabilities automatically."
+    ],
+    "test_goal": "read visible LinkedIn sea turtles"
+  }
+}

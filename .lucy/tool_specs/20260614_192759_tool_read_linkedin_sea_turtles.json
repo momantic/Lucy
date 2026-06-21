@@ -1,0 +1,8 @@
+{
+  "goal": "read visible LinkedIn sea turtles",
+  "tool_name": "tool_read_linkedin_sea_turtles",
+  "description": "Reads visible LinkedIn profiles of sea turtles.",
+  "args_example": {},
+  "prompt_doc": "Tool documentation for Lucy's Available tools list",
+  "code": "def tool_read_linkedin_sea_turtles(args: dict) -> dict:\n  return {\"ok\": False, \"hint\": \"Accessing LinkedIn profiles requires login and permission.\"}"
+}

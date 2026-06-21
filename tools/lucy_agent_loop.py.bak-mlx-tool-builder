@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env /usr/local/bin/python3
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import argparse
 import json
 import re
 import subprocess
+import os
+import shlex
 import sys
 import textwrap
 from datetime import datetime
@@ -332,6 +334,89 @@ def tool_remove_app_to_trash(args: dict) -> dict:
     }
 
 
+def tool_count_files(args: dict) -> dict:
+  try:
+    count = len([f for f in Path('.').glob('**/*') if f.is_file()])
+    return {"ok": True, "file_count": count}
+  except Exception as e:
+    return {"ok": False, "error": str(e)}
+
+
+def tool_visible_terminal_self_loop(args: dict) -> dict:
+    if os.environ.get("LUCY_VISIBLE_TERMINAL") == "1":
+        return {
+            "ok": False,
+            "error": "Already running inside a visible Terminal self-loop. Refusing to open another Terminal tab.",
+            "safety": "Prevented recursive Terminal tab spawning."
+        }
+
+    goal = str(args.get("goal", "")).strip()
+    max_cycles_raw = args.get("max_cycles", 2)
+
+    try:
+        max_cycles = int(max_cycles_raw)
+    except Exception:
+        max_cycles = 2
+
+    max_cycles = max(1, min(max_cycles, 4))
+
+    if not goal:
+        return {"ok": False, "error": "Missing goal."}
+
+    # Safety: this tool does not run arbitrary shell commands.
+    # It only types a fixed Lucy self-loop command with the user's goal safely quoted.
+    command = (
+        "cd ~/lucy && "
+        + "LUCY_VISIBLE_TERMINAL=1 /usr/local/bin/python3 tools/lucy_self_loop.py "
+        + shlex.quote(goal)
+        + " --max-cycles "
+        + shlex.quote(str(max_cycles))
+    )
+
+    try:
+        proc = subprocess.run(
+            ["pbcopy"],
+            input=command,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
+        if proc.returncode != 0:
+            return {"ok": False, "error": proc.stderr.strip() or "Could not copy command to clipboard."}
+    except Exception as e:
+        return {"ok": False, "error": f"Could not copy command to clipboard: {e}"}
+
+    script_lines = [
+        'tell application "Terminal"',
+        '    activate',
+        'end tell',
+        'delay 0.4',
+        'tell application "System Events"',
+        '    key code 17 using {command down}',
+        '    delay 0.2',
+        '    key code 9 using {command down}',
+        '    delay 0.1',
+        '    key code 36',
+        'end tell',
+    ]
+    script = "\n".join(script_lines)
+
+    code, out = run(["osascript", "-e", script], timeout=20)
+
+    if code != 0:
+        return {
+            "ok": False,
+            "error": out,
+            "hint": "Lucy may need Accessibility/Automation permission to control Terminal/System Events."
+        }
+
+    return {
+        "ok": True,
+        "typed_command": command,
+        "safety": "Typed and ran only a fixed Lucy self-loop command. Did not accept arbitrary shell."
+    }
+
+
 def tool_find_app(args: dict) -> dict:
     name = str(args.get("name", "")).strip()
     if not name:
@@ -551,6 +636,8 @@ def tool_read_project_status(args: dict) -> dict:
 
 
 TOOLS = {
+    "visible_terminal_self_loop": tool_visible_terminal_self_loop,
+    "count_files": tool_count_files,
     "remove_app_to_trash": tool_remove_app_to_trash,
     "download_known_app": tool_download_known_app,
     "download_file": tool_download_file,
@@ -584,6 +671,8 @@ Important safety rules:
 - Never call a tool that is not listed in Available tools.
 - If an attempted tool is unavailable, use request_new_tool or final instead of repeating it.
 - Keep responses short and action-oriented.
+- Action must be the exact tool name from available_tools, such as count_files or download_file. Never use section numbers like 0.7 or 1.
+- If the user explicitly asks to watch Lucy type/run herself in Terminal, use visible_terminal_self_loop. Do not generate arbitrary shell commands for this tool; pass the user's goal as the goal argument.
 - For app download requests, prefer download_known_app if the app is supported. Do not install or run downloaded apps without explicit user approval.
 - For removing/uninstalling apps, use remove_app_to_trash. Do not permanently delete apps.
 
@@ -598,6 +687,10 @@ Available tools:
 0. get_current_time
 Args: {"timezone": "America/New_York"}
 Purpose: Get the real current local time from the computer. Use this for "what time is it", "current time", "date", or "today".
+
+0.4 visible_terminal_self_loop
+Args: {"goal": "Count the number of files in the Lucy project root.", "max_cycles": 2}
+Purpose: Open Terminal, visibly type a safe fixed Lucy self-loop command, and press Enter. This does not accept arbitrary shell commands.
 
 0.5 create_calendar_event
 Args: {"title": "Zoom meeting", "start": "June 11, 2026 3:30 PM", "end": "June 11, 2026 4:30 PM", "location": "Zoom", "notes": "Zoom link not provided"}
@@ -618,6 +711,8 @@ Purpose: Download a known app from a verified official source. Currently support
 0.9 remove_app_to_trash
 Args: {"app_name": "Discord"}
 Purpose: Move an installed app from /Applications or ~/Applications to Trash. Does not permanently delete it.
+
+This tool counts the number of files in the Lucy project root directory. It does not require any arguments.
 
 1. find_app
 Args: {"name": "Messages"}

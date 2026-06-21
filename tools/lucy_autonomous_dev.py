@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env /usr/local/bin/python3
 
 """
 Lucy Autonomous Dev Engine
@@ -108,6 +108,19 @@ def project_tree(max_files: int = 250) -> str:
     return "\n".join(lines)
 
 
+
+def read_lucy_instructions() -> str:
+    """Read local self-development instructions if present."""
+    path = PROJECT_ROOT / "instructions.md"
+    if not path.exists():
+        return "No instructions.md found."
+
+    content = path.read_text(errors="replace").strip()
+    if len(content) > 12000:
+        content = content[:12000] + "\n\n[truncated]"
+    return content
+
+
 def collect_context() -> str:
     chunks = []
     chunks.append("PROJECT TREE:\n" + project_tree())
@@ -131,7 +144,7 @@ def run_build() -> Tuple[int, str]:
     return proc.returncode, proc.stdout + "\n" + proc.stderr
 
 
-def call_mlx_lm(prompt: str, model: str) -> str:
+def call_mlx_lm(prompt: str, model: str, timeout_seconds: int = 180) -> str:
     proc = subprocess.run(
         [
             sys.executable,
@@ -143,14 +156,14 @@ def call_mlx_lm(prompt: str, model: str) -> str:
             "--prompt",
             prompt,
             "--max-tokens",
-            "2048",
+            "1024",
             "--verbose",
             "False",
         ],
         cwd=str(PROJECT_ROOT),
         text=True,
         capture_output=True,
-        timeout=600,
+        timeout=timeout_seconds,
     )
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr or proc.stdout or "mlx-lm failed")
@@ -288,7 +301,467 @@ def snapshot(paths: List[str], stamp: str) -> Path:
     return backup_dir
 
 
+
+
+
+def apply_tools_readme_template() -> list[str]:
+    """Deterministic safe template for creating tools_created_by_lucy/README.md."""
+    target_dir = PROJECT_ROOT / "tools_created_by_lucy"
+    target_dir.mkdir(exist_ok=True)
+
+    target = target_dir / "README.md"
+    content = """# Lucy-Created Tools
+
+This folder is the sandbox for tools Lucy creates during self-development.
+
+Tools start here before they are promoted into built-in Lucy commands.
+
+## Requirements Before Promotion
+
+Each Lucy-created tool should have:
+
+1. A clear purpose
+2. A dry-run mode
+3. Safety checks
+4. At least one smoke test
+5. User approval before promotion into the main app
+
+## Dry-Run Mode
+
+A dry-run mode previews what the tool would do without changing the system.
+
+Examples:
+- preview a Calendar event without creating it
+- preview an email without sending it
+- preview a file operation without moving or deleting files
+
+## Safety Checks
+
+Tools should check whether an action is risky before running.
+
+Lucy must ask before:
+- sending emails
+- creating real calendar events
+- deleting files
+- installing apps
+- spending money
+- changing system settings
+- uploading data
+
+## Smoke Tests
+
+Each tool should include a small test that proves the basic path works.
+
+Examples:
+- parse a reminder request
+- generate a calendar event preview
+- open an app in dry-run mode
+- validate required input fields
+
+## Apple-Native Direction
+
+Prefer Mac and Apple-native automation:
+
+- Swift / AppKit
+- AppleScript via osascript
+- Shortcuts
+- Calendar.app
+- Mail.app
+- Reminders.app
+- Notes.app
+- Safari
+- Finder
+
+Lucy should remain local-first, safe, and Mac-native.
+"""
+    old = target.read_text(errors="replace") if target.exists() else None
+    if old == content:
+        return []
+
+    target.write_text(content)
+    return [str(target.relative_to(PROJECT_ROOT))]
+
+
+def apply_selfdevcheck_template() -> list[str]:
+    """Deterministic safe template for adding /selfdevcheck to Lucy."""
+    chat = PROJECT_ROOT / "swift_app" / "Sources" / "ChatWindowController.swift"
+    text = chat.read_text()
+
+    changed = False
+
+    if "func selfDevCheckReport()" not in text:
+        helper_marker = "    func runSelfCommand(_ command: String) -> String {\n"
+        swift_helper = (
+            '    func selfDevCheckReport() -> String {\n'
+            '        let root = LucyPaths.projectRoot.path\n'
+            '        let devScript = "tools/lucy_autonomous_dev.py"\n'
+            '        let fm = FileManager.default\n'
+            '        let instructions = LucyPaths.projectRoot.appendingPathComponent("instructions.md").path\n'
+            '        let buildScript = LucyPaths.projectRoot.appendingPathComponent("build_lucy_app.sh").path\n'
+            '        let distApp = LucyPaths.projectRoot.appendingPathComponent("dist/Lucy.app").path\n'
+            '\n'
+            '        return """\n'
+            '        Lucy Self-Dev Check\n'
+            '        Project root: \\(root)\n'
+            '        Dev script: \\(devScript)\n'
+            '        instructions.md exists: \\(fm.fileExists(atPath: instructions))\n'
+            '        build_lucy_app.sh exists: \\(fm.fileExists(atPath: buildScript))\n'
+            '        dist/Lucy.app exists: \\(fm.fileExists(atPath: distApp))\n'
+            '        """\n'
+            '    }\n'
+            '\n'
+        )
+        if helper_marker not in text:
+            raise RuntimeError("Could not find runSelfCommand insertion point.")
+        text = text.replace(helper_marker, swift_helper + helper_marker, 1)
+        changed = True
+
+    if 'case "/selfdevcheck":' not in text:
+        case_marker = '        case "/status":\n'
+        case_text = '        case "/selfdevcheck":\n            return selfDevCheckReport()\n\n'
+        if case_marker not in text:
+            raise RuntimeError("Could not find /status case insertion point.")
+        text = text.replace(case_marker, case_text + case_marker, 1)
+        changed = True
+
+    if '"/selfdevcheck"' not in text:
+        list_marker = '            "/memory", "/project", "/readself", "/status", "/quit", "/settings",\n'
+        replacement = '            "/memory", "/project", "/readself", "/status", "/selfdevcheck", "/quit", "/settings",\n'
+        if list_marker not in text:
+            raise RuntimeError("Could not add /selfdevcheck to known command list.")
+        text = text.replace(list_marker, replacement, 1)
+        changed = True
+
+    if changed:
+        chat.write_text(text)
+        return [str(chat.relative_to(PROJECT_ROOT))]
+    return []
+
+
+
+def validate_edit_paths(goal: str, edits: list[dict]) -> tuple[bool, str]:
+    """Reject surprising or risky paths before applying model edits."""
+    goal_lower = goal.lower()
+
+    allowed_prefixes = [
+        "swift_app/Sources/",
+        "tools/",
+        "tools_created_by_lucy/",
+        "self_updates/",
+        "README.md",
+        "instructions.md",
+    ]
+
+    protected_unless_mentioned = [
+        "build_lucy_app.sh",
+        "Package.swift",
+    ]
+
+    for edit in edits:
+        path = str(edit.get("path", ""))
+
+        if path.startswith("/") or ".." in Path(path).parts:
+            return False, f"Rejected unsafe path: {path}"
+
+        if not any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in allowed_prefixes):
+            return False, f"Rejected edit outside allowed project areas: {path}"
+
+        for protected in protected_unless_mentioned:
+            if path == protected and protected.lower() not in goal_lower:
+                return False, f"Rejected surprising edit to {protected}; goal did not mention it."
+
+        if path == "README.md" and "readme.md" not in goal_lower:
+            return False, "Rejected root README.md edit; goal did not mention root README.md."
+
+        if "tools_created_by_lucy/readme.md" in goal_lower and path == "README.md":
+            return False, "Goal requested tools_created_by_lucy/README.md, but model edited root README.md."
+
+    return True, "Edit paths validated."
+
+
+
+def infer_tool_pair_base_name(goal: str) -> str | None:
+    """Infer a tool-pair base name from a goal like 'create a Notes tool pair'."""
+    goal_lower = goal.lower()
+
+    known = {
+        "notes": "notes",
+        "note": "notes",
+        "mail": "mail_draft",
+        "email": "mail_draft",
+        "safari": "safari",
+        "finder": "finder",
+        "shortcut": "shortcuts",
+        "shortcuts": "shortcuts",
+        "calendar": "calendar",
+        "reminder": "reminders",
+        "reminders": "reminders",
+    }
+
+    for word, base in known.items():
+        if word in goal_lower:
+            return base
+
+    return None
+
+
+def verify_apple_action_tool_pair(goal: str) -> tuple[bool, str]:
+    """Verify that an Apple action tool pair exists, compiles, and is registered."""
+    import json
+    import subprocess
+
+    base = infer_tool_pair_base_name(goal)
+    if not base:
+        return False, "Goal mentions an Apple action tool pair, but Lucy could not infer the tool base name."
+
+    dry_name = f"{base}_dry_run"
+    approved_name = f"{base}_create_approved"
+
+    dry_path = PROJECT_ROOT / "tools_created_by_lucy" / f"{dry_name}.py"
+    approved_path = PROJECT_ROOT / "tools_created_by_lucy" / f"{approved_name}.py"
+    registry_path = PROJECT_ROOT / "tools_created_by_lucy" / "tool_registry.json"
+
+    missing = []
+    if not dry_path.exists():
+        missing.append(str(dry_path.relative_to(PROJECT_ROOT)))
+    if not approved_path.exists():
+        missing.append(str(approved_path.relative_to(PROJECT_ROOT)))
+    if not registry_path.exists():
+        missing.append(str(registry_path.relative_to(PROJECT_ROOT)))
+
+    if missing:
+        return False, "Missing required tool-pair files: " + ", ".join(missing)
+
+    for path in [dry_path, approved_path]:
+        proc = subprocess.run(
+            ["/usr/local/bin/python3", "-m", "py_compile", str(path)],
+            cwd=str(PROJECT_ROOT),
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        if proc.returncode != 0:
+            return False, f"Python compile failed for {path.relative_to(PROJECT_ROOT)}:\n{proc.stderr}"
+
+    try:
+        registry = json.loads(registry_path.read_text())
+    except Exception as e:
+        return False, f"Could not parse tool_registry.json: {e}"
+
+    tools = registry.get("tools", [])
+    names = {tool.get("name") for tool in tools}
+
+    if dry_name not in names:
+        return False, f"tool_registry.json is missing registry entry: {dry_name}"
+    if approved_name not in names:
+        return False, f"tool_registry.json is missing registry entry: {approved_name}"
+
+    return True, f"Verified Apple action tool pair for '{base}': files exist, py_compile passed, and registry contains {dry_name} + {approved_name}."
+
+
+
+
+
+def maybe_create_safari_open_tool(goal: str) -> tuple[bool, str] | None:
+    goal_lower = goal.lower()
+    if not (
+        "safari" in goal_lower
+        and "tool pair" in goal_lower
+        and ("create" in goal_lower or "add" in goal_lower)
+    ):
+        return None
+
+    creator = PROJECT_ROOT / "tools" / "lucy_create_safari_open_tool.py"
+    if not creator.exists():
+        return False, f"Safari open tool creator not found: {creator}"
+
+    proc = subprocess.run(
+        ["/usr/local/bin/python3", str(creator)],
+        cwd=str(PROJECT_ROOT),
+        text=True,
+        capture_output=True,
+        timeout=120,
+    )
+
+    output = (proc.stdout or "").strip()
+    error = (proc.stderr or "").strip()
+
+    if proc.returncode != 0:
+        return False, (
+            "Safari open tool creator failed.\n"
+            f"Exit code: {proc.returncode}\n"
+            f"STDOUT:\n{output}\n\nSTDERR:\n{error}"
+        )
+
+    return True, output
+
+
+def maybe_update_generator_registry_metadata(goal: str) -> tuple[bool, str] | None:
+    goal_lower = goal.lower()
+    if not (
+        "tool-pair generator" in goal_lower
+        and "intent_prefixes" in goal_lower
+        and "pair_base" in goal_lower
+        and "role" in goal_lower
+    ):
+        return None
+
+    updater = PROJECT_ROOT / "tools" / "lucy_update_generator_metadata.py"
+    if not updater.exists():
+        return False, f"Generator metadata updater not found: {updater}"
+
+    proc = subprocess.run(
+        ["/usr/local/bin/python3", str(updater)],
+        cwd=str(PROJECT_ROOT),
+        text=True,
+        capture_output=True,
+        timeout=180,
+    )
+
+    output = (proc.stdout or "").strip()
+    error = (proc.stderr or "").strip()
+
+    if proc.returncode != 0:
+        return False, (
+            "Generator metadata updater failed.\n"
+            f"Exit code: {proc.returncode}\n"
+            f"STDOUT:\n{output}\n\nSTDERR:\n{error}"
+        )
+
+    return True, output
+
+
+def maybe_run_tool_pair_generator(goal: str) -> tuple[bool, str] | None:
+    """
+    Deterministic factory hook.
+
+    If the goal asks for a supported Apple action tool pair, run Lucy's
+    tool-pair generator instead of asking the local LLM to invent files.
+    """
+    goal_lower = goal.lower()
+
+    # Only create a specific tool pair.
+    # Do NOT hijack meta-goals like "extend the generator" or "scan existing tools".
+    if (
+        "extend" in goal_lower
+        or "generator-extension" in goal_lower
+        or "scan tools_created_by_lucy" in goal_lower
+        or "import them into" in goal_lower
+        or "support notes" in goal_lower
+    ):
+        return None
+
+    wants_tool_pair = (
+        "tool pair" in goal_lower
+        and (
+            goal_lower.startswith("create ")
+            or goal_lower.startswith("add ")
+            or "create a " in goal_lower
+            or "create an " in goal_lower
+        )
+        and (
+            "apple" in goal_lower
+            or "mac" in goal_lower
+            or "mail" in goal_lower
+            or "email" in goal_lower
+        )
+    )
+
+    if not wants_tool_pair:
+        return None
+
+    tool_type = None
+
+    if "mail" in goal_lower or "email" in goal_lower:
+        tool_type = "mail_draft"
+    elif "note" in goal_lower or "notes" in goal_lower:
+        tool_type = "notes"
+    elif "reminder" in goal_lower or "reminders" in goal_lower:
+        tool_type = "reminders"
+    elif "calendar" in goal_lower or "event" in goal_lower or "meeting" in goal_lower:
+        tool_type = "calendar"
+
+    if tool_type is None:
+        return None
+
+    generator = PROJECT_ROOT / "tools" / "lucy_tool_pair_generator.py"
+    if not generator.exists():
+        return False, f"Tool-pair generator not found: {generator}"
+
+    proc = subprocess.run(
+        ["/usr/local/bin/python3", str(generator), tool_type],
+        cwd=str(PROJECT_ROOT),
+        text=True,
+        capture_output=True,
+        timeout=120,
+    )
+
+    output = (proc.stdout or "").strip()
+    error = (proc.stderr or "").strip()
+
+    if proc.returncode != 0:
+        return False, (
+            f"Tool-pair generator failed for {tool_type}.\n"
+            f"Exit code: {proc.returncode}\n"
+            f"STDOUT:\n{output}\n\nSTDERR:\n{error}"
+        )
+
+    ok, msg = verify_apple_action_tool_pair(goal)
+    if not ok:
+        return False, (
+            f"Generator ran, but verifier failed.\n"
+            f"Generator output:\n{output}\n\n"
+            f"Verifier:\n{msg}"
+        )
+
+    return True, (
+        f"Lucy tool-pair factory generated '{tool_type}' successfully.\n\n"
+        f"Generator output:\n{output}\n\n"
+        f"Verifier:\n{msg}"
+    )
+
+
+def verify_goal_satisfied(goal: str) -> tuple[bool, str]:
+    """Conservative post-build verification so build success is not mistaken for goal success."""
+    goal_lower = goal.lower()
+
+    generated = maybe_run_tool_pair_generator(goal)
+    if generated is not None:
+        return generated
+
+
+    if "tool pair" in goal_lower and ("apple" in goal_lower or "apple-native" in goal_lower or "calendar" in goal_lower or "reminder" in goal_lower or "notes" in goal_lower or "mail" in goal_lower or "finder" in goal_lower or "safari" in goal_lower or "shortcut" in goal_lower):
+        return verify_apple_action_tool_pair(goal)
+    chat = PROJECT_ROOT / "swift_app" / "Sources" / "ChatWindowController.swift"
+
+    if "tools_created_by_lucy/readme.md" in goal_lower:
+        target = PROJECT_ROOT / "tools_created_by_lucy" / "README.md"
+        if not target.exists():
+            return False, "Goal requested tools_created_by_lucy/README.md, but that exact file does not exist."
+
+        content = target.read_text(errors="replace").lower()
+        required = ["dry-run", "safety", "smoke"]
+        missing = [word for word in required if word not in content]
+        if missing:
+            return False, f"tools_created_by_lucy/README.md exists but is missing: {', '.join(missing)}"
+
+        return True, "Verified tools_created_by_lucy/README.md exists and mentions dry-run, safety, and smoke tests."
+
+    if "selfdevcheck" in goal_lower:
+        if not chat.exists():
+            return False, f"Expected Swift command file missing: {chat}"
+        content = chat.read_text(errors="replace").lower()
+        if "selfdevcheck" not in content:
+            return False, "Goal requested /selfdevcheck, but ChatWindowController.swift does not contain selfdevcheck."
+        return True, "Verified /selfdevcheck appears in ChatWindowController.swift."
+
+    # Default: no verifier exists for this goal yet.
+    # Do not block generic goals for now.
+    return True, "No specific verifier for this goal; build success accepted."
+
+
 def make_prompt(goal: str, context: str, build_output: str | None, attempt: int) -> str:
+    lucy_instructions = read_lucy_instructions()
     if build_output:
         build_section = f"""
 PREVIOUS BUILD OUTPUT:
@@ -298,7 +771,11 @@ PREVIOUS BUILD OUTPUT:
         build_section = "No build has been run yet for this attempt."
 
     return f"""
-You are a code patch generator for a local user-owned macOS project.
+You are a code patch generator for Lucy, a local-first Mac desktop companion app.
+
+LUCY LOCAL INSTRUCTIONS:
+{lucy_instructions}
+
 
 CRITICAL OUTPUT RULE:
 Return ONLY one valid JSON object.
@@ -322,9 +799,10 @@ RULES:
 - Prefer the smallest possible change.
 - Keep existing behavior unless the user goal requires changing it.
 - Do NOT return an empty edits array unless the requested change is already visibly present in the file content.
-- If the user asks to append text to README.md, you MUST return exactly one write edit for README.md.
 - Use full replacement file contents for every edited file.
-- For this test, prefer editing README.md only.
+- Edit the files that actually satisfy the user goal.
+- Do not edit README.md unless the user specifically asks for README changes.
+- New Lucy-created tools should start in tools_created_by_lucy/ when appropriate.
 
 VALID JSON SHAPE:
 {{
@@ -358,12 +836,40 @@ Return ONLY the JSON object now.
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("goal", nargs="+", help="Development goal for Lucy")
-    parser.add_argument("--model", default=os.environ.get("LUCY_DEV_MODEL", "mlx-community/Qwen2.5-3B-Instruct-4bit"))
+    parser.add_argument("--model", default=os.environ.get("LUCY_DEV_MODEL", "mlx-community/Qwen2.5-Coder-3B-Instruct-4bit"))
     parser.add_argument("--max-attempts", type=int, default=3)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
     goal = " ".join(args.goal)
+
+
+    safari_result = maybe_create_safari_open_tool(goal)
+    if safari_result is not None:
+        ok, msg = safari_result
+        print("Lucy Developer:")
+        print(msg)
+        if ok:
+            return 0
+        return 1
+
+    metadata_result = maybe_update_generator_registry_metadata(goal)
+    if metadata_result is not None:
+        ok, msg = metadata_result
+        print("Lucy Developer:")
+        print(msg)
+        if ok:
+            return 0
+        return 1
+
+    factory_result = maybe_run_tool_pair_generator(goal)
+    if factory_result is not None:
+        ok, msg = factory_result
+        print("Lucy Developer:")
+        print(msg)
+        if ok:
+            return 0
+        return 1
     stamp = now_stamp()
     log_dir = PROJECT_ROOT / "self_updates"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -381,6 +887,68 @@ def main() -> int:
     log(f"Model: {args.model}")
     log(f"Dry run: {args.dry_run}")
     log("")
+
+    if "tools_created_by_lucy/readme.md" in goal.lower() and not args.dry_run:
+        log("Using deterministic template: tools_created_by_lucy README")
+        changed = apply_tools_readme_template()
+        if changed:
+            log("Changed files:")
+            for c in changed:
+                log(f"- {c}")
+        else:
+            log("Template made no changes; tools README may already be correct.")
+
+        code, out = run_build()
+        build_log = log_dir / f"autonomous_dev_{stamp}_tools_readme_build.log"
+        build_log.write_text(out)
+        log(f"Build log saved: {build_log}")
+        log("Recent build output:")
+        log(out[-5000:])
+
+        if code != 0:
+            log("STATUS: BUILD_FAILED")
+            return 7
+
+        ok, verify_message = verify_goal_satisfied(goal)
+        log(f"Goal verification: {verify_message}")
+        if ok:
+            log("STATUS: PASSED")
+            log("Lucy built successfully after deterministic tools README template.")
+            return 0
+
+        log("STATUS: FAILED_GOAL_NOT_SATISFIED")
+        return 9
+
+    if "selfdevcheck" in goal.lower() and not args.dry_run:
+        log("Using deterministic template: selfdevcheck")
+        changed = apply_selfdevcheck_template()
+        if changed:
+            log("Changed files:")
+            for c in changed:
+                log(f"- {c}")
+        else:
+            log("Template made no changes; /selfdevcheck may already exist.")
+
+        code, out = run_build()
+        build_log = log_dir / f"autonomous_dev_{stamp}_selfdevcheck_build.log"
+        build_log.write_text(out)
+        log(f"Build log saved: {build_log}")
+        log("Recent build output:")
+        log(out[-5000:])
+
+        if code != 0:
+            log("STATUS: BUILD_FAILED")
+            return 7
+
+        ok, verify_message = verify_goal_satisfied(goal)
+        log(f"Goal verification: {verify_message}")
+        if ok:
+            log("STATUS: PASSED")
+            log("Lucy built successfully after deterministic selfdevcheck template.")
+            return 0
+
+        log("STATUS: FAILED_GOAL_NOT_SATISFIED")
+        return 9
 
     if not (PROJECT_ROOT / "build_lucy_app.sh").exists():
         log("ERROR: build_lucy_app.sh not found.")
@@ -502,10 +1070,17 @@ def main() -> int:
         log(out[-5000:])
 
         if code == 0:
+            ok, verify_message = verify_goal_satisfied(goal)
             log("")
-            log("STATUS: PASSED")
-            log("Lucy built successfully after autonomous edits.")
-            return 0
+            log(f"Goal verification: {verify_message}")
+            if ok:
+                log("STATUS: PASSED")
+                log("Lucy built successfully after autonomous edits.")
+                return 0
+
+            log("STATUS: FAILED_GOAL_NOT_SATISFIED")
+            log("Build passed, but the requested goal was not actually implemented.")
+            return 9
 
         log("STATUS: BUILD_FAILED")
         log("Feeding build failure into next attempt.")

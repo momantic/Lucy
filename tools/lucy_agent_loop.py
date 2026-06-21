@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env /usr/local/bin/python3
 
 from __future__ import annotations
 
@@ -367,7 +367,7 @@ def tool_visible_terminal_self_loop(args: dict) -> dict:
     # It only types a fixed Lucy self-loop command with the user's goal safely quoted.
     command = (
         "cd ~/lucy && "
-        + "LUCY_VISIBLE_TERMINAL=1 python3 tools/lucy_self_loop.py "
+        + "LUCY_VISIBLE_TERMINAL=1 /usr/local/bin/python3 tools/lucy_self_loop.py "
         + shlex.quote(goal)
         + " --max-cycles "
         + shlex.quote(str(max_cycles))
@@ -416,6 +416,9 @@ def tool_visible_terminal_self_loop(args: dict) -> dict:
         "safety": "Typed and ran only a fixed Lucy self-loop command. Did not accept arbitrary shell."
     }
 
+
+def tool_read_linkedin_sea_turtles(args: dict) -> dict:
+  return {"ok": False, "hint": "Accessing LinkedIn profiles requires login and permission."}
 
 def tool_find_app(args: dict) -> dict:
     name = str(args.get("name", "")).strip()
@@ -636,6 +639,7 @@ def tool_read_project_status(args: dict) -> dict:
 
 
 TOOLS = {
+    "read_linkedin_sea_turtles": tool_read_linkedin_sea_turtles,
     "visible_terminal_self_loop": tool_visible_terminal_self_loop,
     "count_files": tool_count_files,
     "remove_app_to_trash": tool_remove_app_to_trash,
@@ -713,6 +717,8 @@ Args: {"app_name": "Discord"}
 Purpose: Move an installed app from /Applications or ~/Applications to Trash. Does not permanently delete it.
 
 This tool counts the number of files in the Lucy project root directory. It does not require any arguments.
+
+Tool documentation for Lucy's Available tools list
 
 1. find_app
 Args: {"name": "Messages"}

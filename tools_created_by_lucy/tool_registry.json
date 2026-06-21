@@ -1,0 +1,363 @@
+{
+  "tools": [
+    {
+      "name": "reminders_dry_run",
+      "path": "tools_created_by_lucy/reminders_dry_run.py",
+      "status": "sandbox",
+      "dry_run": true,
+      "pair_base": "reminders",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "remind me ",
+        "remind me to ",
+        "reminder ",
+        "set a reminder ",
+        "set reminder "
+      ],
+      "purpose": "Template-backed dry-run tool for reminders.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/reminders_dry_run.py test"
+    },
+    {
+      "name": "reminders_create_approved",
+      "path": "tools_created_by_lucy/reminders_create_approved.py",
+      "status": "sandbox",
+      "dry_run": false,
+      "pair_base": "reminders",
+      "role": "create_approved",
+      "intent_prefixes": [
+        "remind me ",
+        "remind me to ",
+        "reminder ",
+        "set a reminder ",
+        "set reminder "
+      ],
+      "purpose": "Template-backed approved action tool for reminders.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/reminders_create_approved.py test"
+    },
+    {
+      "name": "calendar_dry_run",
+      "path": "tools_created_by_lucy/calendar_dry_run.py",
+      "status": "sandbox",
+      "dry_run": true,
+      "pair_base": "calendar",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "schedule ",
+        "schedule a meeting ",
+        "schedule meeting ",
+        "create calendar event ",
+        "add calendar event ",
+        "add event ",
+        "set up meeting "
+      ],
+      "purpose": "Template-backed dry-run tool for calendar.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/calendar_dry_run.py test"
+    },
+    {
+      "name": "calendar_create_approved",
+      "path": "tools_created_by_lucy/calendar_create_approved.py",
+      "status": "sandbox",
+      "dry_run": false,
+      "pair_base": "calendar",
+      "role": "create_approved",
+      "intent_prefixes": [
+        "schedule ",
+        "schedule a meeting ",
+        "schedule meeting ",
+        "create calendar event ",
+        "add calendar event ",
+        "add event ",
+        "set up meeting "
+      ],
+      "purpose": "Template-backed approved action tool for calendar.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/calendar_create_approved.py test"
+    },
+    {
+      "name": "notes_dry_run",
+      "path": "tools_created_by_lucy/notes_dry_run.py",
+      "status": "sandbox",
+      "dry_run": true,
+      "pair_base": "notes",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "create a note ",
+        "create note ",
+        "make a note ",
+        "make note ",
+        "add a note ",
+        "add note "
+      ],
+      "purpose": "Template-backed dry-run tool for notes.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/notes_dry_run.py test"
+    },
+    {
+      "name": "notes_create_approved",
+      "path": "tools_created_by_lucy/notes_create_approved.py",
+      "status": "sandbox",
+      "dry_run": false,
+      "pair_base": "notes",
+      "role": "create_approved",
+      "intent_prefixes": [
+        "create a note ",
+        "create note ",
+        "make a note ",
+        "make note ",
+        "add a note ",
+        "add note "
+      ],
+      "purpose": "Template-backed approved action tool for notes.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/notes_create_approved.py test"
+    },
+    {
+      "name": "mail_draft_dry_run",
+      "path": "tools_created_by_lucy/mail_draft_dry_run.py",
+      "status": "sandbox",
+      "dry_run": true,
+      "pair_base": "mail_draft",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "write an email ",
+        "write email ",
+        "draft an email ",
+        "draft email ",
+        "create an email ",
+        "create email "
+      ],
+      "purpose": "Template-backed dry-run tool for mail_draft.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/mail_draft_dry_run.py test"
+    },
+    {
+      "name": "mail_draft_create_approved",
+      "path": "tools_created_by_lucy/mail_draft_create_approved.py",
+      "status": "sandbox",
+      "dry_run": false,
+      "pair_base": "mail_draft",
+      "role": "create_approved",
+      "intent_prefixes": [
+        "write an email ",
+        "write email ",
+        "draft an email ",
+        "draft email ",
+        "create an email ",
+        "create email "
+      ],
+      "purpose": "Template-backed approved action tool for mail_draft.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/mail_draft_create_approved.py test"
+    },
+    {
+      "name": "safari_open_dry_run",
+      "path": "tools_created_by_lucy/safari_open_dry_run.py",
+      "status": "sandbox",
+      "dry_run": true,
+      "pair_base": "safari_open",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "open website ",
+        "open safari to ",
+        "open url ",
+        "open link ",
+        "go to website "
+      ],
+      "purpose": "Parse Safari open-url requests and preview the URL without opening Safari.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/safari_open_dry_run.py \"open website https://example.com\""
+    },
+    {
+      "name": "safari_open_create_approved",
+      "path": "tools_created_by_lucy/safari_open_create_approved.py",
+      "status": "sandbox",
+      "dry_run": false,
+      "pair_base": "safari_open",
+      "role": "create_approved",
+      "intent_prefixes": [
+        "open website ",
+        "open safari to ",
+        "open url ",
+        "open link ",
+        "go to website "
+      ],
+      "purpose": "Open a URL in Safari after Lucy has shown a preview and the user has explicitly approved.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/safari_open_create_approved.py \"open website https://example.com\""
+    },
+    {
+      "name": "app_open_dry_run",
+      "path": "tools_created_by_lucy/app_open_dry_run.py",
+      "status": "sandbox",
+      "dry_run": true,
+      "pair_base": "app_open",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "open ",
+        "launch ",
+        "start ",
+        "run ",
+        "open app ",
+        "launch app "
+      ],
+      "purpose": "Parse app-opening requests, check whether the app is installed, and preview the action.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/app_open_dry_run.py \"open Roblox\""
+    },
+    {
+      "name": "app_open_create_approved",
+      "path": "tools_created_by_lucy/app_open_create_approved.py",
+      "status": "sandbox",
+      "dry_run": false,
+      "pair_base": "app_open",
+      "role": "create_approved",
+      "intent_prefixes": [
+        "open ",
+        "launch ",
+        "start ",
+        "run ",
+        "open app ",
+        "launch app "
+      ],
+      "purpose": "Open an installed app after approval, or open a safe download search page if missing.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "python3 tools_created_by_lucy/app_open_create_approved.py \"open Roblox\""
+    },
+    {
+      "name": "web_app_search_dry_run",
+      "path": "tools_created_by_lucy/web_app_search_dry_run.py",
+      "status": "sandbox",
+      "dry_run": true,
+      "pair_base": "web_app_search",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "find ",
+        "find me ",
+        "search ",
+        "search for ",
+        "look up ",
+        "play "
+      ],
+      "purpose": "Search Spotify, YouTube, or Google from natural search requests.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "/usr/local/bin/python3 tools_created_by_lucy/web_app_search_dry_run.py \"find me never gonna give you up on spotify\""
+    },
+    {
+      "name": "web_app_search_create_approved",
+      "path": "tools_created_by_lucy/web_app_search_create_approved.py",
+      "status": "sandbox",
+      "dry_run": false,
+      "pair_base": "web_app_search",
+      "role": "create_approved",
+      "intent_prefixes": [
+        "find ",
+        "find me ",
+        "search ",
+        "search for ",
+        "look up ",
+        "play "
+      ],
+      "purpose": "Open Spotify, YouTube, or Google search results after approval.",
+      "requires_approval_for_real_action": true,
+      "smoke_test": "/usr/local/bin/python3 tools_created_by_lucy/web_app_search_create_approved.py \"find me never gonna give you up on spotify\""
+    },
+    {
+      "name": "public_web_search",
+      "path": "tools_created_by_lucy/dynamic/public_web_search.py",
+      "status": "dynamic_sandbox",
+      "dry_run": true,
+      "pair_base": "public_web_search",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "use public_web_search ",
+        "public_web_search "
+      ],
+      "purpose": "Create a tool that returns a safe public web search URL for a query",
+      "requires_approval_for_real_action": false,
+      "smoke_test": "python3 tools/lucy_tool_sandbox.py tools_created_by_lucy/dynamic/public_web_search.py \"ocean animals\""
+    },
+    {
+      "name": "extract_links",
+      "path": "tools_created_by_lucy/dynamic/extract_links.py",
+      "status": "dynamic_sandbox",
+      "dry_run": true,
+      "pair_base": "extract_links",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "use extract_links ",
+        "extract_links "
+      ],
+      "purpose": "create a tool that extracts links from a webpage",
+      "requires_approval_for_real_action": false,
+      "smoke_test": "python3 tools/lucy_tool_sandbox.py tools_created_by_lucy/dynamic/extract_links.py \"https://example.com\""
+    },
+    {
+      "name": "extract_page_title",
+      "path": "tools_created_by_lucy/dynamic/extract_page_title.py",
+      "status": "react_generated_sandbox",
+      "dry_run": true,
+      "pair_base": "extract_page_title",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "use extract_page_title ",
+        "extract_page_title "
+      ],
+      "purpose": "Lucy ReAct-generated dynamic tool: extract_page_title",
+      "requires_approval_for_real_action": false,
+      "smoke_test": "python3 tools_created_by_lucy/dynamic/extract_page_title.py <input>"
+    },
+    {
+      "name": "linkedin_visible_research",
+      "path": "tools_created_by_lucy/linkedin_visible_research_dry_run.py",
+      "status": "v1_browser_visible_research",
+      "dry_run": true,
+      "pair_base": "linkedin_visible_research",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "research linkedin ",
+        "read linkedin ",
+        "summarize linkedin ",
+        "draft linkedin post ",
+        "create linkedin post ",
+        "linkedin research "
+      ],
+      "purpose": "Open LinkedIn content search in Safari for a topic and guide visible-page research.",
+      "requires_approval_for_real_action": false,
+      "smoke_test": "python3 tools_created_by_lucy/linkedin_visible_research_dry_run.py 'research linkedin about sea turtles'"
+    },
+    {
+      "name": "linkedin_visible_research_read",
+      "path": "tools_created_by_lucy/linkedin_visible_research_read.py",
+      "status": "v1_browser_visible_research",
+      "dry_run": true,
+      "pair_base": "linkedin_visible_research_read",
+      "role": "dry_run",
+      "intent_prefixes": [
+        "read visible linkedin ",
+        "summarize visible linkedin ",
+        "draft from visible linkedin ",
+        "linkedin_visible_research_read "
+      ],
+      "purpose": "Read visible Safari page text and draft a LinkedIn post from visible trends.",
+      "requires_approval_for_real_action": false,
+      "smoke_test": "python3 tools_created_by_lucy/linkedin_visible_research_read.py 'sea turtles'"
+    },
+    {
+      "name": "lucy_linkedin_direct",
+      "path": "tools_created_by_lucy/lucy_linkedin_direct.py",
+      "description": "Uses Chrome LinkedIn search screenshot/OCR, then MLX, to draft a LinkedIn post and print it in Lucy chat.",
+      "prompt_doc": "Use lucy_linkedin_direct when the user asks to write, draft, or make a LinkedIn post. It opens LinkedIn in Chrome, reads visible results with screenshot/OCR, drafts locally with MLX, and prints the final draft.",
+      "smoke_test": "python3 tools_created_by_lucy/lucy_linkedin_direct.py 'write me a linkedin post about sea turtles'"
+    },
+    {
+      "name": "lucy_browser",
+      "path": "tools_created_by_lucy/lucy_browser.py",
+      "description": "Browser bridge for Lucy. Can open LinkedIn searches and read current Chrome page text through the Lucy Browser Bridge extension.",
+      "prompt_doc": "Use lucy_browser when the user asks Lucy to research websites, read browser pages, or research LinkedIn.",
+      "smoke_test": "python3 tools_created_by_lucy/lucy_browser.py state"
+    }
+  ]
+}
