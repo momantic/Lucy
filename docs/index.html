@@ -3,211 +3,180 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lucy — AI Desktop Agent</title>
+<title>Lucy — Local AI Desktop Agent</title>
 
 <style>
-:root{
-  --bg1:#0b0b12;
-  --bg2:#141428;
-  --card:rgba(255,255,255,0.05);
-  --stroke:rgba(255,255,255,0.10);
-  --text:rgba(255,255,255,0.85);
-  --muted:rgba(255,255,255,0.6);
-  --blue:#00d4ff;
-  --purple:#7c5cff;
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #141428, #0b0b12 65%);
+  color: white;
 }
 
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  background: radial-gradient(circle at top, var(--bg2), var(--bg1) 60%);
-  color:white;
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 80px 24px;
 }
 
 /* HERO */
-.hero{
-  max-width:900px;
-  margin:0 auto;
-  padding:120px 24px 80px;
-  text-align:center;
+.hero {
+  text-align: center;
+  margin-bottom: 70px;
 }
 
-.badge{
-  display:inline-flex;
-  gap:8px;
-  align-items:center;
-  padding:6px 14px;
-  border-radius:999px;
-  font-size:12px;
-  background:var(--card);
-  border:1px solid var(--stroke);
-  color:var(--muted);
-  backdrop-filter: blur(10px);
+.badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
 }
 
-.icon{
-  width:120px;
-  height:120px;
-  border-radius:28px;
-  margin:26px 0;
-  box-shadow:0 30px 80px rgba(124,92,255,0.25);
+h1 {
+  font-size: 68px;
+  margin: 12px 0;
+  background: linear-gradient(90deg,#7c5cff,#00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-h1{
-  font-size:72px;
-  margin:10px 0;
-  letter-spacing:-2px;
-  background:linear-gradient(90deg,var(--purple),var(--blue));
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
+.subtitle {
+  max-width: 700px;
+  margin: auto;
+  color: rgba(255,255,255,0.75);
+  font-size: 18px;
+  line-height: 1.6;
 }
 
-.sub{
-  font-size:18px;
-  color:var(--muted);
-  max-width:680px;
-  margin:0 auto;
-  line-height:1.6;
+/* ICON */
+.icon {
+  width: 120px;
+  height: 120px;
+  border-radius: 24px;
+  margin: 20px auto;
+  display: block;
+  box-shadow: 0 20px 60px rgba(124,92,255,0.25);
 }
 
-/* buttons */
-.buttons{
-  margin-top:28px;
-  display:flex;
-  justify-content:center;
-  gap:12px;
+/* BUTTONS */
+.buttons {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
 }
 
-.btn{
-  padding:14px 22px;
-  border-radius:14px;
-  text-decoration:none;
-  font-weight:600;
-  transition:0.2s;
+.btn {
+  padding: 14px 22px;
+  border-radius: 14px;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-.primary{
-  background:linear-gradient(135deg,var(--purple),var(--blue));
-  color:black;
+.primary {
+  background: linear-gradient(135deg,#7c5cff,#00d4ff);
+  color: black;
 }
 
-.secondary{
-  background:var(--card);
-  border:1px solid var(--stroke);
-  color:white;
+.secondary {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: white;
 }
 
-/* sections */
-.section{
-  max-width:1000px;
-  margin:0 auto;
-  padding:80px 24px;
+/* SECTIONS */
+.section {
+  margin-top: 80px;
 }
 
-.title{
-  font-size:24px;
-  margin-bottom:18px;
-  color:white;
-  letter-spacing:-0.3px;
+.title {
+  font-size: 24px;
+  margin-bottom: 16px;
 }
 
-/* grid */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:14px;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 14px;
 }
 
-.card{
-  background:var(--card);
-  border:1px solid var(--stroke);
-  padding:18px;
-  border-radius:16px;
-  color:var(--text);
-  line-height:1.6;
-  backdrop-filter: blur(10px);
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 16px;
+  border-radius: 14px;
+  line-height: 1.5;
 }
 
-/* command blocks */
-.code{
-  font-family:ui-monospace,SFMono-Regular;
-  font-size:13px;
-  padding:12px 14px;
-  background:rgba(0,0,0,0.35);
-  border:1px solid var(--stroke);
-  border-radius:12px;
-  margin-top:10px;
-  color:var(--muted);
+.version {
+  color: #00d4ff;
+  font-weight: 600;
 }
 
-/* responsive */
-@media(max-width:800px){
-  h1{font-size:48px;}
-  .grid{grid-template-columns:1fr;}
-  .buttons{flex-direction:column;}
+/* MOBILE */
+@media (max-width: 800px) {
+  h1 { font-size: 46px; }
+  .grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 
 <body>
 
-<!-- HERO -->
-<div class="hero" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+<div class="container">
 
-  <div class="badge">Local AI Desktop Agent • v0.1</div>
+  <!-- HERO -->
+  <div class="hero">
 
-  <div style="display:flex;justify-content:center;"><div style="display:flex;justify-content:center;margin-top:10px;"><img class="icon" style="display:block;margin:18px auto;" style="display:block;margin:0 auto;" src="assets/lucy.jpg">
+    <div class="badge">
+      Local AI Desktop Agent <span class="version">v0.1</span>
+    </div>
 
-  <h1>Lucy</h1>
+    <img class="icon" src="assets/lucy.jpg">
 
-  <div class="sub">
-    A local AI agent that reads webpages, writes content, and automates browser workflows through a Chrome Bridge.
+    <h1>Lucy</h1>
+
+    <div class="subtitle">
+      Lucy is a local AI agent powered by MLX. She runs entirely on your Mac — 
+      private, free, and fast. She can read webpages, write content, and automate browser workflows.
+    </div>
+
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
+        Download Lucy
+      </a>
+      <a class="btn secondary" href="/Lucy/bridge/">
+        Install Chrome Bridge
+      </a>
+    </div>
+
   </div>
 
-  <div class="buttons">
-    <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy</a>
-    <a class="btn secondary" href="/Lucy/bridge/">Install Chrome Bridge</a>
+  <!-- CAPABILITIES -->
+  <div class="section">
+    <div class="title">Capabilities</div>
+
+    <div class="grid">
+      <div class="card">🧠 Understand webpages instantly</div>
+      <div class="card">🌐 Extract structured content</div>
+      <div class="card">✍️ Write emails, posts, summaries</div>
+      <div class="card">⚙️ Automate browser workflows</div>
+    </div>
   </div>
 
-</div>
+  <!-- ABOUT LOCAL -->
+  <div class="section">
+    <div class="title">Why Lucy</div>
 
-<!-- CAPABILITIES -->
-<div class="section">
-  <div class="title">Capabilities</div>
-
-  <div class="grid">
-    <div class="card">🧠 Understand webpages instantly</div>
-    <div class="card">🌐 Extract structured web content</div>
-    <div class="card">✍️ Write emails, posts, summaries</div>
-    <div class="card">⚙️ Automate browser workflows</div>
-  </div>
-</div>
-
-<!-- HOW IT WORKS -->
-<div class="section">
-  <div class="title">How Lucy Works</div>
-
-  <div class="card">
-    Click install → open any webpage → ask Lucy → she processes locally and responds instantly.
-  </div>
-
-  <div class="code">“Write an email to my professor asking for a meeting”</div>
-  <div class="code">“Search LinkedIn for AI engineer roles”</div>
-  <div class="code">“Summarize this page”</div>
-
-</div>
-
-<!-- USE CASES -->
-<div class="section">
-  <div class="title">What You Can Do</div>
-
-  <div class="grid">
-    <div class="card">📧 Write professional emails instantly</div>
-    <div class="card">🔎 Search LinkedIn jobs automatically</div>
-    <div class="card">⏰ Set reminders & tasks</div>
-    <div class="card">🪟 Control browser tabs</div>
-    <div class="card">🧭 Automate workflows</div>
-    <div class="card">🙈 Hide / resume agent state</div>
+    <div class="card">
+      Lucy runs locally using <span class="version">MLX</span> on Apple Silicon.  
+      No cloud APIs. No subscriptions. No data leaves your machine.
+      <br><br>
+      She is designed for privacy-first AI automation directly on your desktop.
+    </div>
   </div>
 
 </div>
