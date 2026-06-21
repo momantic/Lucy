@@ -9,42 +9,50 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at top, #1a1a2e, #0b0b12 60%);
+  background: radial-gradient(circle at top, #17172a, #0b0b12 60%);
   color: white;
 }
 
 /* layout */
 .container {
-  max-width: 1050px;
+  max-width: 1100px;
   margin: auto;
-  padding: 80px 24px;
+  padding: 90px 24px;
 }
 
-/* hero */
+/* HERO */
 .hero {
   text-align: center;
+  margin-bottom: 90px;
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
   padding: 6px 14px;
   border-radius: 999px;
+  font-size: 12px;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
-  font-size: 13px;
   color: #bbb;
+}
+
+.version {
+  color: #00d4ff;
+  font-weight: 600;
 }
 
 .icon {
   width: 120px;
   height: 120px;
   border-radius: 24px;
-  margin: 22px 0;
-  box-shadow: 0 20px 60px rgba(124,92,255,0.25);
+  margin: 25px 0;
+  box-shadow: 0 25px 80px rgba(124,92,255,0.25);
 }
 
 h1 {
-  font-size: 64px;
+  font-size: 72px;
   margin: 10px 0;
   background: linear-gradient(90deg,#7c5cff,#00d4ff);
   -webkit-background-clip: text;
@@ -52,11 +60,11 @@ h1 {
 }
 
 .subtitle {
-  max-width: 720px;
+  max-width: 750px;
   margin: auto;
-  color: rgba(255,255,255,0.7);
-  line-height: 1.6;
+  color: rgba(255,255,255,0.75);
   font-size: 18px;
+  line-height: 1.6;
 }
 
 /* buttons */
@@ -68,7 +76,7 @@ h1 {
 }
 
 .btn {
-  padding: 14px 20px;
+  padding: 14px 22px;
   border-radius: 14px;
   font-weight: 600;
   text-decoration: none;
@@ -91,8 +99,9 @@ h1 {
 }
 
 .title {
-  font-size: 28px;
-  margin-bottom: 20px;
+  font-size: 26px;
+  margin-bottom: 18px;
+  color: white;
 }
 
 /* grid */
@@ -108,14 +117,15 @@ h1 {
   padding: 18px;
   border-radius: 14px;
   line-height: 1.5;
+  transition: 0.2s ease;
 }
 
-.card span {
-  color: #00d4ff;
-  font-weight: 600;
+.card:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,0.06);
 }
 
-/* command blocks */
+/* command box */
 .code {
   background: rgba(0,0,0,0.35);
   border: 1px solid rgba(255,255,255,0.08);
@@ -124,14 +134,24 @@ h1 {
   font-family: monospace;
   margin-top: 10px;
   font-size: 13px;
-  overflow-x: auto;
 }
 
-/* footer spacing */
-.spacer {
-  height: 40px;
+/* footer */
+.footer {
+  margin-top: 100px;
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+}
+
+/* mobile */
+@media (max-width: 800px) {
+  h1 { font-size: 48px; }
+  .grid { grid-template-columns: 1fr; }
+  .buttons { flex-direction: column; }
 }
 </style>
+
 </head>
 
 <body>
@@ -140,27 +160,29 @@ h1 {
 
 <!-- HERO -->
 <div class="hero">
-  <div class="badge">🧠 Local AI Desktop Agent • v0.1</div>
 
-  <div>
-    <img class="icon" src="assets/lucy.jpg">
+  <div class="badge">
+    🧠 Local AI Desktop Agent • <span class="version">v0.1</span>
   </div>
+
+  <img class="icon" src="assets/lucy.jpg">
 
   <h1>Lucy</h1>
 
-  <div class="subtitle">
-    A local AI agent that reads webpages, writes content, automates your browser,
-    and executes real workflows through a Chrome Bridge.
-  </div>
+  <p class="subtitle">
+    A local AI agent that reads webpages, writes content, and automates browser workflows through a Chrome Bridge.
+  </p>
 
   <div class="buttons">
     <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
       Download Lucy
     </a>
+
     <a class="btn secondary" href="/Lucy/bridge/">
       Install Chrome Bridge
     </a>
   </div>
+
 </div>
 
 <!-- CAPABILITIES -->
@@ -168,44 +190,45 @@ h1 {
   <div class="title">Capabilities</div>
 
   <div class="grid">
-    <div class="card"><span>🧠 Understand</span><br>Reads and interprets webpages in real time</div>
-    <div class="card"><span>🌐 Extract</span><br>Pull structured data from any website</div>
-    <div class="card"><span>✍️ Write</span><br>Generate emails, posts, summaries, reports</div>
-    <div class="card"><span>⚙️ Automate</span><br>Run browser workflows through Chrome Bridge</div>
+    <div class="card">🧠 Understand webpages instantly</div>
+    <div class="card">🌐 Extract structured web content</div>
+    <div class="card">✍️ Write emails, posts, summaries</div>
+    <div class="card">⚙️ Automate browser workflows</div>
   </div>
 </div>
 
-<!-- HOW TO PROMPT -->
+<!-- HOW TO USE -->
 <div class="section">
-  <div class="title">How to Talk to Lucy</div>
+  <div class="title">How to use Lucy</div>
 
   <div class="card">
-    You can control Lucy using natural language. Examples:
-    
-    <div class="code">Write an email to my professor asking for a meeting next week</div>
-    <div class="code">Summarize this webpage and extract key points</div>
-    <div class="code">Search LinkedIn for AI engineer roles in San Francisco</div>
-    <div class="code">Set a reminder to follow up with recruiter tomorrow</div>
-    <div class="code">Hide yourself and pause automation</div>
-    <div class="code">Open Chrome and navigate to GitHub trending</div>
+    You talk to Lucy in natural language:
+
+    <div class="code">Write an email to my professor asking for a meeting</div>
+    <div class="code">Summarize this webpage</div>
+    <div class="code">Search LinkedIn for AI engineer jobs</div>
+    <div class="code">Set a reminder for tomorrow</div>
+    <div class="code">Hide yourself and pause</div>
   </div>
 </div>
 
 <!-- FEATURES -->
 <div class="section">
-  <div class="title">What Lucy Can Do</div>
+  <div class="title">What Lucy can do</div>
 
   <div class="grid">
-    <div class="card">📧 Write & send structured emails</div>
-    <div class="card">🔎 Search LinkedIn & extract job listings</div>
-    <div class="card">⏰ Set reminders & scheduled tasks</div>
-    <div class="card">🪟 Control browser tabs & navigation</div>
-    <div class="card">🧭 “Jump mode” navigation between workflows</div>
-    <div class="card">🙈 Hide / pause / resume agent state</div>
+    <div class="card">📧 Email generation + structuring</div>
+    <div class="card">🔎 LinkedIn job search automation</div>
+    <div class="card">⏰ Reminders + task scheduling</div>
+    <div class="card">🪟 Browser control & navigation</div>
+    <div class="card">🧭 Workflow “jump mode” execution</div>
+    <div class="card">🙈 Hide / resume agent state</div>
   </div>
 </div>
 
-<div class="spacer"></div>
+<div class="footer">
+  Built locally • macOS • Chrome Bridge powered
+</div>
 
 </div>
 
