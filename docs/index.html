@@ -1,51 +1,162 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lucy</title>
+<title>Lucy — AI Desktop Agent</title>
 
 <style>
 body {
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  background:#0b0b12;
-  color:white;
-  text-align:center;
-  padding:80px;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #1a1a2e, #0b0b12 60%);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
 
-img {
-  width:120px;
-  border-radius:20px;
-  margin-bottom:20px;
+.container {
+  text-align: center;
+  max-width: 900px;
+  padding: 40px;
 }
 
+/* badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 13px;
+  color: #bbb;
+}
+
+/* icon */
+.icon {
+  width: 120px;
+  height: 120px;
+  border-radius: 24px;
+  margin: 24px 0;
+  box-shadow: 0 20px 60px rgba(124,92,255,0.25);
+}
+
+/* title */
 h1 {
-  font-size:60px;
+  font-size: 64px;
+  margin: 10px 0;
+  background: linear-gradient(90deg,#7c5cff,#00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* subtitle */
+p {
+  color: rgba(255,255,255,0.7);
+  font-size: 18px;
+  max-width: 650px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* buttons */
+.buttons {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
 }
 
 .btn {
-  display:inline-block;
-  margin:10px;
-  padding:14px 20px;
-  border-radius:12px;
-  background:#7c5cff;
-  color:black;
-  text-decoration:none;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.2s ease;
+}
+
+.primary {
+  background: linear-gradient(135deg,#7c5cff,#00d4ff);
+  color: black;
+}
+
+.primary:hover {
+  transform: translateY(-2px);
+}
+
+.secondary {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: white;
+}
+
+.secondary:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* feature grid */
+.grid {
+  margin-top: 60px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 16px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.card span {
+  color: #00d4ff;
 }
 </style>
+
 </head>
 
 <body>
 
-<img src="lucy.jpg">
+<div class="container">
 
-<h1>Lucy</h1>
+  <div class="badge">
+    🧠 Local AI Desktop Agent • v0.1
+  </div>
 
-<a class="btn" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download</a>
+  <div>
+    <img class="icon" src="assets/lucy.jpg">
+  </div>
 
-<a class="btn" href="/Lucy/bridge/">Bridge</a>
+  <h1>Lucy</h1>
+
+  <p>
+    A local AI agent that reads webpages, writes content, and automates your browser through a Chrome Bridge.
+  </p>
+
+  <div class="buttons">
+    <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
+      Download Lucy
+    </a>
+
+    <a class="btn secondary" href="/Lucy/bridge/">
+      Install Chrome Bridge
+    </a>
+  </div>
+
+  <div class="grid">
+    <div class="card"><span>🧠</span> Understand webpages instantly</div>
+    <div class="card"><span>🌐</span> Extract structured content</div>
+    <div class="card"><span>✍️</span> Write posts, emails, summaries</div>
+    <div class="card"><span>⚙️</span> Automate browser workflows</div>
+  </div>
+
+</div>
 
 </body>
 </html>
