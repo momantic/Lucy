@@ -5,9 +5,13 @@
   "description": "Connect Chrome to Lucy AI Desktop Agent",
   "permissions": ["activeTab", "scripting"],
   "action": {
-    "default_title": "Send page to Lucy"
+    "default_title": "Send page to Lucy",
+    "default_icon": "icons/icon.png"
   },
   "background": {
     "service_worker": "background.js"
+  },
+  "icons": {
+    "128": "icons/icon.png"
   }
 }
