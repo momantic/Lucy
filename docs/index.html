@@ -37,7 +37,6 @@ h1 {
   color: #b5b5b5;
   font-size: 18px;
   margin-top: 14px;
-  line-height: 1.6;
 }
 
 .badge {
@@ -49,7 +48,6 @@ h1 {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.2);
   font-size: 12px;
-  color: #ccc;
 }
 
 .btn {
@@ -61,6 +59,18 @@ h1 {
   font-weight: 700;
   border-radius: 14px;
   text-decoration: none;
+}
+
+.secondary-btn {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 12px 22px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 14px;
 }
 
 .card {
@@ -82,15 +92,6 @@ h1 {
   h1 { font-size: 48px; }
 }
 
-.prompt {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.15);
-  padding: 16px;
-  border-radius: 12px;
-  font-family: monospace;
-  color: #9fe6ff;
-}
-
 .avatar {
   width: 140px;
   height: 140px;
@@ -98,7 +99,6 @@ h1 {
   object-fit: cover;
   display: block;
   margin: 0 auto 20px auto;
-  box-shadow: 0 20px 60px rgba(124,92,255,0.35);
 }
 </style>
 </head>
@@ -116,7 +116,7 @@ h1 {
 <h1>Lucy</h1>
 
 <p class="subtitle">
-A local AI desktop agent for macOS that browses, researches, and writes structured outputs.
+Local AI agent that browses, researches, and writes LinkedIn posts.
 </p>
 
 <a class="btn"
@@ -124,13 +124,18 @@ href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.z
 Download Lucy
 </a>
 
+<br>
+
+<a class="secondary-btn"
+href="chrome://extensions">
+⬇ Install Chrome Browser Bridge
+</a>
+
 </div>
 
 <div class="card">
 <h2>Try Lucy</h2>
-<div class="prompt">
-write me a linkedin post about ai agents in stock markets
-</div>
+<div>write me a linkedin post about ai agents in stock markets</div>
 </div>
 
 <div class="grid">
@@ -138,15 +143,6 @@ write me a linkedin post about ai agents in stock markets
 <div class="card">🌐 Browser research</div>
 <div class="card">✍️ LinkedIn writing</div>
 <div class="card">⚙️ Agent workflows</div>
-</div>
-
-<div class="card">
-<h2>How it works</h2>
-Browser → Extract → Analyze → Write → Review → Output
-</div>
-
-<div style="text-align:center;color:#666;margin-top:60px;">
-Lucy v0.1 • Open Beta • macOS
 </div>
 
 </div>
