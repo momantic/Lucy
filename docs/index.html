@@ -11,23 +11,22 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   background: radial-gradient(circle at top, #1a1a2e, #0b0b12 60%);
   color: white;
-  display: flex;
-  justify-content: center; align-items: center;
-  align-items: center;
-  min-height: 100vh;
 }
 
+/* layout */
 .container {
-  text-align: center;
-  max-width: 900px;
-  padding: 40px;
+  max-width: 1050px;
+  margin: auto;
+  padding: 80px 24px;
 }
 
-/* badge */
+/* hero */
+.hero {
+  text-align: center;
+}
+
 .badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  display: inline-block;
   padding: 6px 14px;
   border-radius: 999px;
   background: rgba(255,255,255,0.06);
@@ -36,16 +35,14 @@ body {
   color: #bbb;
 }
 
-/* icon */
 .icon {
   width: 120px;
   height: 120px;
   border-radius: 24px;
-  margin: 24px 0;
+  margin: 22px 0;
   box-shadow: 0 20px 60px rgba(124,92,255,0.25);
 }
 
-/* title */
 h1 {
   font-size: 64px;
   margin: 10px 0;
@@ -54,20 +51,19 @@ h1 {
   -webkit-text-fill-color: transparent;
 }
 
-/* subtitle */
-p {
+.subtitle {
+  max-width: 720px;
+  margin: auto;
   color: rgba(255,255,255,0.7);
-  font-size: 18px;
-  max-width: 650px;
-  margin: 0 auto;
   line-height: 1.6;
+  font-size: 18px;
 }
 
 /* buttons */
 .buttons {
-  margin-top: 30px;
+  margin-top: 28px;
   display: flex;
-  justify-content: center; align-items: center;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -76,16 +72,11 @@ p {
   border-radius: 14px;
   font-weight: 600;
   text-decoration: none;
-  transition: 0.2s ease;
 }
 
 .primary {
   background: linear-gradient(135deg,#7c5cff,#00d4ff);
   color: black;
-}
-
-.primary:hover {
-  transform: translateY(-2px);
 }
 
 .secondary {
@@ -94,13 +85,18 @@ p {
   color: white;
 }
 
-.secondary:hover {
-  background: rgba(255,255,255,0.1);
+/* sections */
+.section {
+  margin-top: 90px;
 }
 
-/* feature grid */
+.title {
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+/* grid */
 .grid {
-  margin-top: 60px;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
@@ -109,52 +105,107 @@ p {
 .card {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
-  padding: 16px;
+  padding: 18px;
   border-radius: 14px;
-  text-align: left;
+  line-height: 1.5;
 }
 
 .card span {
   color: #00d4ff;
+  font-weight: 600;
+}
+
+/* command blocks */
+.code {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 14px;
+  border-radius: 12px;
+  font-family: monospace;
+  margin-top: 10px;
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+/* footer spacing */
+.spacer {
+  height: 40px;
 }
 </style>
-
 </head>
 
 <body>
 
 <div class="container">
 
-  <div class="badge">
-    🧠 Local AI Desktop Agent • v0.1
-  </div>
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">🧠 Local AI Desktop Agent • v0.1</div>
 
   <div>
-    <img class="icon" src="assets/lucy.jpg?v=1">
+    <img class="icon" src="assets/lucy.jpg">
   </div>
 
   <h1>Lucy</h1>
 
-  <p>
-    A local AI agent that reads webpages, writes content, and automates your browser through a Chrome Bridge.
-  </p>
+  <div class="subtitle">
+    A local AI agent that reads webpages, writes content, automates your browser,
+    and executes real workflows through a Chrome Bridge.
+  </div>
 
   <div class="buttons">
     <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
       Download Lucy
     </a>
-
     <a class="btn secondary" href="/Lucy/bridge/">
       Install Chrome Bridge
     </a>
   </div>
+</div>
+
+<!-- CAPABILITIES -->
+<div class="section">
+  <div class="title">Capabilities</div>
 
   <div class="grid">
-    <div class="card"><span>🧠</span> Understand webpages instantly</div>
-    <div class="card"><span>🌐</span> Extract structured content</div>
-    <div class="card"><span>✍️</span> Write posts, emails, summaries</div>
-    <div class="card"><span>⚙️</span> Automate browser workflows</div>
+    <div class="card"><span>🧠 Understand</span><br>Reads and interprets webpages in real time</div>
+    <div class="card"><span>🌐 Extract</span><br>Pull structured data from any website</div>
+    <div class="card"><span>✍️ Write</span><br>Generate emails, posts, summaries, reports</div>
+    <div class="card"><span>⚙️ Automate</span><br>Run browser workflows through Chrome Bridge</div>
   </div>
+</div>
+
+<!-- HOW TO PROMPT -->
+<div class="section">
+  <div class="title">How to Talk to Lucy</div>
+
+  <div class="card">
+    You can control Lucy using natural language. Examples:
+    
+    <div class="code">Write an email to my professor asking for a meeting next week</div>
+    <div class="code">Summarize this webpage and extract key points</div>
+    <div class="code">Search LinkedIn for AI engineer roles in San Francisco</div>
+    <div class="code">Set a reminder to follow up with recruiter tomorrow</div>
+    <div class="code">Hide yourself and pause automation</div>
+    <div class="code">Open Chrome and navigate to GitHub trending</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div class="section">
+  <div class="title">What Lucy Can Do</div>
+
+  <div class="grid">
+    <div class="card">📧 Write & send structured emails</div>
+    <div class="card">🔎 Search LinkedIn & extract job listings</div>
+    <div class="card">⏰ Set reminders & scheduled tasks</div>
+    <div class="card">🪟 Control browser tabs & navigation</div>
+    <div class="card">🧭 “Jump mode” navigation between workflows</div>
+    <div class="card">🙈 Hide / pause / resume agent state</div>
+  </div>
+</div>
+
+<div class="spacer"></div>
 
 </div>
 
