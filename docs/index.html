@@ -6,194 +6,209 @@
 <title>Lucy — AI Desktop Agent</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at top, #141427, #0b0b12 70%);
-  color: white;
+:root{
+  --bg1:#0b0b12;
+  --bg2:#141428;
+  --card:rgba(255,255,255,0.05);
+  --stroke:rgba(255,255,255,0.10);
+  --text:rgba(255,255,255,0.85);
+  --muted:rgba(255,255,255,0.6);
+  --blue:#00d4ff;
+  --purple:#7c5cff;
 }
 
-.container {
-  max-width: 1100px;
-  margin: auto;
-  padding: 90px 24px;
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  background: radial-gradient(circle at top, var(--bg2), var(--bg1) 60%);
+  color:white;
 }
 
 /* HERO */
-.hero {
-  text-align: center;
-  margin-bottom: 100px;
+.hero{
+  max-width:900px;
+  margin:0 auto;
+  padding:120px 24px 80px;
+  text-align:center;
 }
 
-.badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  font-size: 12px;
-  color: #bbb;
+.badge{
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  padding:6px 14px;
+  border-radius:999px;
+  font-size:12px;
+  background:var(--card);
+  border:1px solid var(--stroke);
+  color:var(--muted);
+  backdrop-filter: blur(10px);
 }
 
-h1 {
-  font-size: 72px;
-  margin: 15px 0;
-  background: linear-gradient(90deg,#7c5cff,#00d4ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.icon{
+  width:120px;
+  height:120px;
+  border-radius:28px;
+  margin:26px 0;
+  box-shadow:0 30px 80px rgba(124,92,255,0.25);
 }
 
-.subtitle {
-  max-width: 720px;
-  margin: auto;
-  color: rgba(255,255,255,0.75);
-  font-size: 18px;
-  line-height: 1.6;
+h1{
+  font-size:72px;
+  margin:10px 0;
+  letter-spacing:-2px;
+  background:linear-gradient(90deg,var(--purple),var(--blue));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
 }
 
-.icon {
-  width: 120px;
-  border-radius: 24px;
-  margin: 25px 0;
-  box-shadow: 0 20px 80px rgba(124,92,255,0.3);
+.sub{
+  font-size:18px;
+  color:var(--muted);
+  max-width:680px;
+  margin:0 auto;
+  line-height:1.6;
 }
 
-/* BUTTONS */
-.buttons {
-  margin-top: 25px;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
+/* buttons */
+.buttons{
+  margin-top:28px;
+  display:flex;
+  justify-content:center;
+  gap:12px;
 }
 
-.btn {
-  padding: 14px 22px;
-  border-radius: 14px;
-  font-weight: 600;
-  text-decoration: none;
+.btn{
+  padding:14px 22px;
+  border-radius:14px;
+  text-decoration:none;
+  font-weight:600;
+  transition:0.2s;
 }
 
-.primary {
-  background: linear-gradient(135deg,#7c5cff,#00d4ff);
-  color: black;
+.primary{
+  background:linear-gradient(135deg,var(--purple),var(--blue));
+  color:black;
 }
 
-.secondary {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: white;
+.secondary{
+  background:var(--card);
+  border:1px solid var(--stroke);
+  color:white;
 }
 
-/* SECTION */
-.section {
-  margin-top: 90px;
+/* sections */
+.section{
+  max-width:1000px;
+  margin:0 auto;
+  padding:80px 24px;
 }
 
-.title {
-  font-size: 28px;
-  margin-bottom: 18px;
+.title{
+  font-size:24px;
+  margin-bottom:18px;
+  color:white;
+  letter-spacing:-0.3px;
 }
 
-/* GRID */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+/* grid */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
 }
 
-.card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 18px;
-  border-radius: 14px;
-  line-height: 1.6;
+.card{
+  background:var(--card);
+  border:1px solid var(--stroke);
+  padding:18px;
+  border-radius:16px;
+  color:var(--text);
+  line-height:1.6;
+  backdrop-filter: blur(10px);
 }
 
-/* FLOW */
-.flow {
-  display: grid;
-  gap: 12px;
+/* command blocks */
+.code{
+  font-family:ui-monospace,SFMono-Regular;
+  font-size:13px;
+  padding:12px 14px;
+  background:rgba(0,0,0,0.35);
+  border:1px solid var(--stroke);
+  border-radius:12px;
+  margin-top:10px;
+  color:var(--muted);
 }
 
-.step {
-  padding: 16px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-/* MOBILE */
-@media (max-width: 800px) {
-  h1 { font-size: 48px; }
-  .grid { grid-template-columns: 1fr; }
+/* responsive */
+@media(max-width:800px){
+  h1{font-size:48px;}
+  .grid{grid-template-columns:1fr;}
+  .buttons{flex-direction:column;}
 }
 </style>
-
 </head>
 
 <body>
 
-<div class="container">
-
 <!-- HERO -->
 <div class="hero">
 
-<div class="badge">Local AI Desktop Agent</div>
+  <div class="badge">Local AI Desktop Agent • v0.1</div>
 
-<img class="icon" src="assets/lucy.jpg">
+  <img class="icon" src="assets/lucy.jpg">
 
-<h1>Lucy</h1>
+  <h1>Lucy</h1>
 
-<p class="subtitle">
-A local AI agent that reads webpages, writes content, and automates your browser through a Chrome Bridge.
-</p>
+  <div class="sub">
+    A local AI agent that reads webpages, writes content, and automates browser workflows through a Chrome Bridge.
+  </div>
 
-<div class="buttons">
-<a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download</a>
-<a class="btn secondary" href="/Lucy/bridge/">Install Chrome Bridge</a>
-</div>
+  <div class="buttons">
+    <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy</a>
+    <a class="btn secondary" href="/Lucy/bridge/">Install Chrome Bridge</a>
+  </div>
 
 </div>
 
 <!-- CAPABILITIES -->
 <div class="section">
-<div class="title">Capabilities</div>
+  <div class="title">Capabilities</div>
 
-<div class="grid">
-<div class="card">🧠 Understand webpages instantly</div>
-<div class="card">🌐 Extract structured content</div>
-<div class="card">✍️ Write emails, posts, summaries</div>
-<div class="card">⚙️ Automate browser workflows</div>
-</div>
+  <div class="grid">
+    <div class="card">🧠 Understand webpages instantly</div>
+    <div class="card">🌐 Extract structured web content</div>
+    <div class="card">✍️ Write emails, posts, summaries</div>
+    <div class="card">⚙️ Automate browser workflows</div>
+  </div>
 </div>
 
 <!-- HOW IT WORKS -->
 <div class="section">
-<div class="title">How Lucy Works</div>
+  <div class="title">How Lucy Works</div>
 
-<div class="flow">
-<div class="step">1. Click “Install Chrome Bridge”</div>
-<div class="step">2. Open any webpage</div>
-<div class="step">3. Ask Lucy to analyze or act on it</div>
-<div class="step">4. Lucy processes locally and responds instantly</div>
-</div>
+  <div class="card">
+    Click install → open any webpage → ask Lucy → she processes locally and responds instantly.
+  </div>
+
+  <div class="code">“Write an email to my professor asking for a meeting”</div>
+  <div class="code">“Search LinkedIn for AI engineer roles”</div>
+  <div class="code">“Summarize this page”</div>
 
 </div>
 
 <!-- USE CASES -->
 <div class="section">
-<div class="title">What You Can Do</div>
+  <div class="title">What You Can Do</div>
 
-<div class="grid">
-<div class="card">📧 Write professional emails instantly</div>
-<div class="card">🔎 Search LinkedIn for jobs</div>
-<div class="card">⏰ Create reminders and tasks</div>
-<div class="card">🪟 Control browser tabs</div>
-<div class="card">🧭 Navigate workflows automatically</div>
-<div class="card">🙈 Hide / pause / resume Lucy</div>
-</div>
-
-</div>
+  <div class="grid">
+    <div class="card">📧 Write professional emails instantly</div>
+    <div class="card">🔎 Search LinkedIn jobs automatically</div>
+    <div class="card">⏰ Set reminders & tasks</div>
+    <div class="card">🪟 Control browser tabs</div>
+    <div class="card">🧭 Automate workflows</div>
+    <div class="card">🙈 Hide / resume agent state</div>
+  </div>
 
 </div>
 
