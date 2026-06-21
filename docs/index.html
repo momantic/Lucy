@@ -19,7 +19,6 @@ body {
   padding: 80px 24px;
 }
 
-/* HERO */
 .hero {
   text-align: center;
   padding: 80px 0 40px;
@@ -41,7 +40,18 @@ h1 {
   line-height: 1.6;
 }
 
-/* BUTTON */
+.badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  font-size: 12px;
+  color: #ccc;
+}
+
 .btn {
   display: inline-block;
   margin-top: 25px;
@@ -53,20 +63,6 @@ h1 {
   text-decoration: none;
 }
 
-/* VERSION BADGE */
-.badge {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.2);
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: #ccc;
-}
-
-/* CARDS */
 .card {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
@@ -75,18 +71,6 @@ h1 {
   margin-top: 18px;
 }
 
-/* TRY BOX */
-.prompt-box {
-  background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 18px;
-  border-radius: 14px;
-  margin-top: 12px;
-  font-family: monospace;
-  color: #9fe6ff;
-}
-
-/* GRID */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -98,14 +82,22 @@ h1 {
   h1 { font-size: 48px; }
 }
 
-/* IMAGE */
+.prompt {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 16px;
+  border-radius: 12px;
+  font-family: monospace;
+  color: #9fe6ff;
+}
+
 .avatar {
   width: 140px;
   height: 140px;
   border-radius: 24px;
   object-fit: cover;
-  margin: 0 auto 18px auto;
   display: block;
+  margin: 0 auto 20px auto;
   box-shadow: 0 20px 60px rgba(124,92,255,0.35);
 }
 </style>
@@ -115,7 +107,6 @@ h1 {
 
 <div class="container">
 
-<!-- HERO -->
 <div class="hero">
 
 <div class="badge">v0.1 beta</div>
@@ -125,60 +116,37 @@ h1 {
 <h1>Lucy</h1>
 
 <p class="subtitle">
-A local AI agent for macOS that browses, researches,<br>
-and writes structured outputs using on-device intelligence.
+A local AI desktop agent for macOS that browses, researches, and writes structured outputs.
 </p>
 
 <a class="btn"
 href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
 Download Lucy
 </a>
+
 </div>
 
-<!-- WHAT -->
-<div class="card">
-<h2>What is Lucy?</h2>
-Lucy is not a chatbot. She is a multi-step AI agent system that performs real workflows.
-</div>
-
-<!-- FEATURES -->
-<div class="grid">
-<div class="card">🧠 Local MLX reasoning engine</div>
-<div class="card">🌐 Browser Bridge research system</div>
-<div class="card">✍️ LinkedIn post generator</div>
-<div class="card">⚙️ Multi-agent workflow engine</div>
-</div>
-
-<!-- TRY LUCY -->
 <div class="card">
 <h2>Try Lucy</h2>
-
-<div class="prompt-box">
+<div class="prompt">
 write me a linkedin post about ai agents in stock markets
 </div>
-
 </div>
 
-<!-- HOW IT WORKS -->
+<div class="grid">
+<div class="card">🧠 Local MLX reasoning</div>
+<div class="card">🌐 Browser research</div>
+<div class="card">✍️ LinkedIn writing</div>
+<div class="card">⚙️ Agent workflows</div>
+</div>
+
 <div class="card">
-<h2>How Lucy works</h2>
+<h2>How it works</h2>
 Browser → Extract → Analyze → Write → Review → Output
 </div>
 
-<!-- INSTALL -->
-<div class="card">
-<h2>Install</h2>
-<ol>
-<li>Download Lucy</li>
-<li>Open Lucy.app (right-click → Open)</li>
-<li>Install Chrome Browser Bridge extension</li>
-<li>Run local bridge server</li>
-</ol>
-</div>
-
-<!-- FOOTER -->
 <div style="text-align:center;color:#666;margin-top:60px;">
-Lucy v0.1 • Open Beta • Built for macOS Apple Silicon
+Lucy v0.1 • Open Beta • macOS
 </div>
 
 </div>
