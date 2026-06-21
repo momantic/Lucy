@@ -1,133 +1,206 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Lucy — AI Desktop Agent</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 950px;
-      margin: 60px auto;
-      padding: 0 20px;
-      line-height: 1.6;
-      color: #111;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lucy — AI Desktop Agent</title>
 
-    h1 { font-size: 52px; margin-bottom: 0; }
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #151526, #07070b 60%);
+  color: white;
+}
 
-    .tagline {
-      font-size: 20px;
-      color: #555;
-      margin-top: 10px;
-    }
+/* container */
+.container {
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 90px 24px;
+}
 
-    .btn {
-      display: inline-block;
-      padding: 14px 24px;
-      background: black;
-      color: white;
-      border-radius: 12px;
-      text-decoration: none;
-      font-weight: 600;
-      margin-top: 20px;
-    }
+/* HERO */
+.hero {
+  text-align: center;
+  padding: 90px 0 60px;
+}
 
-    .card {
-      background: #f6f6f6;
-      padding: 18px;
-      border-radius: 14px;
-      margin-top: 25px;
-    }
+h1 {
+  font-size: 72px;
+  margin: 0;
+  letter-spacing: -3px;
+  background: linear-gradient(90deg,#7c5cff,#00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-    code {
-      background: #eee;
-      padding: 4px 6px;
-      border-radius: 6px;
-    }
+.subtitle {
+  font-size: 20px;
+  color: #b5b5b5;
+  margin-top: 18px;
+  line-height: 1.6;
+}
 
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
+/* BUTTON */
+.btn {
+  display: inline-block;
+  margin-top: 30px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg,#7c5cff,#00d4ff);
+  color: black;
+  font-weight: 700;
+  border-radius: 14px;
+  text-decoration: none;
+  box-shadow: 0 10px 40px rgba(0,212,255,0.2);
+  transition: transform 0.2s ease;
+}
 
-    @media (max-width: 800px) {
-      .grid { grid-template-columns: 1fr; }
-    }
-  </style>
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+/* SECTIONS */
+.section {
+  margin-top: 90px;
+}
+
+h2 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #e8e8e8;
+}
+
+/* CARDS */
+.card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 22px;
+  border-radius: 16px;
+  margin-top: 18px;
+  backdrop-filter: blur(10px);
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 18px;
+}
+
+@media(max-width:800px){
+  .grid { grid-template-columns: 1fr; }
+  h1 { font-size: 48px; }
+}
+
+/* CODE */
+code {
+  background: rgba(255,255,255,0.06);
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #9fe6ff;
+}
+
+/* small text */
+.small {
+  color: #777;
+  font-size: 13px;
+}
+
+/* typing animation */
+.typing {
+  display: inline-block;
+  border-right: 2px solid #00d4ff;
+  white-space: nowrap;
+  overflow: hidden;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+  50% { border-color: transparent; }
+}
+</style>
 </head>
 
 <body>
 
-<h1>Lucy</h1>
-<p class="tagline">A local AI agent for Mac that browses, researches, and writes for you.</p>
+<div class="container">
 
-<a class="btn"
-href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
-⬇ Download Lucy (Mac Beta)
-</a>
+<!-- HERO -->
+<div class="hero">
+  <h1>Lucy</h1>
 
-<div class="card">
-<h3>What is Lucy?</h3>
-<p>
-Lucy is a local-first AI desktop agent that runs on your Mac.
-She can browse the web, read LinkedIn pages, analyze content, and write structured posts using local MLX models.
-</p>
+  <p class="subtitle">
+    A local AI agent for macOS that browses the web, researches content,<br>
+    and writes structured outputs — fully on your machine.
+  </p>
+
+  <a class="btn"
+     href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
+     Download Lucy (Mac Beta)
+  </a>
+
+  <p class="small">No cloud API • Runs locally • Apple Silicon optimized</p>
 </div>
 
-<div class="grid">
-
-<div class="card">
-<h3>🧠 What she does</h3>
-<ul>
-<li>Reads web pages via Browser Bridge</li>
-<li>Generates LinkedIn posts</li>
-<li>Runs local AI models (MLX)</li>
-<li>Uses multi-step agent workflows</li>
-<li>Works completely locally</li>
-</ul>
+<!-- WHAT -->
+<div class="section">
+  <h2>What is Lucy?</h2>
+  <div class="card">
+    Lucy is not a chatbot. She is a <b>multi-step AI agent system</b> that can:
+    browse, analyze, and generate structured outputs using local MLX models.
+  </div>
 </div>
 
-<div class="card">
-<h3>🔒 Privacy</h3>
-<ul>
-<li>No cloud API required</li>
-<li>No data upload by default</li>
-<li>Browser data stays local</li>
-<li>Runs on your machine</li>
-</ul>
+<!-- FEATURES -->
+<div class="section">
+  <h2>Capabilities</h2>
+
+  <div class="grid">
+    <div class="card">🧠 Local MLX reasoning engine</div>
+    <div class="card">🌐 Browser Bridge web research</div>
+    <div class="card">✍️ LinkedIn post generation</div>
+    <div class="card">⚙️ Multi-agent workflow system</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section">
+  <h2>How Lucy thinks</h2>
+  <div class="card">
+    <span class="typing">Browser → Extract → Analyze → Write → Review → Output</span>
+  </div>
+</div>
+
+<!-- INSTALL -->
+<div class="section">
+  <h2>Installation</h2>
+
+  <div class="card">
+    <ol>
+      <li>Download Lucy</li>
+      <li>Open Lucy.app (right-click → Open)</li>
+      <li>Install Chrome Browser Bridge extension</li>
+      <li>Start local bridge server</li>
+      <li>Ask Lucy anything</li>
+    </ol>
+  </div>
+</div>
+
+<!-- EXAMPLE -->
+<div class="section">
+  <h2>Example</h2>
+  <div class="card">
+    <code>write me a linkedin post about ai agents in stock markets</code>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="section" style="text-align:center;color:#666;margin-top:100px;">
+  Lucy v0.1 • Open Beta • Built for macOS Apple Silicon
 </div>
 
 </div>
-
-<div class="card">
-<h3>⚙️ How to install</h3>
-
-<ol>
-<li>Download Lucy</li>
-<li>Open <code>Lucy.app</code> (right-click → Open)</li>
-<li>Install Chrome extension (Browser Bridge)</li>
-<li>Enable developer mode in Chrome</li>
-<li>Load unpacked extension from Lucy folder</li>
-</ol>
-</div>
-
-<div class="card">
-<h3>🌐 Example prompt</h3>
-<code>write me a linkedin post about ai agents in stock markets</code>
-</div>
-
-<div class="card">
-<h3>🚀 Architecture</h3>
-<p>
-Lucy uses a multi-agent pipeline:
-Browser Bridge → MLX analysis → Writer agent → Reviewer → Final post
-</p>
-</div>
-
-<p style="margin-top:40px;color:#888">
-Lucy v0.1 • Open Beta • Built for macOS Apple Silicon
-</p>
 
 </body>
 </html>
