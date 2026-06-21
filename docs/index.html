@@ -13,17 +13,14 @@ body {
   color: white;
 }
 
-/* layout */
 .wrap {
-  max-width: 1100px;
+  max-width: 1000px;
   margin: auto;
-  padding: 70px 24px;
+  padding: 80px 24px;
 }
 
-/* HERO */
 .hero {
   text-align: center;
-  padding: 40px 0 60px;
 }
 
 .badge {
@@ -34,113 +31,68 @@ body {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.12);
   color: #bbb;
-  margin-bottom: 16px;
 }
 
 .version {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(0,212,255,0.15);
-  border: 1px solid rgba(0,212,255,0.35);
   color: #00d4ff;
+  margin-left: 6px;
+}
+
+img {
+  width: 120px;
+  border-radius: 20px;
+  margin: 20px 0;
 }
 
 h1 {
-  font-size: 78px;
-  margin: 0;
-  letter-spacing: -2px;
+  font-size: 64px;
+  margin: 10px 0;
   background: linear-gradient(90deg,#7c5cff,#00d4ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.subtitle {
-  font-size: 18px;
-  max-width: 700px;
-  margin: 14px auto;
-  color: #b5b5b5;
+p {
+  color: #bbb;
+  max-width: 650px;
+  margin: auto;
   line-height: 1.6;
 }
 
-/* BUTTONS */
-.btns {
-  margin-top: 22px;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
+.buttons {
+  margin-top: 25px;
 }
 
 .btn {
-  padding: 14px 22px;
-  border-radius: 14px;
+  display: inline-block;
+  padding: 14px 20px;
+  margin: 5px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.primary {
   background: linear-gradient(135deg,#7c5cff,#00d4ff);
   color: black;
-  font-weight: 700;
-  text-decoration: none;
 }
 
 .secondary {
-  padding: 14px 22px;
-  border-radius: 14px;
   background: rgba(255,255,255,0.08);
   color: white;
-  text-decoration: none;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.15);
 }
 
-/* SECTION */
 .section {
-  margin: 70px auto;
-  max-width: 950px;
-}
-
-h2 {
-  font-size: 26px;
-  margin-bottom: 14px;
-}
-
-/* GRID */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  margin-top: 80px;
 }
 
 .card {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
   padding: 18px;
-  border-radius: 16px;
-  line-height: 1.6;
-}
-
-/* SCREENSHOTS */
-.screens {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.screens div {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #777;
-}
-
-/* MOBILE */
-@media (max-width: 800px) {
-  h1 { font-size: 52px; }
-  .grid { grid-template-columns: 1fr; }
-  .screens { grid-template-columns: 1fr; }
-  .btns { flex-direction: column; }
+  margin-top: 12px;
 }
 </style>
 
@@ -150,91 +102,37 @@ h2 {
 
 <div class="wrap">
 
-<!-- HERO -->
 <div class="hero">
 
 <div class="badge">
-  LOCAL AI DESKTOP AGENT
-  <span class="version">v0.1.0</span>
+  Lucy AI Desktop Agent <span class="version">v0.1</span>
 </div>
+
+<img src="assets/lucy.jpg">
 
 <h1>Lucy</h1>
 
-<p class="subtitle">
-A local AI agent that reads webpages, writes content, and automates browser workflows through a Chrome Bridge.
+<p>
+A local AI agent that reads webpages, writes content, and automates your browser through a Chrome Bridge.
 </p>
 
-<div class="btns">
-  <a class="btn" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
+<div class="buttons">
+  <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
     Download Lucy
   </a>
 
-  <a class="secondary" href="/Lucy/bridge/">
+  <a class="btn secondary" href="/Lucy/bridge/">
     Install Chrome Bridge
   </a>
 </div>
 
 </div>
 
-<!-- WHAT SHE DOES -->
 <div class="section">
-<h2>What Lucy does</h2>
-
-<div class="grid">
-<div class="card">🧠 Reads and understands webpages instantly</div>
-<div class="card">🌐 Extracts structured browser content</div>
-<div class="card">✍️ Writes emails, posts, summaries</div>
-<div class="card">⚙️ Runs local AI workflows (MLX)</div>
-</div>
-</div>
-
-<!-- WHY LUCY -->
-<div class="section">
-<h2>Why Lucy</h2>
-
-<div class="card">
-Lucy is not a chatbot. She is a <b>local AI agent</b> that connects directly to your browser and performs real actions on real web content.
-</div>
-</div>
-
-<!-- FEATURES -->
-<div class="section">
-<h2>Capabilities</h2>
-
-<div class="grid">
-<div class="card">✔ Webpage summarization</div>
-<div class="card">✔ Writing assistance</div>
-<div class="card">✔ Research automation</div>
-<div class="card">✔ Local privacy-first AI</div>
-</div>
-</div>
-
-<!-- SCREENSHOTS -->
-<div class="section">
-<h2>Screenshots</h2>
-
-<div class="screens">
-<div>Screenshot 1</div>
-<div>Screenshot 2</div>
-<div>Screenshot 3</div>
-<div>More coming soon</div>
-</div>
-
-</div>
-
-<!-- BRIDGE -->
-<div class="section">
-<h2>Chrome Bridge</h2>
-
-<div class="card">
-Click extension → send page → Lucy analyzes it locally → return results instantly.
-</div>
-
-</div>
-
-<!-- FOOTER -->
-<div style="text-align:center;color:#777;margin-top:80px;">
-Lucy v0.1 • Built for macOS • Chrome Extension Enabled
+  <div class="card">🧠 Understand webpages in real time</div>
+  <div class="card">🌐 Extract browser content</div>
+  <div class="card">✍️ Write posts, emails, summaries</div>
+  <div class="card">⚙️ Run local AI workflows</div>
 </div>
 
 </div>
