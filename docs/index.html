@@ -9,82 +9,87 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at top, #151526, #07070b 60%);
+  background: radial-gradient(circle at top, #141427, #07070b 60%);
   color: white;
 }
 
-/* container */
 .container {
   max-width: 1050px;
   margin: 0 auto;
-  padding: 90px 24px;
+  padding: 80px 24px;
 }
 
 /* HERO */
 .hero {
   text-align: center;
-  padding: 90px 0 60px;
+  padding: 80px 0 40px;
+  position: relative;
 }
 
 h1 {
-  font-size: 72px;
+  font-size: 70px;
   margin: 0;
-  letter-spacing: -3px;
   background: linear-gradient(90deg,#7c5cff,#00d4ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .subtitle {
-  font-size: 20px;
   color: #b5b5b5;
-  margin-top: 18px;
+  font-size: 18px;
+  margin-top: 14px;
   line-height: 1.6;
 }
 
 /* BUTTON */
 .btn {
   display: inline-block;
-  margin-top: 30px;
-  padding: 14px 28px;
+  margin-top: 25px;
+  padding: 14px 26px;
   background: linear-gradient(135deg,#7c5cff,#00d4ff);
   color: black;
   font-weight: 700;
   border-radius: 14px;
   text-decoration: none;
-  box-shadow: 0 10px 40px rgba(0,212,255,0.2);
-  transition: transform 0.2s ease;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
-}
-
-/* SECTIONS */
-.section {
-  margin-top: 90px;
-}
-
-h2 {
-  font-size: 28px;
-  margin-bottom: 20px;
-  color: #e8e8e8;
+/* VERSION BADGE */
+.badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #ccc;
 }
 
 /* CARDS */
 .card {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
-  padding: 22px;
+  padding: 20px;
   border-radius: 16px;
   margin-top: 18px;
-  backdrop-filter: blur(10px);
+}
+
+/* TRY BOX */
+.prompt-box {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 18px;
+  border-radius: 14px;
+  margin-top: 12px;
+  font-family: monospace;
+  color: #9fe6ff;
 }
 
 /* GRID */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2,1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 18px;
 }
 
@@ -93,31 +98,15 @@ h2 {
   h1 { font-size: 48px; }
 }
 
-/* CODE */
-code {
-  background: rgba(255,255,255,0.06);
-  padding: 6px 10px;
-  border-radius: 8px;
-  color: #9fe6ff;
-}
-
-/* small text */
-.small {
-  color: #777;
-  font-size: 13px;
-}
-
-/* typing animation */
-.typing {
-  display: inline-block;
-  border-right: 2px solid #00d4ff;
-  white-space: nowrap;
-  overflow: hidden;
-  animation: blink 0.8s infinite;
-}
-
-@keyframes blink {
-  50% { border-color: transparent; }
+/* IMAGE */
+.avatar {
+  width: 140px;
+  height: 140px;
+  border-radius: 24px;
+  object-fit: cover;
+  margin: 0 auto 18px auto;
+  display: block;
+  box-shadow: 0 20px 60px rgba(124,92,255,0.35);
 }
 </style>
 </head>
@@ -128,76 +117,68 @@ code {
 
 <!-- HERO -->
 <div class="hero">
-  <h1>Lucy</h1>
 
-  <p class="subtitle">
-    A local AI agent for macOS that browses the web, researches content,<br>
-    and writes structured outputs — fully on your machine.
-  </p>
+<div class="badge">v0.1 beta</div>
 
-  <a class="btn"
-     href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
-     Download Lucy (Mac Beta)
-  </a>
+<img src="assets/lucy.png" class="avatar" />
 
-  <p class="small">No cloud API • Runs locally • Apple Silicon optimized</p>
+<h1>Lucy</h1>
+
+<p class="subtitle">
+A local AI agent for macOS that browses, researches,<br>
+and writes structured outputs using on-device intelligence.
+</p>
+
+<a class="btn"
+href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
+Download Lucy
+</a>
 </div>
 
 <!-- WHAT -->
-<div class="section">
-  <h2>What is Lucy?</h2>
-  <div class="card">
-    Lucy is not a chatbot. She is a <b>multi-step AI agent system</b> that can:
-    browse, analyze, and generate structured outputs using local MLX models.
-  </div>
+<div class="card">
+<h2>What is Lucy?</h2>
+Lucy is not a chatbot. She is a multi-step AI agent system that performs real workflows.
 </div>
 
 <!-- FEATURES -->
-<div class="section">
-  <h2>Capabilities</h2>
+<div class="grid">
+<div class="card">🧠 Local MLX reasoning engine</div>
+<div class="card">🌐 Browser Bridge research system</div>
+<div class="card">✍️ LinkedIn post generator</div>
+<div class="card">⚙️ Multi-agent workflow engine</div>
+</div>
 
-  <div class="grid">
-    <div class="card">🧠 Local MLX reasoning engine</div>
-    <div class="card">🌐 Browser Bridge web research</div>
-    <div class="card">✍️ LinkedIn post generation</div>
-    <div class="card">⚙️ Multi-agent workflow system</div>
-  </div>
+<!-- TRY LUCY -->
+<div class="card">
+<h2>Try Lucy</h2>
+
+<div class="prompt-box">
+write me a linkedin post about ai agents in stock markets
+</div>
+
 </div>
 
 <!-- HOW IT WORKS -->
-<div class="section">
-  <h2>How Lucy thinks</h2>
-  <div class="card">
-    <span class="typing">Browser → Extract → Analyze → Write → Review → Output</span>
-  </div>
+<div class="card">
+<h2>How Lucy works</h2>
+Browser → Extract → Analyze → Write → Review → Output
 </div>
 
 <!-- INSTALL -->
-<div class="section">
-  <h2>Installation</h2>
-
-  <div class="card">
-    <ol>
-      <li>Download Lucy</li>
-      <li>Open Lucy.app (right-click → Open)</li>
-      <li>Install Chrome Browser Bridge extension</li>
-      <li>Start local bridge server</li>
-      <li>Ask Lucy anything</li>
-    </ol>
-  </div>
-</div>
-
-<!-- EXAMPLE -->
-<div class="section">
-  <h2>Example</h2>
-  <div class="card">
-    <code>write me a linkedin post about ai agents in stock markets</code>
-  </div>
+<div class="card">
+<h2>Install</h2>
+<ol>
+<li>Download Lucy</li>
+<li>Open Lucy.app (right-click → Open)</li>
+<li>Install Chrome Browser Bridge extension</li>
+<li>Run local bridge server</li>
+</ol>
 </div>
 
 <!-- FOOTER -->
-<div class="section" style="text-align:center;color:#666;margin-top:100px;">
-  Lucy v0.1 • Open Beta • Built for macOS Apple Silicon
+<div style="text-align:center;color:#666;margin-top:60px;">
+Lucy v0.1 • Open Beta • Built for macOS Apple Silicon
 </div>
 
 </div>
