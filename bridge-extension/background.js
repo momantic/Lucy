@@ -1,16 +1,33 @@
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id) return;
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status === "complete") {
+    chrome.scripting.executeScript({
+      target: {tabId},
+      files: ["content.js"]
+    }).catch(() => {});
+  }
+});
 
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: () => {
-      const pageText = document.body.innerText;
+const BRIDGE_BASE = "http://127.0.0.1:8765";
 
-      console.log("📤 Sending page to Lucy Bridge:");
-      console.log(pageText);
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== "bridge_fetch") return false;
 
-      // TODO: connect to local Lucy app (future step)
-      alert("Lucy Bridge active. Page captured in console.");
-    }
-  });
+  const path = message.path || "/";
+  const options = message.options || {};
+  fetch(BRIDGE_BASE + path, options)
+    .then(async (response) => {
+      const text = await response.text();
+      let body;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = text;
+      }
+      sendResponse({ok: response.ok, status: response.status, body});
+    })
+    .catch((error) => {
+      sendResponse({ok: false, error: String(error)});
+    });
+
+  return true;
 });

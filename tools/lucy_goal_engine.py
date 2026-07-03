@@ -189,22 +189,25 @@ def main() -> int:
     lowered_request = request.lower()
     normalized_intent = lucy_normalize_intent(request)
 
-    # linkedin_direct_draft_route_v2
-    if "linkedin" in low and ("post" in low or "draft" in low or "write" in low or "make" in low):
+    # LinkedIn direct draft route. Keep this deterministic so LinkedIn post
+    # requests never fall through to the generic MLX/self-loop tool builder.
+    if normalized_intent == "linkedin_post":
         tool = PROJECT_ROOT / "tools_created_by_lucy" / "lucy_linkedin_direct.py"
         proc = subprocess.run(
-            [sys.executable, str(tool), text],
+            [sys.executable, str(tool), request],
             cwd=str(PROJECT_ROOT),
             capture_output=True,
             text=True,
             timeout=180,
         )
-        return {
+        print(json.dumps({
             "ok": proc.returncode == 0,
             "mode": "lucy_linkedin_direct_v2",
             "stdout": proc.stdout,
             "stderr": proc.stderr,
-        }
+            "message": proc.stdout.strip()[-4000:] if proc.stdout.strip() else "LinkedIn drafting route finished."
+        }, indent=2, ensure_ascii=False))
+        return 0 if proc.returncode == 0 else 1
 
     # Special-case LinkedIn visible-page research before generic web search.
     if "linkedin" in lowered_request and (

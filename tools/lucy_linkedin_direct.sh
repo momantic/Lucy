@@ -10,6 +10,7 @@ RESEARCH_OUT="/tmp/lucy_linkedin_research.txt"
 POST_OUT="/tmp/lucy_linkedin_post.txt"
 MLX_OUT="/tmp/lucy_linkedin_mlx_output.md"
 PROMPT_OUT="/tmp/lucy_linkedin_mlx_prompt.txt"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 rm -f "$POST_OUT" "$MLX_OUT" "$PROMPT_OUT"
 
@@ -29,16 +30,51 @@ echo "Lucy: 🔎 Researching LinkedIn..."
 echo "Opening LinkedIn with Lucy Browser Bridge..."
 
 BROWSER_JSON="/tmp/lucy_browser_state.json"
-python3 tools_created_by_lucy/lucy_browser.py linkedin_search "$TOPIC" > "$BROWSER_JSON" 2>/tmp/lucy_browser_err.log || true
-sleep 4
-python3 tools_created_by_lucy/lucy_browser.py read > "$BROWSER_JSON" 2>/tmp/lucy_browser_err.log || true
-
-RESEARCH_TEXT="$(python3 tools_created_by_lucy/lucy_browser.py page_text 2>/dev/null || true)"
+if [ -n "${LUCY_TEST_BRIDGE_TEXT:-}" ]; then
+  RESEARCH_TEXT="$LUCY_TEST_BRIDGE_TEXT"
+else
+  python3 tools_created_by_lucy/lucy_browser.py linkedin_search "$TOPIC" > "$BROWSER_JSON" 2>/tmp/lucy_browser_err.log || true
+  python3 tools_created_by_lucy/lucy_browser.py read linkedin > "$BROWSER_JSON" 2>/tmp/lucy_browser_err.log || true
+  RESEARCH_TEXT="$(python3 tools_created_by_lucy/lucy_browser.py linkedin_posts_text 2>/dev/null || true)"
+  if [ -z "$(printf "%s" "$RESEARCH_TEXT" | tr -d '[:space:]')" ]; then
+    RESEARCH_TEXT="$(python3 tools_created_by_lucy/lucy_browser.py page_text 2>/dev/null || true)"
+  else
+    echo "Lucy: 🧠 Using structured LinkedIn post capture from Browser Bridge."
+  fi
+fi
 WORD_COUNT="$(printf "%s" "$RESEARCH_TEXT" | wc -w | tr -d ' ')"
 
 if [ "$WORD_COUNT" -lt 20 ]; then
-  echo "Warning: Browser Bridge research was weak or failed. Drafting from topic only."
-  RESEARCH_TEXT="No useful LinkedIn Browser Bridge research was captured. Draft from the topic only."
+  echo "Warning: Browser Bridge research was weak or failed. Trying non-extension browser reading fallbacks."
+
+  if [ -n "${LUCY_TEST_APPLESCRIPT_TEXT:-}" ]; then
+    printf "%s\n" "$LUCY_TEST_APPLESCRIPT_TEXT" > "$RESEARCH_OUT"
+  else
+    "$SCRIPT_DIR/linkedin_research_to_file_auto.sh" "$TOPIC" >/tmp/lucy_linkedin_non_extension_path.txt 2>/tmp/lucy_linkedin_non_extension_err.log || true
+  fi
+
+  if [ -s "$RESEARCH_OUT" ]; then
+    RESEARCH_TEXT="$(cat "$RESEARCH_OUT")"
+  fi
+  WORD_COUNT="$(printf "%s" "$RESEARCH_TEXT" | wc -w | tr -d ' ')"
+
+  if [ "$WORD_COUNT" -lt 20 ]; then
+    echo "Warning: AppleScript page text was weak. Trying non-extension Chrome window OCR fallback."
+    if [ -z "${LUCY_TEST_APPLESCRIPT_TEXT:-}" ]; then
+      "$SCRIPT_DIR/read_linkedin_chrome_window_text.sh" > "$RESEARCH_OUT" 2>/tmp/lucy_linkedin_ocr_err.log || true
+      if [ -s "$RESEARCH_OUT" ]; then
+        RESEARCH_TEXT="$(cat "$RESEARCH_OUT")"
+      fi
+      WORD_COUNT="$(printf "%s" "$RESEARCH_TEXT" | wc -w | tr -d ' ')"
+    fi
+  fi
+
+  if [ "$WORD_COUNT" -lt 20 ]; then
+    echo "Warning: All browser reading methods were weak. Drafting from topic only."
+    RESEARCH_TEXT="No useful LinkedIn research was captured. Draft from the topic only."
+  else
+    echo "Lucy: 📄 Read $WORD_COUNT words from LinkedIn via non-extension fallback."
+  fi
 else
   echo "Lucy: 📄 Read $WORD_COUNT words from LinkedIn."
 echo "Captured LinkedIn Browser Bridge research: $WORD_COUNT words"
@@ -57,14 +93,16 @@ $TOPIC
 LinkedIn research text:
 $RESEARCH_TEXT
 
-Extract the useful signal from this research. Ignore navigation, ads, profile noise, reaction counts, and repeated UI text.
+Extract the useful signal from this research. Prefer the structured "Post 1", "Post 2", etc. entries when present. Ignore navigation, ads, profile noise, reaction counts, and repeated UI text.
 
 Return a concise research brief with these sections:
 1. Main trend across the results
-2. 5-8 concrete signals/examples from different posts
+2. 5-8 concrete signals/examples from different posts, citing the post number when available
 3. Companies/products/people mentioned
 4. Risks or tensions
 5. Best angle for a thoughtful LinkedIn post
+
+Important: do not invent names, companies, metrics, sources, dates, or claims that are not present in the captured LinkedIn text. If the capture is weak, say so in the brief.
 
 Do not write the final LinkedIn post yet.
 PROMPT
@@ -78,6 +116,30 @@ echo "[ ] Review"
 echo ""
 echo "Lucy: Extracting themes and signals..."
 echo "Analyzing LinkedIn research..."
+
+if [ "${LUCY_TEST_SKIP_MLX:-0}" = "1" ]; then
+cat > /tmp/lucy_linkedin_analysis_clean.md <<TEST_ANALYSIS
+Main trend: local/test LinkedIn research capture is available for $TOPIC.
+Signals: $RESEARCH_TEXT
+TEST_ANALYSIS
+cat > "$POST_OUT" <<TEST_POST
+AI agents are moving from research demos into practical workflows around $TOPIC.
+
+The useful signal is not that agents can generate more content. It is that they can help structure decisions, surface risks, and keep a trace of what changed.
+
+In markets, that distinction matters. A copilot that summarizes signals is very different from an execution agent that can place trades. The former improves attention. The latter needs guardrails, audit trails, and clear human control.
+
+The teams that get this right will probably treat agents less like magic interns and more like accountable workflow software.
+
+Where would you draw the line between helpful automation and too much delegation?
+TEST_POST
+echo ""
+echo "Lucy: Test mode skipped MLX."
+echo "--- LINKEDIN DRAFT ---"
+cat "$POST_OUT"
+echo "--- END DRAFT ---"
+exit 0
+fi
 
 "$PY" -m mlx_lm generate \
   --model "$MODEL" \
@@ -118,12 +180,13 @@ Requirements:
 - 220-320 words.
 - Strong hook in the first line.
 - Do not summarize only one post.
-- Use at least 3 distinct signals/examples from the research.
+- Use at least 3 distinct signals/examples from the captured posts when available.
 - Separate analysis tools from execution/trading agents if relevant.
 - Include one tension/risk/open question.
 - Sound like a thoughtful founder/operator/engineer, not a generic marketer.
 - No fake identity. Do not say "our team", "my research", "we launched", or imply the user owns any product.
 - Do not mention that you analyzed LinkedIn.
+- Do not invent names, companies, dates, sources, metrics, partnerships, or product claims not supported by the research brief or original page context.
 - Short paragraphs.
 - End with a sharp question.
 - Output only the final post.

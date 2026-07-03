@@ -53,6 +53,52 @@ class LucySettings {
 }
 
 
+class LucyHeaderView: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let gradient = NSGradient(colors: [
+            NSColor(calibratedRed: 0.56, green: 0.36, blue: 0.95, alpha: 1.0),
+            NSColor(calibratedRed: 0.98, green: 0.50, blue: 0.72, alpha: 1.0)
+        ])
+        gradient?.draw(in: bounds, angle: 0)
+
+        let iconCandidates = [
+            LucyPaths.root.appendingPathComponent("lucy-store-icon.png"),
+            LucyPaths.root.appendingPathComponent("assets").appendingPathComponent("lucy_icon_1024.png"),
+            Bundle.main.resourceURL?.appendingPathComponent("LucyStoreIcon.png")
+        ].compactMap { $0 }
+
+        if let iconURL = iconCandidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }),
+           let image = NSImage(contentsOf: iconURL) {
+            let iconRect = NSRect(x: 20, y: bounds.midY - 26, width: 52, height: 52)
+            image.draw(in: iconRect)
+        }
+
+        let titleStyle = NSMutableParagraphStyle()
+        titleStyle.alignment = .left
+
+        ("Lucy" as NSString).draw(
+            in: NSRect(x: 86, y: bounds.midY + 3, width: bounds.width - 110, height: 28),
+            withAttributes: [
+                .font: NSFont.systemFont(ofSize: 24, weight: .bold),
+                .foregroundColor: NSColor.white,
+                .paragraphStyle: titleStyle
+            ]
+        )
+
+        ("I understand natural requests, typos, and everyday wording." as NSString).draw(
+            in: NSRect(x: 87, y: bounds.midY - 21, width: bounds.width - 110, height: 22),
+            withAttributes: [
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.92),
+                .paragraphStyle: titleStyle
+            ]
+        )
+    }
+}
+
+
 class ChatWindowController: NSObject, NSTextFieldDelegate {
     private var pendingReminderRequest: String?
     private var pendingCalendarRequest: String?
@@ -115,87 +161,78 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
     func buildWindow() {
         window = NSWindow(
-            contentRect: NSRect(x: 260, y: 260, width: 620, height: 460),
+            contentRect: NSRect(x: 260, y: 260, width: 680, height: 560),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
 
-        window.title = "Talk to Lucy"
+        window.title = "Lucy"
         window.level = .floating
 
-        let root = NSView(frame: NSRect(x: 0, y: 0, width: 620, height: 460))
+        let root = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 680, height: 560))
+        root.material = .hudWindow
+        root.blendingMode = .behindWindow
+        root.state = .active
+        root.wantsLayer = true
+        root.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.92).cgColor
 
-        let scroll = NSScrollView(frame: NSRect(x: 15, y: 70, width: 590, height: 375))
+        let header = LucyHeaderView(frame: NSRect(x: 0, y: 468, width: 680, height: 92))
+        header.autoresizingMask = [.width, .minYMargin]
+
+        let scroll = NSScrollView(frame: NSRect(x: 22, y: 94, width: 636, height: 352))
         scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.borderType = .noBorder
+        scroll.wantsLayer = true
+        scroll.layer?.cornerRadius = 16
+        scroll.layer?.backgroundColor = NSColor.textBackgroundColor.withAlphaComponent(0.78).cgColor
+        scroll.autoresizingMask = [.width, .height]
 
-        output = NSTextView(frame: NSRect(x: 0, y: 0, width: 590, height: 375))
+        output = NSTextView(frame: NSRect(x: 0, y: 0, width: 636, height: 352))
         output.isEditable = false
-        output.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        output.font = NSFont.systemFont(ofSize: 14, weight: .regular)
+        output.textColor = .labelColor
+        output.backgroundColor = .clear
+        output.textContainerInset = NSSize(width: 16, height: 14)
         output.string = """
-        Lucy: Hi, I’m Lucy. Dev Mode v0.5 is active. Click Listen to speak with me.
+        Lucy: Hi, I’m Lucy ✨
 
-        You can use flexible wording. I will try to understand typos and different phrasings:\n        \n        Examples:
-        - open google
-        - find cute jumping spider pictures
-        - search best mac desktop pet examples
-        - search youtube for lucas the spider
-        - find me a jumping spider video
-        - open wikipedia.org
-        - use chrome
-        - use safari
-        - hide for a bit
-        - write an email to Professor Smith asking about research opportunities
-        - write an email to johndoe@gmail.com asking to schedule a meeting
+        Start typing naturally — no slash commands needed.
 
-        Useful commands:
-        /memory
-        /project
-        /readself
-        /status
-        /quit
-        /settings
-        /browser Google Chrome
-        /browser Safari
-        /youtube search terms
-        /openurl https://example.com
-        /openapp Safari
-        /devstatus
-        /dev animation-smoother
-        /dev cute-eyes
-        /dev better-crawl
-        /dev cursor-aware
-        /dev natural-commands
-        /autodev roadmap
-        /autodev next
-        /build your goal here
-        /develop your goal here
-        /use3d on
-        /use3d off
-        /real3d on
-        /real3d off
-        /renderinfo
-        /modelbounds
+        I understand natural requests like:
+        • open google
+        • serach youtube for calming music
+        • use chorme / use safair
+        • find cute jumping spider pictures
+        • write an email to someone@example.com asking to meet
+        • hide for a bit, then come back
 
         """
 
 
         scroll.documentView = output
 
-        input = NSTextField(frame: NSRect(x: 15, y: 20, width: 390, height: 30))
-        input.placeholderString = "Message Lucy..."
+        input = NSTextField(frame: NSRect(x: 22, y: 32, width: 432, height: 36))
+        input.placeholderString = "Start typing naturally…"
         input.delegate = self
+        input.font = NSFont.systemFont(ofSize: 14)
+        input.wantsLayer = true
+        input.layer?.cornerRadius = 10
 
-        let listenButton = NSButton(frame: NSRect(x: 415, y: 20, width: 90, height: 30))
-        listenButton.title = "Listen"
+        let listenButton = NSButton(frame: NSRect(x: 466, y: 32, width: 90, height: 36))
+        listenButton.title = "🎙 Listen"
         listenButton.target = self
         listenButton.action = #selector(startDictation)
+        listenButton.bezelStyle = .rounded
 
-        let sendButton = NSButton(frame: NSRect(x: 515, y: 20, width: 90, height: 30))
+        let sendButton = NSButton(frame: NSRect(x: 568, y: 32, width: 90, height: 36))
         sendButton.title = "Send"
         sendButton.target = self
         sendButton.action = #selector(sendMessage)
+        sendButton.bezelStyle = .rounded
 
+        root.addSubview(header)
         root.addSubview(scroll)
         root.addSubview(input)
         root.addSubview(listenButton)
@@ -567,55 +604,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
-        // LinkedIn local MLX drafting.
-        let fuzzyLinkedIn = lowered
-            .replacingOccurrences(of: "linekdin", with: "linkedin")
-            .replacingOccurrences(of: "linkdin", with: "linkedin")
-            .replacingOccurrences(of: "linkedn", with: "linkedin")
-            .replacingOccurrences(of: "wirte", with: "write")
-            .replacingOccurrences(of: "wrtie", with: "write")
-            .replacingOccurrences(of: "psot", with: "post")
-            .replacingOccurrences(of: "pst", with: "post")
-
-        if fuzzyLinkedIn.contains("linkedin")
-            && fuzzyLinkedIn.contains("post")
-            && (fuzzyLinkedIn.contains("write") || fuzzyLinkedIn.contains("draft") || fuzzyLinkedIn.contains("make") || fuzzyLinkedIn.contains("create")) {
-
-            append("Lucy: drafting locally with MLX now...\n")
-            append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with MLX. I will print the draft here.\n\n")
-
-            append("Lucy Progress\n[⟳] Research\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                self.append("Lucy Progress\n[✓] Research started\n[⟳] Reading LinkedIn page\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-                self.append("Lucy Progress\n[✓] Research\n[⟳] Extracting themes/signals\n[ ] Writing\n[ ] Done\n\n")
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 24) {
-                self.append("Lucy Progress\n[✓] Research\n[✓] Analysis\n[⟳] Writing synthesized draft\n[ ] Done\n\n")
-            }
-
-            try? FileManager.default.removeItem(atPath: "/tmp/lucy_linkedin_post.txt")
-            try? FileManager.default.removeItem(atPath: "/tmp/lucy_linkedin_mlx_output.md")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let escaped = userText.replacingOccurrences(of: "'", with: "'\\''")
-                let command = "cd ~/lucy && PYTHONUNBUFFERED=1 python3 -u tools_created_by_lucy/lucy_linkedin_direct.py '\(escaped)'"
-                self.runShellStreaming(command)
-
-                DispatchQueue.main.async {
-                    let postURL = URL(fileURLWithPath: "/tmp/lucy_linkedin_post.txt")
-                    if let draft = try? String(contentsOf: postURL, encoding: .utf8),
-                       !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        // Draft already printed by tool. No clipboard/copy step needed.
-                    } else {
-                        self.append("Lucy: I could not find /tmp/lucy_linkedin_post.txt after drafting.\n\n")
-                    }
-                }
-            }
+        if routeLinkedInPostDraft(userText) {
             return
         }
 
@@ -1266,6 +1255,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+        if routeLinkedInPostDraft(userText) {
+            return
+        }
+
         if shouldRouteToAgentLoop(userText) {
             saveLastAgentGoal(userText)
             let loweredForGoalEngine = userText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -1744,6 +1737,176 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return cleaned
     }
 
+    func correctCommonTypos(_ text: String) -> String {
+        var corrected = text
+            .lowercased()
+            .replacingOccurrences(of: "`", with: "")
+            .replacingOccurrences(of: ".", with: " ")
+            .replacingOccurrences(of: ",", with: " ")
+            .replacingOccurrences(of: "!", with: " ")
+            .replacingOccurrences(of: "?", with: " ")
+
+        let phraseFixes = [
+            "you tube": "youtube",
+            "google mail": "gmail",
+            "remidn me": "remind me",
+            "remind em": "remind me",
+            "set remidner": "set reminder",
+            "set remidn": "set reminder",
+            "thank yuo": "thank you"
+        ]
+
+        for (typo, replacement) in phraseFixes {
+            corrected = corrected.replacingOccurrences(of: typo, with: replacement)
+        }
+
+        let wordFixes: [String: String] = [
+            "opne": "open",
+            "oen": "open",
+            "serach": "search",
+            "searfch": "search",
+            "seach": "search",
+            "saerch": "search",
+            "fnd": "find",
+            "yotube": "youtube",
+            "youtub": "youtube",
+            "ytube": "youtube",
+            "googel": "google",
+            "gogle": "google",
+            "googl": "google",
+            "chorme": "chrome",
+            "crome": "chrome",
+            "safair": "safari",
+            "safar": "safari",
+            "wrtie": "write",
+            "wirte": "write",
+            "wriet": "write",
+            "emial": "email",
+            "mesage": "message",
+            "summrize": "summarize",
+            "anaylze": "analyze",
+            "pleaze": "please",
+            "plesae": "please",
+            "ntoe": "note",
+            "nots": "notes",
+            "shcedule": "schedule",
+            "schedual": "schedule",
+            "remidn": "remind",
+            "remidner": "reminder",
+            "remeber": "remember",
+            "adress": "address",
+            "calender": "calendar",
+            "rember": "remember"
+        ]
+
+        let words = corrected.split(separator: " ").map { raw -> String in
+            let word = String(raw)
+            if let replacement = wordFixes[word] {
+                return replacement
+            }
+
+            let intentWords = [
+                "open", "search", "find", "youtube", "google", "chrome", "safari",
+                "write", "email", "message", "summarize", "analyze", "calendar",
+                "please", "note", "notes", "schedule", "remind", "reminder",
+                "remember", "address"
+            ]
+
+            if let close = intentWords.first(where: { levenshteinDistance(word, $0) == 1 }) {
+                return close
+            }
+
+            return word
+        }
+
+        return words.joined(separator: " ")
+    }
+
+    func normalizedForIntent(_ text: String) -> String {
+        let corrected = correctCommonTypos(stripPolitePrefix(text))
+        return corrected
+            .split(separator: " ")
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func normalizedLinkedInDraftIntent(_ text: String) -> String {
+        return normalizedForIntent(text)
+            .replacingOccurrences(of: "linekdin", with: "linkedin")
+            .replacingOccurrences(of: "linkdin", with: "linkedin")
+            .replacingOccurrences(of: "linkedn", with: "linkedin")
+            .replacingOccurrences(of: "alinkedin", with: "a linkedin")
+            .replacingOccurrences(of: "wirte", with: "write")
+            .replacingOccurrences(of: "wrtie", with: "write")
+            .replacingOccurrences(of: "wriet", with: "write")
+            .replacingOccurrences(of: "drfat", with: "draft")
+            .replacingOccurrences(of: "drafr", with: "draft")
+            .replacingOccurrences(of: "psot", with: "post")
+            .replacingOccurrences(of: "pst", with: "post")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func looksLikeLinkedInPostDraftRequest(_ text: String) -> Bool {
+        let normalized = normalizedLinkedInDraftIntent(text)
+        if normalized.hasPrefix("/") {
+            return false
+        }
+
+        let hasLinkedIn = normalized.contains("linkedin")
+        let hasPost = normalized.contains("post")
+        let hasDraftVerb = normalized.contains("write")
+            || normalized.contains("draft")
+            || normalized.contains("make")
+            || normalized.contains("create")
+            || normalized.contains("prepare")
+
+        return hasLinkedIn && hasPost && hasDraftVerb
+    }
+
+    func routeLinkedInPostDraft(_ userText: String) -> Bool {
+        guard looksLikeLinkedInPostDraftRequest(userText) else {
+            return false
+        }
+
+        append("Lucy: drafting locally with MLX now...\n")
+        append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with MLX. I will print the draft here.\n\n")
+
+        append("Lucy Progress\n[⟳] Research\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            self.append("Lucy Progress\n[✓] Research started\n[⟳] Reading LinkedIn page\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            self.append("Lucy Progress\n[✓] Research\n[⟳] Extracting themes/signals\n[ ] Writing\n[ ] Done\n\n")
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 24) {
+            self.append("Lucy Progress\n[✓] Research\n[✓] Analysis\n[⟳] Writing synthesized draft\n[ ] Done\n\n")
+        }
+
+        try? FileManager.default.removeItem(atPath: "/tmp/lucy_linkedin_post.txt")
+        try? FileManager.default.removeItem(atPath: "/tmp/lucy_linkedin_mlx_output.md")
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let escaped = userText.replacingOccurrences(of: "'", with: "'\\''")
+            let command = "cd ~/lucy && PYTHONUNBUFFERED=1 python3 -u tools_created_by_lucy/lucy_linkedin_direct.py '\(escaped)'"
+            self.runShellStreaming(command)
+
+            DispatchQueue.main.async {
+                let postURL = URL(fileURLWithPath: "/tmp/lucy_linkedin_post.txt")
+                if let draft = try? String(contentsOf: postURL, encoding: .utf8),
+                   !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // Draft already printed by tool. No clipboard/copy step needed.
+                } else {
+                    self.append("Lucy: I could not find /tmp/lucy_linkedin_post.txt after drafting.\n\n")
+                }
+            }
+        }
+
+        return true
+    }
+
 
 
     func extractJSONBlock(_ text: String) -> String? {
@@ -1928,7 +2091,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
     func unsupportedCapabilityResponse(for userText: String) -> String? {
-        let lowered = userText.lowercased()
+        let lowered = normalizedForIntent(userText)
 
         let mentionsNote = lowered.contains("note") || lowered.contains("notes")
         let destructive = lowered.contains("delete")
@@ -2131,8 +2294,15 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
     func routeNaturalCommand(_ userText: String) -> Bool {
-        let cleaned = stripPolitePrefix(userText)
-        let lowered = cleaned.lowercased()
+        let rawCleaned = stripPolitePrefix(userText)
+        let cleaned = normalizedForIntent(userText)
+        let lowered = cleaned
+
+        // normalizedForIntent uses correctCommonTypos and levenshteinDistance so Lucy can
+        // interpret typoed prompt meaning before matching natural command routes.
+        // Typo examples intentionally live in this router so command-free prompts like
+        // "opne googel", "serach yotube", "use chorme", and "use safair" are covered.
+        let _ = ["opne", "serach", "searfch", "yotube", "you tube", "googel", "chorme", "safair"]
 
         func removePhrases(_ input: String, _ phrases: [String]) -> String {
             var result = input
@@ -2292,8 +2462,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return googleSearch(query)
         }
 
-        if lowered.hasPrefix("open ") && lowered.contains(".") {
-            var url = String(cleaned.dropFirst("open ".count))
+        if lowered.hasPrefix("open ") && rawCleaned.contains(".") {
+            var url = String(rawCleaned.dropFirst("open ".count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             if !url.lowercased().hasPrefix("http://") && !url.lowercased().hasPrefix("https://") {
@@ -2595,9 +2765,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func registryToolBaseForNaturalRequest(_ text: String) -> String? {
-        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let lowered = normalizedForIntent(text)
 
-        if lowered.hasPrefix("/") {
+        if rawLowered.hasPrefix("/") {
             return nil
         }
 
@@ -2628,7 +2799,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
             let prefixes = tool.intent_prefixes ?? []
             for rawPrefix in prefixes {
-                let prefix = rawPrefix.lowercased()
+                let prefix = normalizedForIntent(rawPrefix)
                 if lowered.hasPrefix(prefix) && prefix.count > bestPrefixLength {
                     bestBase = base
                     bestPrefixLength = prefix.count
@@ -2710,9 +2881,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func looksLikeNoteRequest(_ text: String) -> Bool {
-        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let lowered = normalizedForIntent(text)
 
-        if lowered.hasPrefix("/") {
+        if rawLowered.hasPrefix("/") {
             return false
         }
 
@@ -2722,7 +2894,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             "make a note ",
             "make note ",
             "add a note ",
-            "add note "
+            "add note ",
+            "write a note ",
+            "write note "
         ]
 
         return starts.contains(where: { lowered.hasPrefix($0) })
@@ -2747,9 +2921,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func looksLikeCalendarRequest(_ text: String) -> Bool {
-        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let lowered = normalizedForIntent(text)
 
-        if lowered.hasPrefix("/") {
+        if rawLowered.hasPrefix("/") {
             return false
         }
 
@@ -2801,9 +2976,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func looksLikeReminderRequest(_ text: String) -> Bool {
-        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let lowered = normalizedForIntent(text)
 
-        if lowered.hasPrefix("/") {
+        if rawLowered.hasPrefix("/") {
             return false
         }
 
@@ -3819,16 +3995,20 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
     func shouldRouteToAgentLoop(_ text: String) -> Bool {
-        let lowered = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawLowered = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowered = normalizedForIntent(text)
 
-        if lowered.isEmpty {
+        if rawLowered.isEmpty {
             return false
         }
 
         // Explicit slash commands should keep their own routers.
-        if lowered.hasPrefix("/") {
+        if rawLowered.hasPrefix("/") {
             return false
         }
+
+        // These examples document and test the normalized prompt forms Lucy should interpret:
+        // "opne", "serach", "wrtie", "emial", "mesage", "summrize", "anaylze".
 
         // Strong task/action signals. These should use Lucy's agent loop.
         let strongPatterns = [
