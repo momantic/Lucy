@@ -1,186 +1,75 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/png" href="assets/favicon.png?v=2">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lucy — Local AI Desktop Agent</title>
-
+<meta name="description" content="Lucy is a private local AI desktop agent for Mac. Download Lucy and add the Lucy Chrome Bridge from the Chrome Web Store in minutes.">
+<title>Lucy — Local AI Desktop Agent for Mac</title>
+<link rel="icon" type="image/png" href="assets/favicon.png?v=3">
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at top, #141428, #0b0b12 65%);
-  color: white;
-}
-
-.container {
-  max-width: 1000px;
-  margin: auto;
-  padding: 80px 24px;
-}
-
-/* HERO */
-.hero {
-  text-align: center;
-  margin-bottom: 70px;
-}
-
-.badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  font-size: 12px;
-  color: rgba(255,255,255,0.7);
-}
-
-h1 {
-  font-size: 68px;
-  margin: 12px 0;
-  background: linear-gradient(90deg,#7c5cff,#00d4ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.subtitle {
-  max-width: 700px;
-  margin: auto;
-  color: rgba(255,255,255,0.75);
-  font-size: 18px;
-  line-height: 1.6;
-}
-
-/* ICON */
-.icon {
-  width: 120px;
-  height: 120px;
-  border-radius: 24px;
-  margin: 20px auto;
-  display: block;
-  box-shadow: 0 20px 60px rgba(124,92,255,0.25);
-}
-
-/* BUTTONS */
-.buttons {
-  margin-top: 25px;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-.btn {
-  padding: 14px 22px;
-  border-radius: 14px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.primary {
-  background: linear-gradient(135deg,#7c5cff,#00d4ff);
-  color: black;
-}
-
-.secondary {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: white;
-}
-
-/* SECTIONS */
-.section {
-  margin-top: 80px;
-}
-
-.title {
-  font-size: 24px;
-  margin-bottom: 16px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2,1fr);
-  gap: 14px;
-}
-
-.card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 16px;
-  border-radius: 14px;
-  line-height: 1.5;
-}
-
-.version {
-  color: #00d4ff;
-  font-weight: 600;
-}
-
-/* MOBILE */
-@media (max-width: 800px) {
-  h1 { font-size: 46px; }
-  .grid { grid-template-columns: 1fr; }
-}
+:root{color-scheme:dark;--bg:#07070b;--panel:rgba(255,255,255,.06);--panel-2:rgba(255,255,255,.1);--line:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.72);--cyan:#00d4ff;--violet:#7c5cff;--green:#6dffb2}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:radial-gradient(circle at 20% 0%,rgba(124,92,255,.28),transparent 34%),radial-gradient(circle at 84% 10%,rgba(0,212,255,.2),transparent 30%),linear-gradient(180deg,#111126 0%,var(--bg) 64%);color:var(--text)}a{color:inherit}.container{max-width:1120px;margin:0 auto;padding:28px 24px 80px}.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:68px}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.brand img{width:34px;height:34px;border-radius:9px}.nav-links{display:flex;gap:10px;flex-wrap:wrap}.nav-links a{text-decoration:none;color:var(--muted);padding:9px 12px;border-radius:999px}.nav-links a:hover{background:var(--panel);color:#fff}.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr);gap:44px;align-items:center}.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:rgba(109,255,178,.09);border:1px solid rgba(109,255,178,.24);color:var(--green);font-size:13px;font-weight:700}.version{color:var(--cyan);font-weight:800}h1{font-size:clamp(48px,8vw,86px);line-height:.95;margin:18px 0 20px;letter-spacing:-.06em;background:linear-gradient(90deg,#fff,#cfd2ff 38%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}.subtitle{font-size:20px;line-height:1.6;color:var(--muted);max-width:720px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:15px;font-weight:800;text-decoration:none;border:1px solid var(--line)}.primary{background:linear-gradient(135deg,var(--violet),var(--cyan));color:#06070a;border:0}.secondary{background:var(--panel);color:#fff}.hero-card{background:linear-gradient(180deg,var(--panel-2),rgba(255,255,255,.04));border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:0 30px 100px rgba(0,0,0,.28)}.icon{width:132px;height:132px;border-radius:28px;display:block;margin:0 auto 20px;box-shadow:0 24px 70px rgba(124,92,255,.35)}.quick{display:grid;gap:12px;margin-top:18px}.quick div{display:flex;gap:10px;color:var(--muted);line-height:1.45}.check{color:var(--green);font-weight:900}.section{margin-top:82px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}.section h2{font-size:32px;margin:0;letter-spacing:-.03em}.section p{color:var(--muted);line-height:1.6}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;min-height:140px}.card strong{display:block;font-size:18px;margin-bottom:8px}.steps{counter-reset:step;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.step{position:relative}.step:before{counter-increment:step;content:counter(step);display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--cyan));color:#05060a;font-weight:900;margin-bottom:14px}.note{border-left:3px solid var(--cyan);padding-left:14px}.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:72px;color:rgba(255,255,255,.58);font-size:14px}.footer a{color:rgba(255,255,255,.78)}@media(max-width:860px){.hero{grid-template-columns:1fr}.grid,.steps{grid-template-columns:1fr}.nav{align-items:flex-start;flex-direction:column}.section-head{display:block}.container{padding-top:22px}.subtitle{font-size:18px}}
 </style>
 </head>
-
 <body>
-
-<div class="container">
-
-  <!-- HERO -->
-  <div class="hero">
-
-    <div class="badge">
-      Local AI Desktop Agent <span class="version">v0.1</span>
+<main class="container">
+  <nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="/Lucy/"><img src="assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
+    <div class="nav-links">
+      <a href="/Lucy/install/">Install</a>
+      <a href="/Lucy/bridge/">Chrome Bridge</a>
+      <a href="/Lucy/privacy.html">Privacy</a>
+      <a href="https://github.com/momantic/Lucy">GitHub</a>
     </div>
+  </nav>
 
-    <img class="icon" src="assets/lucy.jpg">
-
-    <h1>Lucy</h1>
-
-    <div class="subtitle">
-      Lucy is a local AI agent powered by MLX. She runs entirely on your Mac — 
-      private, free, and fast. She can read webpages, write content, and automate browser workflows.
+  <section class="hero">
+    <div>
+      <span class="badge">Private local AI for Mac <span class="version">v0.1 beta</span></span>
+      <h1>Lucy runs on your Mac.</h1>
+      <p class="subtitle">Download Lucy, unzip, open the app, and add Lucy Bridge from the Chrome Web Store when you want Lucy to read webpages. No cloud account, no subscription, and no browser content leaves your machine.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
+        <a class="btn secondary" href="https://chromewebstore.google.com/detail/lucy-bridge/annlbnhnlflpofdjlmdmfebcgakhlccn">Add Chrome Bridge</a>
+        <a class="btn secondary" href="/Lucy/install/">Install guide</a>
+      </div>
     </div>
+    <aside class="hero-card" aria-label="Fast setup summary">
+      <img class="icon" src="assets/lucy.jpg" alt="Lucy app icon">
+      <strong>Fast setup path</strong>
+      <div class="quick">
+        <div><span class="check">✓</span><span>Click <strong>Download Lucy for Mac</strong> to get the latest ZIP.</span></div>
+        <div><span class="check">✓</span><span>Open <strong>Lucy.app</strong> from the unzipped folder.</span></div>
+        <div><span class="check">✓</span><span>Add Lucy Bridge from the Chrome Web Store only if webpage reading is needed.</span></div>
+      </div>
+    </aside>
+  </section>
 
-    <div class="buttons">
-      <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
-        Download Lucy
-      </a>
-      <a class="btn secondary" href="/Lucy/bridge/">
-        Install Chrome Bridge
-      </a>
+  <section class="section">
+    <div class="section-head">
+      <h2>What Lucy can do</h2>
+      <a class="btn secondary" href="/Lucy/install/">Install Lucy</a>
     </div>
-
-  </div>
-
-  <!-- CAPABILITIES -->
-  <div class="section">
-    <div class="title">Capabilities</div>
-
     <div class="grid">
-      <div class="card">🧠 Understand webpages instantly</div>
-      <div class="card">🌐 Extract structured content</div>
-      <div class="card">✍️ Write emails, posts, summaries</div>
-      <div class="card">⚙️ Automate browser workflows</div>
+      <div class="card"><strong>Understand webpages</strong><p>Summarize, extract, and reason over the page you choose to share through the local bridge.</p></div>
+      <div class="card"><strong>Draft useful content</strong><p>Create posts, emails, summaries, and replies from local context without cloud prompts.</p></div>
+      <div class="card"><strong>Stay private</strong><p>Lucy runs locally with MLX on Apple Silicon. Browser content is handled through localhost.</p></div>
     </div>
-  </div>
+  </section>
 
-  <!-- ABOUT LOCAL -->
-  <div class="section">
-    <div class="title">Why Lucy</div>
-
-    <div class="card">
-      Lucy runs locally using <span class="version">MLX</span> on Apple Silicon.  
-      No cloud APIs. No subscriptions. No data leaves your machine.
-      <br><br>
-      She is designed for privacy-first AI automation directly on your desktop.
+  <section class="section">
+    <h2>Smoother installation</h2>
+    <div class="steps">
+      <div class="card step"><strong>Download</strong><p>Click the direct Lucy ZIP download. The install page also includes a copyable Terminal command for one-step setup.</p></div>
+      <div class="card step"><strong>Open Lucy</strong><p>Move Lucy wherever you like, then right-click and open if macOS Gatekeeper asks for confirmation.</p></div>
+      <div class="card step"><strong>Add browser reading</strong><p>Install Lucy Bridge from the Chrome Web Store, start the local bridge server, then click the extension icon on any page.</p></div>
     </div>
-  </div>
+    <p class="note">If you only want the desktop app, you can skip the Chrome Bridge until you need webpage reading.</p>
+  </section>
 
-</div>
-
+  <footer class="footer">
+    <span>Lucy v0.1 beta · Local-first desktop AI</span>
+    <span><a href="https://github.com/momantic/Lucy">GitHub</a> · <a href="/Lucy/privacy.html">Privacy</a></span>
+  </footer>
+</main>
 </body>
 </html>

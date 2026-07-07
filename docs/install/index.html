@@ -1,69 +1,104 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Install Lucy Bridge</title>
-
+<meta name="description" content="Install Lucy for Mac quickly with a direct download, copyable setup command, and one-click Lucy Bridge install from the Chrome Web Store.">
+<title>Install Lucy — Fast Mac Setup</title>
+<link rel="icon" type="image/png" href="../assets/favicon.png?v=3">
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at top, #141427, #07070b 60%);
-  color: white;
-}
-
-.container {
-  max-width: 800px;
-  margin: auto;
-  padding: 80px 24px;
-}
-
-.card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 22px;
-  border-radius: 16px;
-}
-
-h1 {
-  font-size: 42px;
-}
-
-.btn {
-  display: inline-block;
-  margin-top: 20px;
-  padding: 14px 24px;
-  background: linear-gradient(135deg,#7c5cff,#00d4ff);
-  color: black;
-  font-weight: bold;
-  border-radius: 12px;
-  text-decoration: none;
-}
+:root{color-scheme:dark;--bg:#07070b;--panel:rgba(255,255,255,.06);--panel-2:rgba(255,255,255,.1);--line:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.72);--cyan:#00d4ff;--violet:#7c5cff;--green:#6dffb2;--warn:#ffd36d}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:radial-gradient(circle at 18% 0%,rgba(124,92,255,.26),transparent 34%),radial-gradient(circle at 84% 8%,rgba(0,212,255,.18),transparent 30%),linear-gradient(180deg,#111126 0%,var(--bg) 62%);color:var(--text)}a{color:inherit}.container{max-width:1120px;margin:0 auto;padding:28px 24px 84px}.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:54px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none}.brand img{width:34px;height:34px;border-radius:9px}.nav-links{display:flex;gap:10px;flex-wrap:wrap}.nav-links a{text-decoration:none;color:var(--muted);padding:9px 12px;border-radius:999px}.nav-links a:hover{background:var(--panel);color:#fff}.hero{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start}.badge{display:inline-flex;padding:7px 13px;border-radius:999px;background:rgba(109,255,178,.09);border:1px solid rgba(109,255,178,.24);color:var(--green);font-size:13px;font-weight:800}h1{font-size:clamp(42px,7vw,76px);line-height:.95;margin:18px 0 18px;letter-spacing:-.055em;background:linear-gradient(90deg,#fff,#d7d9ff 42%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}h2{font-size:30px;margin:0 0 16px;letter-spacing:-.03em}h3{margin:0 0 8px;font-size:19px}.lead,p,li{color:var(--muted);line-height:1.6}.lead{font-size:20px;max-width:760px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 18px;border-radius:15px;font-weight:850;text-decoration:none;border:1px solid var(--line);cursor:pointer;font:inherit}.primary{background:linear-gradient(135deg,var(--violet),var(--cyan));color:#05060a;border:0}.secondary{background:rgba(255,255,255,.07);color:#fff}.mini{font-size:13px;color:rgba(255,255,255,.62);margin-top:10px}.toc{position:sticky;top:18px}.toc a{display:block;text-decoration:none;color:var(--muted);padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}.toc a:hover{color:#fff}.section{margin-top:56px}.steps{display:grid;gap:14px;counter-reset:step}.step{display:grid;grid-template-columns:46px 1fr;gap:14px;align-items:start}.step:before{counter-increment:step;content:counter(step);display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--cyan));color:#05060a;font-weight:950}.code-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:stretch;margin-top:12px}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;background:#05060a;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px;color:#d8f8ff;line-height:1.45}code{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:2px 6px;color:#fff}.copy{border:1px solid rgba(0,212,255,.36);background:rgba(0,212,255,.12);color:#d8f8ff;border-radius:14px;padding:0 14px;font-weight:800;cursor:pointer}.copy:hover{background:rgba(0,212,255,.2)}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.checklist{list-style:none;padding:0;margin:0;display:grid;gap:10px}.checklist li{position:relative;padding-left:28px}.checklist li:before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:900}.warn{border-left:3px solid var(--warn);padding-left:14px}.ok{border-left:3px solid var(--green);padding-left:14px}.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:70px;color:rgba(255,255,255,.58);font-size:14px}.footer a{color:rgba(255,255,255,.8)}@media(max-width:900px){.hero{grid-template-columns:1fr}.toc{position:static}.grid{grid-template-columns:1fr}.nav{align-items:flex-start;flex-direction:column}.lead{font-size:18px}.code-row{grid-template-columns:1fr}.copy{min-height:44px}.step{grid-template-columns:1fr}.step:before{margin-bottom:-2px}}
 </style>
 </head>
-
 <body>
+<main class="container">
+  <nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="/Lucy/"><img src="../assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
+    <div class="nav-links">
+      <a href="/Lucy/">Home</a>
+      <a href="/Lucy/bridge/">Chrome Bridge</a>
+      <a href="/Lucy/privacy.html">Privacy</a>
+      <a href="https://github.com/momantic/Lucy">GitHub</a>
+    </div>
+  </nav>
 
-<div class="container">
+  <section class="hero">
+    <div>
+      <span class="badge">Fast Mac install · v0.1 beta</span>
+      <h1>Install Lucy in minutes.</h1>
+      <p class="lead">Click the Lucy ZIP for a smooth Mac download, or copy the one-line command if you prefer Terminal. The Chrome Bridge is now one click from the Chrome Web Store and is only needed when you want Lucy to read the webpage you choose.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
+        <a class="btn secondary" href="https://chromewebstore.google.com/detail/lucy-bridge/annlbnhnlflpofdjlmdmfebcgakhlccn">Add Lucy Bridge to Chrome</a>
+      </div>
+      <p class="mini">Requires macOS on Apple Silicon. Python 3 is only needed for webpage bridge mode.</p>
+    </div>
+    <aside class="panel toc" aria-label="Install sections">
+      <strong>Quick links</strong>
+      <a href="#fast">1. Fast install command</a>
+      <a href="#manual">2. Manual install</a>
+      <a href="#bridge">3. Chrome Bridge from Web Store</a>
+      <a href="#fixes">4. Quick fixes</a>
+    </aside>
+  </section>
 
-<h1>Install Lucy Bridge</h1>
+  <section id="fast" class="section panel">
+    <h2>Fastest path</h2>
+    <p>Want the least manual setup? Copy this into Terminal. It downloads the latest Lucy release to <code>~/Downloads</code>, unzips it, and opens the app.</p>
+    <div class="code-row">
+      <pre id="install-command">cd ~/Downloads && curl -L -o Lucy-v0.1-beta.zip https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip && unzip -o Lucy-v0.1-beta.zip && open Lucy-v0.1-beta/Lucy.app</pre>
+      <button class="copy" data-copy="install-command">Copy</button>
+    </div>
+    <p class="ok"><strong>Tip:</strong> If macOS blocks the first launch, right-click <strong>Lucy.app</strong>, choose <strong>Open</strong>, then confirm once.</p>
+  </section>
 
-<div class="card">
+  <section id="manual" class="section">
+    <h2>Manual install</h2>
+    <div class="steps">
+      <div class="step panel"><div><h3>Download Lucy</h3><p>Click <strong>Download Lucy for Mac</strong> above and unzip it. Keep the folder in Downloads or move <strong>Lucy.app</strong> to Applications.</p></div></div>
+      <div class="step panel"><div><h3>Open the app</h3><p>Open <strong>Lucy-v0.1-beta/Lucy.app</strong>. If macOS shows a security prompt, use right-click → <strong>Open</strong> for the first launch.</p></div></div>
+      <div class="step panel"><div><h3>Start using Lucy</h3><p>Ask Lucy to draft, summarize, or help with local tasks. Add the Chrome Bridge below only when webpage reading is needed.</p></div></div>
+    </div>
+  </section>
 
-<p><b>Step 1:</b> Download Lucy app</p>
-<p><b>Step 2:</b> Open the app</p>
-<p><b>Step 3:</b> Click “Enable Bridge” inside Lucy</p>
-<p><b>Step 4:</b> Done — Lucy can now read webpages</p>
+  <section id="bridge" class="section panel">
+    <h2>Optional: Chrome Bridge for webpage reading</h2>
+    <p>Install Lucy Bridge from the Chrome Web Store, then run Lucy’s local bridge server when you want webpage reading. Lucy only receives page text when you click the extension icon on a page.</p>
+    <div class="actions">
+      <a class="btn primary" href="https://chromewebstore.google.com/detail/lucy-bridge/annlbnhnlflpofdjlmdmfebcgakhlccn">Add Lucy Bridge to Chrome</a>
+    </div>
+    <div class="steps">
+      <div class="step panel"><div><h3>Add the extension</h3><p>Click <strong>Add Lucy Bridge to Chrome</strong>, then choose <strong>Add to Chrome</strong> on the Chrome Web Store page.</p></div></div>
+      <div class="step panel"><div><h3>Start Lucy’s local server</h3><p>Keep this Terminal window open while you want webpage reading.</p><div class="code-row"><pre id="server-command">cd ~/Downloads/Lucy-v0.1-beta && python3 browser_bridge/server.py</pre><button class="copy" data-copy="server-command">Copy</button></div></div></div>
+      <div class="step panel"><div><h3>Send a page to Lucy</h3><p>Open the page you want Lucy to read, then click the <strong>Lucy Browser Bridge</strong> extension icon. A checkmark badge means the page was sent to your local Lucy bridge. An exclamation badge means the local server is not running or Chrome blocked the page.</p></div></div>
+    </div>
+  </section>
 
-</div>
+  <section id="fixes" class="section grid">
+    <div class="panel">
+      <h2>Quick fixes</h2>
+      <ul class="checklist">
+        <li><strong>Lucy will not open:</strong> right-click Lucy.app and choose Open once.</li>
+        <li><strong>Chrome Bridge will not send the page:</strong> start the local server command above, then click the extension icon again.</li>
+        <li><strong>Chrome Web Store does not open:</strong> use the direct bridge link above or search for “Lucy Bridge” in the Chrome Web Store.</li>
+        <li><strong>Lucy cannot see the page:</strong> confirm the Python bridge server is still running, then click the Lucy Browser Bridge icon again.</li>
+        <li><strong>Exclamation badge on the extension:</strong> start the local server or try an ordinary <code>https://</code> webpage.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Privacy model</h2>
+      <p>Lucy runs locally. The bridge server listens on localhost, and the Chrome extension sends page text only when you ask it to.</p>
+      <p class="warn">Lucy does not automatically post to websites or send browser content to a cloud API.</p>
+    </div>
+  </section>
 
-<a class="btn"
-href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">
-Download Lucy
-</a>
-
-</div>
-
+  <footer class="footer">
+    <span>Need source files? <a href="https://github.com/momantic/Lucy">View Lucy on GitHub</a></span>
+    <span><a href="/Lucy/">Home</a> · <a href="/Lucy/privacy.html">Privacy</a></span>
+  </footer>
+</main>
+<script>
+document.querySelectorAll('.copy').forEach((button)=>{button.addEventListener('click',async()=>{const target=document.getElementById(button.dataset.copy);const text=target?target.textContent.trim():'';try{await navigator.clipboard.writeText(text);const original=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=original,1400)}catch(error){button.textContent='Select text'}})})
+</script>
 </body>
 </html>

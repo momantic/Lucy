@@ -167,7 +167,7 @@ function capturePage() {
 
 async function sendPage() {
   const capture = capturePage();
-  await bridgeFetch("/page", {
+  return bridgeFetch("/page", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
@@ -177,39 +177,17 @@ async function sendPage() {
       rawText: capture.rawText,
       linkedinPosts: capture.linkedinPosts
     })
-  }).catch(() => {});
+  });
 }
 
-async function pollCommands() {
-  try {
-    const data = (await bridgeFetch("/next_command?url=" + encodeURIComponent(location.href))).body || {};
-    const cmd = data.command;
-    if (!cmd) return;
+if (!globalThis.__lucyBrowserBridgeInstalled) {
+  globalThis.__lucyBrowserBridgeInstalled = true;
 
-    if (cmd.type === "read_page") {
-      await sendPage();
-    }
-
-    if (cmd.type === "click_text") {
-      const target = (cmd.text || "").toLowerCase();
-      const els = [...document.querySelectorAll("button,a,span,div")];
-      const el = els.find(e => (e.innerText || "").toLowerCase().includes(target));
-      if (el) el.click();
-      await sendPage();
-    }
-
-    if (cmd.type === "type_text") {
-      const active = document.activeElement;
-      if (active) {
-        active.focus();
-        active.value = cmd.text || "";
-        active.dispatchEvent(new Event("input", {bubbles: true}));
-      }
-      await sendPage();
-    }
-  } catch {}
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message || message.type !== "lucy_capture_page") return false;
+    sendPage().then(sendResponse).catch((error) => {
+      sendResponse({ok: false, error: String(error)});
+    });
+    return true;
+  });
 }
-
-sendPage();
-setInterval(sendPage, 3000);
-setInterval(pollCommands, 1000);

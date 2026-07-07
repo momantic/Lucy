@@ -23,10 +23,13 @@ h1 { font-size: 32px; }
 <p>Lucy Bridge is a Chrome extension that captures the currently active browser tab content when the user clicks the extension icon.</p>
 
 <h2>Data Collection</h2>
-<p>We do not collect, store, or sell personal data. The extension only accesses webpage content temporarily to send it to the local Lucy desktop application for processing.</p>
+<p>We do not collect, store, or sell personal data. The extension only accesses webpage content temporarily after the user clicks the extension icon, then sends that content to the local Lucy desktop application for processing.</p>
 
 <h2>Data Usage</h2>
-<p>All data captured from webpages is used locally and is not transmitted to any third-party servers.</p>
+<p>All data captured from webpages is used locally and is not transmitted to any third-party servers. The extension communicates with the Lucy desktop bridge on <code>http://127.0.0.1:8765</code>.</p>
+
+<h2>Permissions</h2>
+<p>The extension uses Chrome's <code>activeTab</code> permission to access only the active tab after the user clicks the extension icon. It uses <code>scripting</code> to read page text on that active tab and localhost access to send the selected page content to Lucy running on the user's Mac.</p>
 
 <h2>Third Parties</h2>
 <p>No data is sold, shared, or transferred to third parties.</p>
