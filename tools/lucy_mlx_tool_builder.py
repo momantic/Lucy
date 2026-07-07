@@ -12,6 +12,12 @@ from datetime import datetime
 from pathlib import Path
 
 
+try:
+    from providers.local_llm import generate as generate_local_llm
+except Exception:
+    generate_local_llm = None
+
+
 PROJECT_ROOT = Path("/Users/michaelzheng/lucy").resolve()
 AGENT_LOOP = PROJECT_ROOT / "tools" / "lucy_agent_loop.py"
 SPEC_DIR = PROJECT_ROOT / ".lucy" / "tool_specs"
@@ -80,25 +86,9 @@ def run(cmd: list[str], timeout: int = 600) -> tuple[int, str]:
 
 
 def call_mlx(prompt: str) -> str:
-    code, out = run([
-        sys.executable,
-        "-m",
-        "mlx_lm",
-        "generate",
-        "--model",
-        MODEL,
-        "--prompt",
-        prompt,
-        "--max-tokens",
-        "2200",
-        "--verbose",
-        "False",
-    ], timeout=900)
-
-    if code != 0:
-        raise RuntimeError(out)
-
-    return out
+    if generate_local_llm is None:
+        raise RuntimeError("Local model provider import failed. Check tools/providers/local_llm.py.")
+    return generate_local_llm(prompt, purpose="tool_builder", max_tokens=2200, timeout=900)
 
 
 def extract_json(text: str) -> dict:
@@ -153,7 +143,7 @@ def extract_json(text: str) -> dict:
             "code": code_match.group("code").strip(),
         }
 
-    raise RuntimeError("Could not parse MLX tool-builder output as JSON or TOOL_CODE format.\n\nRAW OUTPUT:\n" + text[:2000])
+    raise RuntimeError("Could not parse local model tool-builder output as JSON or TOOL_CODE format.\n\nRAW OUTPUT:\n" + text[:2000])
 
 
 def snake_name(name: str) -> str:
@@ -292,7 +282,7 @@ def main() -> int:
     goal = " ".join(args.goal).strip()
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    print("# Lucy MLX Arbitrary Tool Builder")
+    print("# Lucy Local Model Arbitrary Tool Builder")
     print(f"Goal: {goal}")
     print(f"Model: {MODEL}")
     print("")

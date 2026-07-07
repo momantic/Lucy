@@ -24,7 +24,7 @@ while true; do
 
   if echo "$LOWER" | grep -q "linkedin post about\|write me a linkedin post about\|draft a linkedin post about\|make me a linkedin post about"; then
     echo ""
-    echo "Lucy: I’ll open LinkedIn. Copy the page text when I ask, then I’ll draft locally with MLX."
+    echo "Lucy: I’ll open LinkedIn. Copy the page text when I ask, then I’ll draft locally with a local model."
     echo ""
 
     tools/lucy_linkedin_local_clipboard.sh "$INPUT"
@@ -33,7 +33,7 @@ while true; do
     echo "Lucy: Done. Open LinkedIn composer and press Command+V."
     echo ""
   else
-    echo "Lucy: This bridge only handles LinkedIn local MLX drafting right now."
+    echo "Lucy: This bridge only handles LinkedIn local model drafting right now."
     echo ""
   fi
 done

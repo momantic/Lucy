@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -e
 
-PY="/usr/local/bin/python3"
+PY="${PYTHON:-python3}"
 INPUT="$*"
 
 if [ -z "$INPUT" ]; then
@@ -30,7 +30,7 @@ ENCODED_TOPIC=$($PY -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.ar
 URL="https://www.linkedin.com/search/results/content/?keywords=$ENCODED_TOPIC"
 
 echo ""
-echo "Lucy LinkedIn Local MLX"
+echo "Lucy LinkedIn Local Model"
 echo "Topic: $TOPIC"
 echo ""
 echo "Open this LinkedIn search URL manually:"
@@ -46,8 +46,8 @@ read -r _
 
 RAW="/tmp/lucy_linkedin_research.txt"
 CLEAN="/tmp/lucy_linkedin_research_clean.txt"
-PROMPT="/tmp/lucy_linkedin_mlx_prompt.txt"
-FULL_OUT="/tmp/lucy_linkedin_mlx_output.md"
+PROMPT="/tmp/lucy_linkedin_local_prompt.txt"
+FULL_OUT="/tmp/lucy_linkedin_local_model_output.md"
 POST_OUT="/tmp/lucy_linkedin_post.txt"
 
 pbpaste > "$RAW"
@@ -107,15 +107,12 @@ Then explain using 3 to 5 short bullets:
 Now write the post.
 PROMPT
 
-MODEL="${LUCY_MLX_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
-
 echo ""
-echo "Running local MLX model..."
-echo "Model: $MODEL"
+echo "Running local model..."
 
-$PY -m mlx_lm generate \
-  --model "$MODEL" \
-  --prompt "$(cat "$PROMPT")" \
+"$PY" tools/providers/local_llm.py \
+  --purpose chat \
+  --prompt-file "$PROMPT" \
   --max-tokens 320 \
   > "$FULL_OUT" 2>/tmp/lucy_mlx_stderr.log
 
@@ -127,7 +124,7 @@ full_out = Path(sys.argv[1])
 post_out = Path(sys.argv[2])
 
 text = full_out.read_text(errors="ignore")
-text = re.sub(r"Calling `python -m mlx_lm.*?\n", "", text)
+text = re.sub(r"Calling `python -m [^`]+`.*?\n", "", text)
 text = re.sub(r"=+\s*", "", text)
 text = re.sub(r"Prompt:\s*\d+ tokens.*", "", text, flags=re.S)
 text = re.sub(r"Generation:\s*\d+ tokens.*", "", text, flags=re.S)
@@ -175,7 +172,7 @@ PY
 echo ""
 echo "Done. Final post copied to clipboard."
 echo "Post file: $POST_OUT"
-echo "Full MLX output: $FULL_OUT"
+echo "Full local model output: $FULL_OUT"
 echo ""
 echo "Preview:"
 echo "----------------------------------------"

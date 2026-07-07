@@ -1,7 +1,7 @@
 import Foundation
 
-final class LucyMLXIntentRouter {
-    static let shared = LucyMLXIntentRouter()
+final class LucyLocalLLMIntentRouter {
+    static let shared = LucyLocalLLMIntentRouter()
 
     private init() {}
 
@@ -15,14 +15,13 @@ final class LucyMLXIntentRouter {
         var prompt = """
         You are Lucy, a cute local-first Mac desktop AI companion.
 
-        You run fully locally using Apple MLX.
+        You run fully locally using Lucy's configured local model provider.
         Be helpful, concise, warm, and practical.
 
         Project truth rule:
-        - If the user asks about Lucy's own code, project status, tools, model provider, MLX, Qwen, files, build status, or implementation details, do not guess from general knowledge.
+        - If the user asks about Lucy's own code, project status, tools, model provider, local models, Qwen, files, build status, or implementation details, do not guess from general knowledge.
         - Say that you need to use Lucy's local project tools/self-loop to inspect the project.
-        - Current known model runtime: MLX.
-        - Current known default model: mlx-community/Qwen2.5-3B-Instruct-4bit.
+        - Current known model runtime: auto-selected local provider, MLX on Apple Silicon and llama.cpp/GGUF on Intel Macs.
 
         Critical safety:
         - Never claim you sent, will send, or can directly send messages/emails.
@@ -62,25 +61,21 @@ final class LucyMLXIntentRouter {
         Lucy:
         """
 
-        return runMLXGenerate(prompt: prompt, maxTokens: 512)
+        return runLocalLLMGenerate(prompt: prompt, maxTokens: 512, timeout: timeout)
     }
 
-    private func runMLXGenerate(prompt: String, maxTokens: Int) -> String {
+    private func runLocalLLMGenerate(prompt: String, maxTokens: Int, timeout: TimeInterval) -> String {
         let process = Process()
+        let python = ProcessInfo.processInfo.environment["PYTHON"] ?? "python3"
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [
-            "python3",
-            "-m",
-            "mlx_lm",
-            "generate",
-            "--model",
-            "mlx-community/Qwen2.5-3B-Instruct-4bit",
-            "--prompt",
-            prompt,
+            python,
+            "tools/providers/local_llm.py",
+            "--purpose",
+            "chat",
             "--max-tokens",
             String(maxTokens),
-            "--verbose",
-            "False"
+            "--stdin"
         ]
 
         process.currentDirectoryURL = LucyPaths.root
@@ -90,10 +85,26 @@ final class LucyMLXIntentRouter {
 
         process.standardOutput = outputPipe
         process.standardError = errorPipe
+        let inputPipe = Pipe()
+        process.standardInput = inputPipe
 
         do {
             try process.run()
-            process.waitUntilExit()
+
+            if let data = prompt.data(using: .utf8) {
+                inputPipe.fileHandleForWriting.write(data)
+            }
+            inputPipe.fileHandleForWriting.closeFile()
+
+            let deadline = Date().addingTimeInterval(timeout)
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+
+            if process.isRunning {
+                process.terminate()
+                return "My local model took too long to answer. On older Intel Macs, try a smaller GGUF model."
+            }
 
             let output = String(
                 data: outputPipe.fileHandleForReading.readDataToEndOfFile(),
@@ -106,12 +117,14 @@ final class LucyMLXIntentRouter {
             ) ?? ""
 
             if process.terminationStatus != 0 {
-                return "I had trouble talking to my MLX local brain:\n\(error.isEmpty ? output : error)"
+                return "I had trouble talking to my local model:\n\(error.isEmpty ? output : error)"
             }
 
             return output.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            return "I could not start my MLX local brain. Error: \(error.localizedDescription)"
+            return "I could not start my local model. Error: \(error.localizedDescription)"
         }
     }
 }
+
+typealias LucyMLXIntentRouter = LucyLocalLLMIntentRouter

@@ -114,6 +114,29 @@ class LucyConversationAndUITests(unittest.TestCase):
         self.assertIn('UserDefaults.standard.register(defaults: ["lucy.use3DSprites": true', self.app_delegate)
         self.assertIn("petView.loadSpriteFrames()", self.app_delegate)
 
+    def test_command_runners_have_thirty_second_timeout_guardrails(self):
+        self.assertIn("func waitForProcess(_ process: Process, timeout: TimeInterval = 30.0)", self.chat)
+
+        for function_name in [
+            "runShell",
+            "runSandboxToolCommand",
+            "runLucySelfLoop",
+            "runLucyAgentLoop",
+            "runShellStreaming",
+        ]:
+            body = self._function_body(function_name)
+            self.assertIn(
+                "waitForProcess(process, timeout: 30.0)",
+                body,
+                f"{function_name} should stop long-running commands after 30 seconds",
+            )
+            self.assertIn("stuck thinking", body)
+            self.assertNotIn(
+                "process.waitUntilExit()",
+                body,
+                f"{function_name} should not wait forever on child processes",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

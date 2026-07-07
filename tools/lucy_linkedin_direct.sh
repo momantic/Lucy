@@ -3,13 +3,12 @@ set -euo pipefail
 export PYTHONUNBUFFERED=1
 
 REQ="${*:-}"
-PY="/usr/local/bin/python3"
-MODEL="${LUCY_LINKEDIN_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
+PY="${PYTHON:-python3}"
 
 RESEARCH_OUT="/tmp/lucy_linkedin_research.txt"
 POST_OUT="/tmp/lucy_linkedin_post.txt"
-MLX_OUT="/tmp/lucy_linkedin_mlx_output.md"
-PROMPT_OUT="/tmp/lucy_linkedin_mlx_prompt.txt"
+MLX_OUT="/tmp/lucy_linkedin_llm_output.md"
+PROMPT_OUT="/tmp/lucy_linkedin_llm_prompt.txt"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 rm -f "$POST_OUT" "$MLX_OUT" "$PROMPT_OUT"
@@ -24,7 +23,7 @@ print(m.group(1).strip() if m else low)
 ' "$REQ")"
 [ -z "$TOPIC" ] && TOPIC="$REQ"
 
-echo "Lucy LinkedIn Direct MLX"
+echo "Lucy LinkedIn Direct Local Model"
 echo "Topic: $TOPIC"
 echo "Lucy: 🔎 Researching LinkedIn..."
 echo "Opening LinkedIn with Lucy Browser Bridge..."
@@ -117,7 +116,7 @@ echo ""
 echo "Lucy: Extracting themes and signals..."
 echo "Analyzing LinkedIn research..."
 
-if [ "${LUCY_TEST_SKIP_MLX:-0}" = "1" ]; then
+if [ "${LUCY_TEST_SKIP_MLX:-0}" = "1" ] || [ "${LUCY_TEST_SKIP_LLM:-0}" = "1" ]; then
 cat > /tmp/lucy_linkedin_analysis_clean.md <<TEST_ANALYSIS
 Main trend: local/test LinkedIn research capture is available for $TOPIC.
 Signals: $RESEARCH_TEXT
@@ -134,16 +133,16 @@ The teams that get this right will probably treat agents less like magic interns
 Where would you draw the line between helpful automation and too much delegation?
 TEST_POST
 echo ""
-echo "Lucy: Test mode skipped MLX."
+echo "Lucy: Test mode skipped local model."
 echo "--- LINKEDIN DRAFT ---"
 cat "$POST_OUT"
 echo "--- END DRAFT ---"
 exit 0
 fi
 
-"$PY" -m mlx_lm generate \
-  --model "$MODEL" \
-  --prompt "$(cat "$PROMPT_OUT")" \
+"$PY" tools/providers/local_llm.py \
+  --purpose chat \
+  --prompt-file "$PROMPT_OUT" \
   --max-tokens 700 > "$ANALYSIS_OUT" 2>&1 || true
 
 "$PY" <<'PY2'
@@ -202,9 +201,9 @@ echo ""
 echo "Lucy: Writing synthesized draft..."
 echo "Writing synthesized LinkedIn draft..."
 
-"$PY" -m mlx_lm generate \
-  --model "$MODEL" \
-  --prompt "$(cat "$FINAL_PROMPT_OUT")" \
+"$PY" tools/providers/local_llm.py \
+  --purpose chat \
+  --prompt-file "$FINAL_PROMPT_OUT" \
   --max-tokens 850 > "$MLX_OUT" 2>&1
 STATUS=$?
 
@@ -215,7 +214,7 @@ set -e
 from pathlib import Path
 import re
 
-raw = Path("/tmp/lucy_linkedin_mlx_output.md").read_text(errors="ignore")
+raw = Path("/tmp/lucy_linkedin_llm_output.md").read_text(errors="ignore")
 text = raw
 
 if "==========" in text:
@@ -238,6 +237,7 @@ print("Draft complete.")
 print()
 print("--- LINKEDIN DRAFT ---")
 bad = [
+    "Lucy LinkedIn Direct Local Model",
     "Lucy LinkedIn Direct MLX",
     "Opening LinkedIn search. Using existing OCR cache if available...",
     "As a member of STEM",

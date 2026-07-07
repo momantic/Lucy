@@ -14,6 +14,12 @@ from datetime import datetime
 from pathlib import Path
 
 
+try:
+    from providers.local_llm import generate as generate_local_llm
+except Exception:
+    generate_local_llm = None
+
+
 PROJECT_ROOT = Path("/Users/michaelzheng/lucy").resolve()
 MODEL = "mlx-community/Qwen2.5-3B-Instruct-4bit"
 MAX_STEPS = 8
@@ -34,32 +40,25 @@ def run(cmd: list[str], timeout: int = 30) -> tuple[int, str]:
 
 
 def call_mlx(prompt: str, max_tokens: int = 1200) -> str:
-    code, out = run(
-        [
-            sys.executable,
-            "-m",
-            "mlx_lm",
-            "generate",
-            "--model",
-            MODEL,
-            "--prompt",
-            prompt,
-            "--max-tokens",
-            str(max_tokens),
-            "--verbose",
-            "False",
-        ],
-        timeout=600,
-    )
-    if code != 0:
+    if generate_local_llm is None:
         return json.dumps({
-            "thought": "MLX call failed.",
+            "thought": "Local model provider import failed.",
             "action": "final",
             "args": {
-                "reply": "I had trouble using my MLX brain:\n" + out
+                "reply": "I could not load my local model provider. Check tools/providers/local_llm.py."
             }
         })
-    return out.strip()
+
+    try:
+        return generate_local_llm(prompt, purpose="agent", max_tokens=max_tokens, timeout=600).strip()
+    except Exception as exc:
+        return json.dumps({
+            "thought": "Local model call failed.",
+            "action": "final",
+            "args": {
+                "reply": "I had trouble using my local model brain:\n" + str(exc)
+            }
+        })
 
 
 def extract_json(text: str) -> dict:
@@ -91,7 +90,7 @@ def extract_json(text: str) -> dict:
             "thought": "The model returned malformed JSON.",
             "action": "final",
             "args": {
-                "reply": f"I got malformed JSON from my MLX brain: {e}"
+                "reply": f"I got malformed JSON from my local model brain: {e}"
             }
         }
 
@@ -659,7 +658,7 @@ TOOLS = {
 
 
 SYSTEM_PROMPT = """
-You are Lucy's local MLX agent loop.
+You are Lucy's local model agent loop.
 
 You are not just a chat bot. You can reason step by step, choose tools, observe results, and continue.
 

@@ -1014,7 +1014,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         if lowered.hasPrefix("/agent ") {
             let goal = String(userText.dropFirst("/agent ".count))
-            append("Lucy: starting my MLX agent loop. I will plan, use safe tools, observe results, and stop before irreversible actions.\n")
+            append("Lucy: starting my local agent loop. I will plan, use safe tools, observe results, and stop before irreversible actions.\n")
 
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = self.runLucyAgentLoop(goal)
@@ -1059,7 +1059,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         if lowered.hasPrefix("/dev autonomous-build ") {
             let goal = String(lowered.dropFirst("/dev autonomous-build ".count))
-            append("Lucy: starting autonomous build with my MLX local brain. I may edit approved project files, rebuild, and report the result.\n")
+            append("Lucy: starting autonomous build with my local model brain. I may edit approved project files, rebuild, and report the result.\n")
 
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = self.runLucyAutonomousBuild(goal)
@@ -1186,7 +1186,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             append("Lucy: drafting a self-update proposal...\n")
 
             DispatchQueue.global(qos: .userInitiated).async {
-                let proposal = self.askMLXForSelfUpdate(request)
+                let proposal = self.askLocalLLMForSelfUpdate(request)
                 let saved = LucyDevTools.shared.createSelfUpdateProposal(
                     request: request,
                     mlxAnswer: proposal
@@ -1242,7 +1242,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
         if isAgentRetryRequest(userText), let previousGoal = loadLastAgentGoal() {
-            append("Lucy: retrying the last task with my MLX self-loop.\n")
+            append("Lucy: retrying the last task with my local self-loop.\n")
 
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = self.runLucySelfLoop(previousGoal)
@@ -1296,8 +1296,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
                 return
             }
 
-            let shouldTryGoalEngineBeforeMLX = !userText.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("/")
-            if shouldTryGoalEngineBeforeMLX,
+            let shouldTryGoalEngineBeforeLocalLLM = !userText.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("/")
+            if shouldTryGoalEngineBeforeLocalLLM,
                let goalResult = runLucyGoalEngine(userText),
                let ok = goalResult.ok,
                ok == true {
@@ -1334,7 +1334,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
                 return
             }
 
-            append("Lucy: I understand this as a task, so I am using my MLX self-loop.\n")
+            append("Lucy: I understand this as a task, so I am using my local self-loop.\n")
 
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = self.runLucySelfLoop(userText)
@@ -1541,7 +1541,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         let userTextSnapshot = userText
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let reply = LucyMLXIntentRouter.shared.chatSync(
+            let reply = LucyLocalLLMIntentRouter.shared.chatSync(
                 history: historySnapshot,
                 userText: userTextSnapshot,
                 timeout: 12.0
@@ -1561,25 +1561,29 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         output.scrollToEndOfDocument(nil)
     }
 
-    func mlxPathAndArgs() -> (String, [String]) {
-        let possiblePaths = [
-            "/usr/local/bin/mlx",
-            "/opt/homebrew/bin/mlx"
-        ]
-
-        if let mlxPath = possiblePaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
-            return (mlxPath, ["run", model])
-        }
-
-        return ("/usr/bin/env", ["mlx", "run", model])
+    func localLLMPathAndArgs(purpose: String = "chat", maxTokens: Int = 512) -> (String, [String]) {
+        let python = ProcessInfo.processInfo.environment["PYTHON"] ?? "python3"
+        return (
+            "/usr/bin/env",
+            [
+                python,
+                "tools/providers/local_llm.py",
+                "--purpose",
+                purpose,
+                "--max-tokens",
+                String(maxTokens),
+                "--stdin"
+            ]
+        )
     }
 
-    func runMLX(prompt: String) -> String {
+    func runLocalLLM(prompt: String, purpose: String = "chat", maxTokens: Int = 512) -> String {
         let process = Process()
-        let (path, args) = mlxPathAndArgs()
+        let (path, args) = localLLMPathAndArgs(purpose: purpose, maxTokens: maxTokens)
 
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = args
+        process.currentDirectoryURL = LucyPaths.root
 
         let inputPipe = Pipe()
         let outputPipe = Pipe()
@@ -1597,21 +1601,25 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             }
 
             inputPipe.fileHandleForWriting.closeFile()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 120.0)
+
+            if !completed {
+                return "My local model timed out after 120 seconds. On older Intel Macs, try a smaller GGUF model in data/model_provider.json."
+            }
 
             let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
             if process.terminationStatus != 0 {
-                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown MLX error."
-                return "I had trouble talking to MLX:\n\(errorText)"
+                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown local model error."
+                return "I had trouble talking to my local model:\n\(errorText)"
             }
 
             let rawText = String(data: data, encoding: .utf8) ?? "I did not get a response."
             return stripTerminalEscapes(rawText)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            return "I could not start MLX. Error: \(error.localizedDescription)"
+            return "I could not start my local model. Error: \(error.localizedDescription)"
         }
     }
 
@@ -1619,6 +1627,25 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
     func shellQuote(_ text: String) -> String {
         return "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
+    func waitForProcess(_ process: Process, timeout: TimeInterval = 30.0) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while process.isRunning && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+
+        if process.isRunning {
+            process.terminate()
+            Thread.sleep(forTimeInterval: 0.2)
+            if process.isRunning {
+                process.interrupt()
+            }
+            return false
+        }
+
+        return true
     }
 
     func runShell(_ command: String) -> String {
@@ -1634,7 +1661,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
+
+            if !completed {
+                return "Command timed out after 30 seconds. I stopped it safely so I would not stay stuck thinking.\nCommand: \(command)"
+            }
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -1868,8 +1899,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return false
         }
 
-        append("Lucy: drafting locally with MLX now...\n")
-        append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with MLX. I will print the draft here.\n\n")
+        append("Lucy: drafting locally with a local model now...\n")
+        append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with a local model. I will print the draft here.\n\n")
 
         append("Lucy Progress\n[⟳] Research\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
 
@@ -1971,7 +2002,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         \(userText)
         """
 
-        let raw = runMLX(prompt: prompt)
+        let raw = runLocalLLM(prompt: prompt)
 
         guard let jsonText = extractJSONBlock(raw),
               let data = jsonText.data(using: .utf8),
@@ -3072,7 +3103,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             process.standardError = errorPipe
 
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
+
+            if !completed {
+                return "Sandbox tool timed out after 30 seconds: \(toolName)\nI stopped it safely so Lucy would not stay stuck thinking."
+            }
 
             let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
@@ -3431,7 +3466,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         My current architecture:
         - Swift/AppKit floating desktop pet
-        - local MLX chat
+        - local model chat
         - local memory
         - capability registry
         - dev task system
@@ -3544,7 +3579,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
+
+            if !completed {
+                return "Apple Notes automation timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
+            }
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -3588,7 +3627,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - output only the note body
         """
 
-        let noteBody = stripTerminalEscapes(runMLX(prompt: prompt))
+        let noteBody = stripTerminalEscapes(runLocalLLM(prompt: prompt))
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let finalBody = noteBody.isEmpty
@@ -3744,7 +3783,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
+
+            if !completed {
+                return "Autodev next timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
+            }
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -3778,7 +3821,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
+
+            if !completed {
+                return "Autodev roadmap timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
+            }
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -4141,7 +4188,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
+
+            if !completed {
+                return "Self-loop timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
+            }
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -4191,7 +4242,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
+
+            if !completed {
+                return "Agent loop timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
+            }
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -4229,7 +4284,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             "python3",
             "tools/lucy_autonomous_dev.py",
             trimmedGoal,
-            "--model", "mlx-community/Qwen2.5-3B-Instruct-4bit",
+            "--model", "auto/local",
             "--max-attempts", "3"
         ]
         process.currentDirectoryURL = LucyPaths.root
@@ -4435,7 +4490,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Mo
         """
 
-        let draft = runMLX(prompt: prompt)
+        let draft = runLocalLLM(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
         let parsed = parseEmailDraft(cleanDraft)
 
@@ -4524,7 +4579,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Mo
         """
 
-        let draft = runMLX(prompt: prompt)
+        let draft = runLocalLLM(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
         saveLastEmailDraft(cleanDraft)
 
@@ -4575,7 +4630,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - Include the subject if the current draft includes one.
         """
 
-        let revised = stripTerminalEscapes(runMLX(prompt: prompt))
+        let revised = stripTerminalEscapes(runLocalLLM(prompt: prompt))
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         saveLastEmailDraft(revised)
@@ -4658,7 +4713,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
-    func askMLX(_ userText: String) -> String {
+    func askLocalLLM(_ userText: String) -> String {
         let memoryText = LucyMemory.shared.memoryPromptText()
 
         let prompt = """
@@ -4684,10 +4739,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Lucy:
         """
 
-        return runMLX(prompt: prompt)
+        return runLocalLLM(prompt: prompt)
     }
 
-    func askMLXForSelfUpdate(_ request: String) -> String {
+    func askLocalLLMForSelfUpdate(_ request: String) -> String {
         let project = LucyDevTools.shared.projectSummary()
         let swiftPreview = LucyDevTools.shared.readSwiftPreview()
 
@@ -4718,7 +4773,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Keep it concise and grounded in the actual project.
         """
 
-        return runMLX(prompt: prompt)
+        return runLocalLLM(prompt: prompt)
     }
     private func runShellStreaming(_ command: String) {
         let process = Process()
@@ -4740,8 +4795,14 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            process.waitUntilExit()
+            let completed = waitForProcess(process, timeout: 30.0)
             pipe.fileHandleForReading.readabilityHandler = nil
+
+            if !completed {
+                DispatchQueue.main.async {
+                    self.append("\nLucy: Command timed out after 30 seconds. I stopped it safely so I would not stay stuck thinking.\n")
+                }
+            }
         } catch {
             DispatchQueue.main.async {
                 self.append("Lucy: Streaming shell failed: \(error.localizedDescription)\n")

@@ -11,18 +11,18 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 RESEARCH="/tmp/lucy_linkedin_research_clean.txt"
-PROMPT="/tmp/lucy_linkedin_mlx_prompt.txt"
-FULL_OUT="/tmp/lucy_linkedin_mlx_output.md"
+PROMPT="/tmp/lucy_linkedin_local_prompt.txt"
+FULL_OUT="/tmp/lucy_linkedin_local_model_output.md"
 POST_OUT="/tmp/lucy_linkedin_post.txt"
 
-MODEL="${LUCY_MLX_MODEL:-mlx-community/Qwen2.5-1.5B-Instruct-4bit}"
+PY="${PYTHON:-python3}"
 
 echo "1. Researching LinkedIn visible content..."
 "$SCRIPT_DIR/linkedin_research_clean_auto.sh" "$TOPIC" >/dev/null 2>/dev/null
 
-echo "2. Building short MLX prompt..."
+echo "2. Building short local-model prompt..."
 
-/usr/local/bin/python3 - "$TOPIC" "$RESEARCH" "$PROMPT" <<'PY'
+"$PY" - "$TOPIC" "$RESEARCH" "$PROMPT" <<'PY'
 import sys, re
 from pathlib import Path
 
@@ -93,16 +93,15 @@ Now write the post.
 prompt_out.write_text(prompt)
 PY
 
-echo "3. Running local MLX model..."
-echo "Model: $MODEL"
+echo "3. Running local model..."
 
-/usr/local/bin/python3 -m mlx_lm generate \
-  --model "$MODEL" \
-  --prompt "$(cat "$PROMPT")" \
+"$PY" tools/providers/local_llm.py \
+  --purpose chat \
+  --prompt-file "$PROMPT" \
   --max-tokens 420 \
   > "$FULL_OUT" 2>/tmp/lucy_mlx_stderr.log
 
-/usr/local/bin/python3 - "$FULL_OUT" "$POST_OUT" <<'PY'
+"$PY" - "$FULL_OUT" "$POST_OUT" <<'PY'
 import re, sys
 from pathlib import Path
 
@@ -111,8 +110,8 @@ post_out = Path(sys.argv[2])
 
 text = full_out.read_text(errors="ignore")
 
-# Remove MLX wrappers/metrics/warnings.
-text = re.sub(r"Calling `python -m mlx_lm.*?\n", "", text)
+# Remove local model provider wrappers/metrics/warnings.
+text = re.sub(r"Calling `python -m [^`]+`.*?\n", "", text)
 text = re.sub(r"=+\s*", "", text)
 text = re.sub(r"Prompt:\s*\d+ tokens.*", "", text, flags=re.S)
 text = re.sub(r"Generation:\s*\d+ tokens.*", "", text, flags=re.S)
@@ -169,9 +168,9 @@ PY
 cat "$POST_OUT" | pbcopy
 
 echo ""
-echo "Done. Local MLX draft copied to clipboard."
+echo "Done. Local model draft copied to clipboard."
 echo "Post file: $POST_OUT"
-echo "Full MLX output: $FULL_OUT"
+echo "Full local model output: $FULL_OUT"
 echo ""
 echo "Preview:"
 echo "----------------------------------------"

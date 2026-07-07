@@ -29,6 +29,11 @@ import subprocess
 import sys
 from typing import Dict, List, Tuple
 
+try:
+    from providers.local_llm import generate as generate_local_llm
+except Exception:
+    generate_local_llm = None
+
 
 PROJECT_ROOT = Path("/Users/michaelzheng/lucy").resolve()
 
@@ -144,30 +149,15 @@ def run_build() -> Tuple[int, str]:
     return proc.returncode, proc.stdout + "\n" + proc.stderr
 
 
-def call_mlx_lm(prompt: str, model: str, timeout_seconds: int = 180) -> str:
-    proc = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mlx_lm",
-            "generate",
-            "--model",
-            model,
-            "--prompt",
-            prompt,
-            "--max-tokens",
-            "1024",
-            "--verbose",
-            "False",
-        ],
-        cwd=str(PROJECT_ROOT),
-        text=True,
-        capture_output=True,
+def call_local_llm(prompt: str, timeout_seconds: int = 180) -> str:
+    if generate_local_llm is None:
+        raise RuntimeError("Local model provider import failed. Check tools/providers/local_llm.py.")
+    return generate_local_llm(
+        prompt,
+        purpose="autonomous_dev",
+        max_tokens=1024,
         timeout=timeout_seconds,
     )
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr or proc.stdout or "mlx-lm failed")
-    return proc.stdout
 
 
 def extract_json_block(text: str) -> dict:
@@ -836,7 +826,11 @@ Return ONLY the JSON object now.
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("goal", nargs="+", help="Development goal for Lucy")
-    parser.add_argument("--model", default=os.environ.get("LUCY_DEV_MODEL", "mlx-community/Qwen2.5-Coder-3B-Instruct-4bit"))
+    parser.add_argument(
+        "--model",
+        default=os.environ.get("LUCY_DEV_MODEL", "auto/local"),
+        help="Legacy display-only option. Lucy now uses data/model_provider.json for provider/model selection.",
+    )
     parser.add_argument("--max-attempts", type=int, default=3)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -883,8 +877,8 @@ def main() -> int:
     log(f"# Lucy Autonomous Dev Run {stamp}")
     log("")
     log(f"Goal: {goal}")
-    log("Provider: mlx")
-    log(f"Model: {args.model}")
+    log("Provider: auto/local")
+    log(f"Model/provider selection: {args.model}")
     log(f"Dry run: {args.dry_run}")
     log("")
 
@@ -980,7 +974,7 @@ def main() -> int:
         prompt = make_prompt(goal, context, build_output, attempt)
 
         try:
-            response = call_mlx_lm(prompt, args.model)
+            response = call_local_llm(prompt)
         except Exception as e:
             log(f"ERROR calling model: {e}")
             return 3

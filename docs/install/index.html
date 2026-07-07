@@ -31,14 +31,15 @@
         <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
         <a class="btn secondary" href="https://chromewebstore.google.com/detail/lucy-bridge/annlbnhnlflpofdjlmdmfebcgakhlccn">Add Lucy Bridge to Chrome</a>
       </div>
-      <p class="mini">Requires macOS on Apple Silicon. Python 3 is only needed for webpage bridge mode.</p>
+      <p class="mini">Requires macOS. Apple Silicon uses MLX by default; Intel Macs can use local GGUF models through llama.cpp. Python 3 is needed for bridge mode and Intel local-model setup.</p>
     </div>
     <aside class="panel toc" aria-label="Install sections">
       <strong>Quick links</strong>
       <a href="#fast">1. Fast install command</a>
       <a href="#manual">2. Manual install</a>
-      <a href="#bridge">3. Chrome Bridge from Web Store</a>
-      <a href="#fixes">4. Quick fixes</a>
+      <a href="#intel">3. Intel/older Mac local models</a>
+      <a href="#bridge">4. Chrome Bridge from Web Store</a>
+      <a href="#fixes">5. Quick fixes</a>
     </aside>
   </section>
 
@@ -61,6 +62,17 @@
     </div>
   </section>
 
+  <section id="intel" class="section panel">
+    <h2>Optional: Intel / older Mac local models</h2>
+    <p>Lucy now supports non-Apple-Silicon Macs by using local GGUF models through llama.cpp instead of MLX. Chat, drafting, self-development, and LinkedIn drafting stay local without cloud API keys.</p>
+    <div class="steps">
+      <div class="step panel"><div><h3>Run the Intel setup helper</h3><p>This creates a local Python environment for <code>llama-cpp-python</code> and prepares <code>assets/models</code>.</p><div class="code-row"><pre id="intel-command">cd ~/Downloads/Lucy-v0.1-beta && tools/setup_local_llm_intel.sh</pre><button class="copy" data-copy="intel-command">Copy</button></div></div></div>
+      <div class="step panel"><div><h3>Add GGUF models</h3><p>Place small quantized GGUF files in <code>assets/models</code>, or edit <code>data/model_provider.json</code> to point at your model paths. Older Macs should start with 1.5B-class Q4 models.</p></div></div>
+      <div class="step panel"><div><h3>Launch with the local Python</h3><p>When using the setup virtual environment, launch Lucy with <code>PYTHON</code> pointing at it so the app can import the local llama.cpp backend.</p><div class="code-row"><pre id="intel-launch-command">cd ~/Downloads/Lucy-v0.1-beta && PYTHON="$PWD/.venv-local-llm/bin/python" ./Lucy.app/Contents/MacOS/Lucy</pre><button class="copy" data-copy="intel-launch-command">Copy</button></div></div></div>
+    </div>
+    <p class="ok"><strong>Still local:</strong> Apple Silicon users keep MLX by default. Intel users get local GGUF inference through the same Lucy provider layer.</p>
+  </section>
+
   <section id="bridge" class="section panel">
     <h2>Optional: Chrome Bridge for webpage reading</h2>
     <p>Install Lucy Bridge from the Chrome Web Store, then run Lucy’s local bridge server when you want webpage reading. Lucy only receives page text when you click the extension icon on a page.</p>
@@ -79,6 +91,7 @@
       <h2>Quick fixes</h2>
       <ul class="checklist">
         <li><strong>Lucy will not open:</strong> right-click Lucy.app and choose Open once.</li>
+        <li><strong>Older Intel Mac local model fails:</strong> run <code>tools/setup_local_llm_intel.sh</code>, add a small GGUF model, and launch with the setup Python.</li>
         <li><strong>Chrome Bridge will not send the page:</strong> start the local server command above, then click the extension icon again.</li>
         <li><strong>Chrome Web Store does not open:</strong> use the direct bridge link above or search for “Lucy Bridge” in the Chrome Web Store.</li>
         <li><strong>Lucy cannot see the page:</strong> confirm the Python bridge server is still running, then click the Lucy Browser Bridge icon again.</li>

@@ -13,7 +13,12 @@ DYNAMIC_DIR = PROJECT_ROOT / "tools_created_by_lucy" / "dynamic"
 CANDIDATE_DIR = DYNAMIC_DIR / "candidate_tools"
 REGISTRY_PATH = PROJECT_ROOT / "tools_created_by_lucy" / "tool_registry.json"
 SANDBOX = PROJECT_ROOT / "tools" / "lucy_tool_sandbox.py"
-MODEL = os.environ.get("LUCY_MLX_MODEL", "mlx-community/Qwen2.5-Coder-3B-Instruct-4bit")
+MODEL = os.environ.get("LUCY_DEV_MODEL", "auto")
+
+try:
+    from providers.local_llm import generate as generate_local_llm
+except Exception:
+    generate_local_llm = None
 
 BANNED = [
     "subprocess", "os.system", "os.popen", "shutil.rmtree",
@@ -56,21 +61,12 @@ def validate(code: str) -> tuple[bool, str]:
 
 
 def call_mlx(prompt: str) -> tuple[bool, str]:
-    cmds = [
-        ["/usr/local/bin/python3", "-m", "mlx_lm.generate", "--model", MODEL, "--prompt", prompt, "--max-tokens", "1400"],
-        ["mlx_lm.generate", "--model", MODEL, "--prompt", prompt, "--max-tokens", "1400"],
-    ]
-    last = ""
-    for cmd in cmds:
-        try:
-            p = subprocess.run(cmd, cwd=str(PROJECT_ROOT), text=True, capture_output=True, timeout=180)
-        except Exception as e:
-            last = str(e)
-            continue
-        if p.returncode == 0 and p.stdout.strip():
-            return True, p.stdout.strip()
-        last = (p.stderr or p.stdout or "").strip()
-    return False, last or "mlx failed"
+    if generate_local_llm is None:
+        return False, "Local model provider import failed. Check tools/providers/local_llm.py."
+    try:
+        return True, generate_local_llm(prompt, purpose="tool_builder", max_tokens=1400, timeout=180).strip()
+    except Exception as e:
+        return False, str(e)
 
 
 def prompt_for(goal: str, name: str, repair: str | None = None) -> str:
@@ -176,7 +172,7 @@ def main() -> int:
     for attempt in range(1, 3):
         ok, raw = call_mlx(prompt_for(goal, name, repair_text))
         if not ok:
-            print(json.dumps({"ok": False, "mode": "mlx_failed", "tool_name": name, "error": raw}, indent=2))
+            print(json.dumps({"ok": False, "mode": "local_model_failed", "tool_name": name, "error": raw}, indent=2))
             return 1
 
         code = extract_code(raw)

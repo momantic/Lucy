@@ -3,38 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import subprocess
-import sys
+
+try:
+    from .local_llm import generate as generate_local
+except Exception:  # pragma: no cover - direct script execution fallback
+    from local_llm import generate as generate_local
 
 
 DEFAULT_MODEL = "mlx-community/Qwen2.5-3B-Instruct-4bit"
 
 
 def generate(prompt: str, model: str = DEFAULT_MODEL, max_tokens: int = 2048) -> str:
-    proc = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "mlx_lm",
-            "generate",
-            "--model",
-            model,
-            "--prompt",
-            prompt,
-            "--max-tokens",
-            str(max_tokens),
-            "--verbose",
-            "False",
-        ],
-        text=True,
-        capture_output=True,
-        timeout=600,
-    )
-
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr or proc.stdout or "mlx-lm failed")
-
-    return proc.stdout.strip()
+    return generate_local(prompt, purpose="chat", max_tokens=max_tokens, provider="mlx")
 
 
 def main() -> int:

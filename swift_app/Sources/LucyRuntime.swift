@@ -39,7 +39,7 @@ class LucyRuntime {
 
         Current mode:
         - Dev Mode v0.5
-        - Local MLX chat
+        - Local model chat
         - Local memory
         - Safe self-update proposal flow
         - Safe built-in apply flow

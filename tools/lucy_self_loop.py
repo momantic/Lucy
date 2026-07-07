@@ -152,7 +152,7 @@ AGENT OUTPUT TAIL:
 {clipped_output}
 
 Constraints:
-- Use MLX/local tooling only.
+- Use local model/local tooling only.
 - Do not add cloud APIs.
 - Do not bypass macOS permissions, passwords, privacy prompts, or user consent.
 - Do not auto-send iMessages/emails. Communication tools may only prepare drafts for user review.
@@ -368,7 +368,7 @@ def main() -> int:
                     print("")
                     continue
 
-            print("Deterministic tool builder could not handle this capability. Trying MLX arbitrary tool builder...")
+            print("Deterministic tool builder could not handle this capability. Trying local model arbitrary tool builder...")
             mlx_tb_code, mlx_tb_output = run_mlx_tool_builder(goal)
             print(mlx_tb_output)
             print("")
@@ -381,22 +381,22 @@ def main() -> int:
 
             if "STATUS: PASSED" in mlx_tb_output:
                 if "Changed files:\n- none" in mlx_tb_output or "Changed files:\r\n- none" in mlx_tb_output:
-                    print("MLX TOOL BUILDER VALIDATION:")
-                    print("MLX tool builder passed. Capability may already exist, so I will retry the original goal.")
+                    print("LOCAL MODEL TOOL BUILDER VALIDATION:")
+                    print("Local model tool builder passed. Capability may already exist, so I will retry the original goal.")
                     print("")
                     continue
 
                 real_fix, fix_reason = is_real_capability_fix(mlx_tb_output)
-                print("MLX TOOL BUILDER VALIDATION:")
+                print("LOCAL MODEL TOOL BUILDER VALIDATION:")
                 print(fix_reason)
                 print("")
 
                 if real_fix:
-                    print("MLX tool builder passed and changed real capability code. Retrying original goal...")
+                    print("Local model tool builder passed and changed real capability code. Retrying original goal...")
                     print("")
                     continue
 
-            print("MLX tool builder could not safely handle this capability. Falling back to autonomous dev...")
+            print("Local model tool builder could not safely handle this capability. Falling back to autonomous dev...")
 
             dev_goal = make_dev_goal(goal, agent_output, classification)
             print("Running autonomous dev to improve tool capability...")

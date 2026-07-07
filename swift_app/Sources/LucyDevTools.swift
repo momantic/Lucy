@@ -36,7 +36,7 @@ class LucyDevTools {
         result += "- Floating native Mac pet window\n"
         result += "- Click and double-click interactions\n"
         result += "- Placeholder animation states\n"
-        result += "- Local MLX chat\n"
+        result += "- Local model chat\n"
         result += "- Local memory file\n"
         result += "- Dev Mode proposal writing\n"
         result += "- Safe built-in apply flow for /apply hide-command\n"

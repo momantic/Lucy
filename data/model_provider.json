@@ -1,7 +1,12 @@
 {
-  "provider": "mlx",
+  "provider": "auto",
+  "apple_silicon_provider": "mlx",
+  "intel_provider": "llamacpp",
+  "fallback_provider": "llamacpp",
   "chat_model": "mlx-community/Qwen2.5-3B-Instruct-4bit",
   "dev_model": "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+  "llamacpp_chat_model_path": "assets/models/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+  "llamacpp_dev_model_path": "assets/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
   "allow_ollama": false,
   "allow_cloud": false
 }

@@ -2,20 +2,19 @@
 set -euo pipefail
 
 REQ="${*:-}"
-PY="/usr/local/bin/python3"
-MODEL="${LUCY_LINKEDIN_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
+PY="${PYTHON:-python3}"
 
 RESEARCH_OUT="/tmp/lucy_linkedin_research.txt"
 POST_OUT="/tmp/lucy_linkedin_post.txt"
-MLX_OUT="/tmp/lucy_linkedin_mlx_output.md"
-PROMPT_OUT="/tmp/lucy_linkedin_mlx_prompt.txt"
+MLX_OUT="/tmp/lucy_linkedin_llm_output.md"
+PROMPT_OUT="/tmp/lucy_linkedin_llm_prompt.txt"
 
 rm -f "$RESEARCH_OUT" "$POST_OUT" "$MLX_OUT" "$PROMPT_OUT"
 
 TOPIC="$(printf "%s" "$REQ" | sed -E 's/^[Ll]ucy,? *//; s/[Ww]rite me a [Ll]inked[Ii]n post (about|on) //; s/[Dd]raft a [Ll]inked[Ii]n post (about|on) //; s/[Mm]ake me a [Ll]inked[Ii]n post (about|on) //')"
 [ -z "$TOPIC" ] && TOPIC="$REQ"
 
-echo "Lucy LinkedIn Direct MLX"
+echo "Lucy LinkedIn Direct Local Model"
 echo "Topic: $TOPIC"
 echo "Opening LinkedIn and reading visible Chrome page with screenshot/OCR..."
 
@@ -59,12 +58,12 @@ Rules:
 - Output only the final post.
 PROMPT
 
-echo "Running local MLX model..."
+echo "Running local model..."
 
 set +e
-"$PY" -m mlx_lm generate \
-  --model "$MODEL" \
-  --prompt "$(cat "$PROMPT_OUT")" \
+"$PY" tools/providers/local_llm.py \
+  --purpose chat \
+  --prompt-file "$PROMPT_OUT" \
   --max-tokens 420 > "$MLX_OUT" 2>&1
 STATUS=$?
 set -e
@@ -73,7 +72,7 @@ set -e
 from pathlib import Path
 import re
 
-raw = Path("/tmp/lucy_linkedin_mlx_output.md").read_text(errors="ignore")
+raw = Path("/tmp/lucy_linkedin_llm_output.md").read_text(errors="ignore")
 text = raw
 
 if "==========" in text:

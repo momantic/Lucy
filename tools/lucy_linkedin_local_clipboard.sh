@@ -10,8 +10,9 @@ if [ -z "$INPUT" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PY="${PYTHON:-python3}"
 
-TOPIC=$(/usr/local/bin/python3 - "$INPUT" <<'PY'
+TOPIC=$("$PY" - "$INPUT" <<'PY'
 import sys, re
 
 text = sys.argv[1].strip()
@@ -65,8 +66,8 @@ read -r _
 
 RAW="/tmp/lucy_linkedin_research.txt"
 CLEAN="/tmp/lucy_linkedin_research_clean.txt"
-PROMPT="/tmp/lucy_linkedin_mlx_prompt.txt"
-FULL_OUT="/tmp/lucy_linkedin_mlx_output.md"
+PROMPT="/tmp/lucy_linkedin_local_prompt.txt"
+FULL_OUT="/tmp/lucy_linkedin_local_model_output.md"
 POST_OUT="/tmp/lucy_linkedin_post.txt"
 
 pbpaste > "$RAW"
@@ -83,7 +84,7 @@ cat "$RAW" \
   | grep -v "Ad" \
   > "$CLEAN" || true
 
-/usr/local/bin/python3 - "$TOPIC" "$CLEAN" "$PROMPT" <<'PY'
+"$PY" - "$TOPIC" "$CLEAN" "$PROMPT" <<'PY'
 import sys, re
 from pathlib import Path
 
@@ -152,19 +153,16 @@ Now write the post.
 prompt_out.write_text(prompt)
 PY
 
-MODEL="${LUCY_MLX_MODEL:-mlx-community/Qwen2.5-3B-Instruct-4bit}"
-
 echo ""
-echo "Running local MLX model..."
-echo "Model: $MODEL"
+echo "Running local model..."
 
-/usr/local/bin/python3 -m mlx_lm generate \
-  --model "$MODEL" \
-  --prompt "$(cat "$PROMPT")" \
+"$PY" tools/providers/local_llm.py \
+  --purpose chat \
+  --prompt-file "$PROMPT" \
   --max-tokens 320 \
   > "$FULL_OUT" 2>/tmp/lucy_mlx_stderr.log
 
-/usr/local/bin/python3 - "$FULL_OUT" "$POST_OUT" <<'PY'
+"$PY" - "$FULL_OUT" "$POST_OUT" <<'PY'
 import re, sys
 from pathlib import Path
 
@@ -172,7 +170,7 @@ full_out = Path(sys.argv[1])
 post_out = Path(sys.argv[2])
 
 text = full_out.read_text(errors="ignore")
-text = re.sub(r"Calling `python -m mlx_lm.*?\n", "", text)
+text = re.sub(r"Calling `python -m [^`]+`.*?\n", "", text)
 text = re.sub(r"=+\s*", "", text)
 text = re.sub(r"Prompt:\s*\d+ tokens.*", "", text, flags=re.S)
 text = re.sub(r"Generation:\s*\d+ tokens.*", "", text, flags=re.S)
@@ -220,7 +218,7 @@ PY
 echo ""
 echo "Done. Final post copied to clipboard."
 echo "Post file: $POST_OUT"
-echo "Full MLX output: $FULL_OUT"
+echo "Full local model output: $FULL_OUT"
 echo ""
 echo "Preview:"
 echo "----------------------------------------"
