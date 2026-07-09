@@ -1,7 +1,0 @@
-```json
-{
-  "error": "Incomplete code provided. Functionality for handling user text [K
-and responses is cut off."
-}
-```
-

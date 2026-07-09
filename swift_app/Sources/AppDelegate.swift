@@ -139,11 +139,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         installAppMenu()
         NSApp.activate(ignoringOtherApps: true)
 
-        print("Lucy Dev Mode v0.5 started")
+        print("Lucy started")
         print("Terminal logging is quiet by default. Use /loud inside Lucy chat to enable movement logs.")
 
         _ = LucyMemory.shared
-        LucyDevTools.shared.ensureDirs()
 
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
 
@@ -154,6 +153,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
 
+        window.isReleasedWhenClosed = false
         window.level = .floating
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -1401,10 +1401,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
     func applicationWillTerminate(_ notification: Notification) {
+        wanderTimer?.invalidate()
+        moodTimer?.invalidate()
         animationTimer?.invalidate()
         cursorTimer?.invalidate()
-        window?.close()
-        chatController?.window?.close()
+        wanderTimer = nil
+        moodTimer = nil
+        animationTimer = nil
+        cursorTimer = nil
+
+        chatController?.prepareForTermination()
+        chatController = nil
+
+        sceneView?.prepareForShutdown()
+        window?.orderOut(nil)
+        window?.contentView = nil
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

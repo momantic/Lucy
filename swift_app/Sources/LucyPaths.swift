@@ -28,28 +28,6 @@ struct LucyPaths {
         return homeLucy
     }()
 
-    static let sourcesDir = root
-        .appendingPathComponent("swift_app")
-        .appendingPathComponent("Sources")
-
-    static let binaryFile = root
-        .appendingPathComponent("swift_app")
-        .appendingPathComponent("Lucy")
-
-    // Legacy single-file path used by old dev tools.
-    // Keep this so LucyDevTools.swift still compiles.
-    static let swiftFile = sourcesDir
-        .appendingPathComponent("main.swift")
-
-    static let selfUpdatesDir = root
-        .appendingPathComponent("self_updates")
-
-    static let backupsDir = root
-        .appendingPathComponent("backups")
-
-    static let memoryBackupsDir = backupsDir
-        .appendingPathComponent("memory")
-
     static let memoryURL = root
         .appendingPathComponent("memory")
         .appendingPathComponent("memory.json")

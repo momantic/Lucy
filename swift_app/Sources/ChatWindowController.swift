@@ -58,10 +58,16 @@ class LucyHeaderView: NSView {
         super.draw(dirtyRect)
 
         let gradient = NSGradient(colors: [
-            NSColor(calibratedRed: 0.56, green: 0.36, blue: 0.95, alpha: 1.0),
-            NSColor(calibratedRed: 0.98, green: 0.50, blue: 0.72, alpha: 1.0)
+            NSColor(calibratedRed: 0.38, green: 0.25, blue: 0.86, alpha: 1.0),
+            NSColor(calibratedRed: 0.88, green: 0.42, blue: 0.82, alpha: 1.0),
+            NSColor(calibratedRed: 1.00, green: 0.62, blue: 0.50, alpha: 1.0)
         ])
-        gradient?.draw(in: bounds, angle: 0)
+        gradient?.draw(in: bounds, angle: 18)
+
+        NSColor.white.withAlphaComponent(0.13).setFill()
+        NSBezierPath(ovalIn: NSRect(x: bounds.width - 150, y: bounds.height - 80, width: 190, height: 125)).fill()
+        NSColor.white.withAlphaComponent(0.08).setFill()
+        NSBezierPath(ovalIn: NSRect(x: bounds.width - 70, y: -30, width: 105, height: 105)).fill()
 
         let iconCandidates = [
             LucyPaths.root.appendingPathComponent("lucy-store-icon.png"),
@@ -71,7 +77,11 @@ class LucyHeaderView: NSView {
 
         if let iconURL = iconCandidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }),
            let image = NSImage(contentsOf: iconURL) {
-            let iconRect = NSRect(x: 20, y: bounds.midY - 26, width: 52, height: 52)
+            let glowRect = NSRect(x: 13, y: bounds.midY - 29, width: 58, height: 58)
+            NSColor.white.withAlphaComponent(0.24).setFill()
+            NSBezierPath(roundedRect: glowRect, xRadius: 19, yRadius: 19).fill()
+
+            let iconRect = NSRect(x: 19, y: bounds.midY - 23, width: 46, height: 46)
             image.draw(in: iconRect)
         }
 
@@ -79,22 +89,42 @@ class LucyHeaderView: NSView {
         titleStyle.alignment = .left
 
         ("Lucy" as NSString).draw(
-            in: NSRect(x: 86, y: bounds.midY + 3, width: bounds.width - 110, height: 28),
+            in: NSRect(x: 82, y: bounds.midY + 1, width: bounds.width - 110, height: 28),
             withAttributes: [
-                .font: NSFont.systemFont(ofSize: 24, weight: .bold),
+                .font: NSFont.systemFont(ofSize: 24, weight: .heavy),
                 .foregroundColor: NSColor.white,
                 .paragraphStyle: titleStyle
             ]
         )
 
-        ("I understand natural requests, typos, and everyday wording." as NSString).draw(
-            in: NSRect(x: 87, y: bounds.midY - 21, width: bounds.width - 110, height: 22),
+        ("Your cozy desktop companion for natural requests." as NSString).draw(
+            in: NSRect(x: 83, y: bounds.midY - 22, width: bounds.width - 105, height: 22),
             withAttributes: [
-                .font: NSFont.systemFont(ofSize: 13, weight: .medium),
+                .font: NSFont.systemFont(ofSize: 12.5, weight: .medium),
                 .foregroundColor: NSColor.white.withAlphaComponent(0.92),
                 .paragraphStyle: titleStyle
             ]
         )
+    }
+}
+
+
+class LucyChatBackgroundView: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let gradient = NSGradient(colors: [
+            NSColor(calibratedRed: 0.98, green: 0.96, blue: 1.00, alpha: 0.96),
+            NSColor(calibratedRed: 0.93, green: 0.96, blue: 1.00, alpha: 0.94),
+            NSColor(calibratedRed: 1.00, green: 0.95, blue: 0.98, alpha: 0.92)
+        ])
+        gradient?.draw(in: bounds, angle: 270)
+
+        NSColor(calibratedRed: 0.58, green: 0.36, blue: 0.98, alpha: 0.08).setFill()
+        NSBezierPath(ovalIn: NSRect(x: -78, y: bounds.height - 170, width: 230, height: 230)).fill()
+
+        NSColor(calibratedRed: 1.00, green: 0.53, blue: 0.72, alpha: 0.08).setFill()
+        NSBezierPath(ovalIn: NSRect(x: bounds.width - 160, y: 36, width: 220, height: 220)).fill()
     }
 }
 
@@ -161,89 +191,130 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
     func buildWindow() {
         window = NSWindow(
-            contentRect: NSRect(x: 260, y: 260, width: 680, height: 560),
+            contentRect: NSRect(x: 260, y: 260, width: 620, height: 460),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
 
-        window.title = "Lucy"
+        window.title = "Talk to Lucy"
         window.level = .floating
+        window.isReleasedWhenClosed = false
+        window.isMovableByWindowBackground = true
+        window.backgroundColor = .clear
 
-        let root = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 680, height: 560))
-        root.material = .hudWindow
+        let root = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 620, height: 460))
+        root.material = .sidebar
         root.blendingMode = .behindWindow
         root.state = .active
         root.wantsLayer = true
-        root.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.92).cgColor
+        root.layer?.backgroundColor = NSColor.clear.cgColor
 
-        let header = LucyHeaderView(frame: NSRect(x: 0, y: 468, width: 680, height: 92))
+        let background = LucyChatBackgroundView(frame: root.bounds)
+        background.autoresizingMask = [.width, .height]
+
+        let header = LucyHeaderView(frame: NSRect(x: 0, y: 382, width: 620, height: 78))
         header.autoresizingMask = [.width, .minYMargin]
+        header.wantsLayer = true
+        header.layer?.cornerRadius = 16
+        header.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
 
-        let scroll = NSScrollView(frame: NSRect(x: 22, y: 94, width: 636, height: 352))
+        let transcriptCard = NSView(frame: NSRect(x: 15, y: 66, width: 590, height: 304))
+        transcriptCard.autoresizingMask = [.width, .height]
+        transcriptCard.wantsLayer = true
+        transcriptCard.layer?.cornerRadius = 20
+        transcriptCard.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.53).cgColor
+        transcriptCard.layer?.borderColor = NSColor.white.withAlphaComponent(0.72).cgColor
+        transcriptCard.layer?.borderWidth = 1
+        transcriptCard.layer?.shadowColor = NSColor.black.cgColor
+        transcriptCard.layer?.shadowOpacity = 0.12
+        transcriptCard.layer?.shadowRadius = 16
+        transcriptCard.layer?.shadowOffset = CGSize(width: 0, height: -5)
+
+        let scroll = NSScrollView(frame: NSRect(x: 22, y: 74, width: 576, height: 288))
         scroll.hasVerticalScroller = true
         scroll.drawsBackground = false
         scroll.borderType = .noBorder
         scroll.wantsLayer = true
         scroll.layer?.cornerRadius = 16
-        scroll.layer?.backgroundColor = NSColor.textBackgroundColor.withAlphaComponent(0.78).cgColor
+        scroll.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.36).cgColor
         scroll.autoresizingMask = [.width, .height]
 
-        output = NSTextView(frame: NSRect(x: 0, y: 0, width: 636, height: 352))
+        output = NSTextView(frame: NSRect(x: 0, y: 0, width: 576, height: 288))
         output.isEditable = false
-        output.font = NSFont.systemFont(ofSize: 14, weight: .regular)
+        output.isSelectable = true
+        output.font = NSFont.systemFont(ofSize: 14.5, weight: .regular)
         output.textColor = .labelColor
         output.backgroundColor = .clear
-        output.textContainerInset = NSSize(width: 16, height: 14)
-        output.string = """
-        Lucy: Hi, I’m Lucy ✨
-
-        Start typing naturally — no slash commands needed.
-
-        I understand natural requests like:
-        • open google
-        • serach youtube for calming music
-        • use chorme / use safair
-        • find cute jumping spider pictures
-        • write an email to someone@example.com asking to meet
-        • hide for a bit, then come back
-
-        """
+        output.insertionPointColor = NSColor(calibratedRed: 0.58, green: 0.36, blue: 0.98, alpha: 1.0)
+        output.textContainerInset = NSSize(width: 18, height: 16)
+        output.textContainer?.lineFragmentPadding = 0
 
 
         scroll.documentView = output
 
-        input = NSTextField(frame: NSRect(x: 22, y: 32, width: 432, height: 36))
-        input.placeholderString = "Start typing naturally…"
+        input = NSTextField(frame: NSRect(x: 15, y: 18, width: 390, height: 36))
+        input.placeholderString = "Ask Lucy anything…"
         input.delegate = self
-        input.font = NSFont.systemFont(ofSize: 14)
+        input.font = NSFont.systemFont(ofSize: 14.5, weight: .medium)
         input.wantsLayer = true
-        input.layer?.cornerRadius = 10
+        input.layer?.cornerRadius = 13
+        input.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.75).cgColor
+        input.layer?.borderColor = NSColor(calibratedRed: 0.62, green: 0.45, blue: 0.96, alpha: 0.25).cgColor
+        input.layer?.borderWidth = 1
 
-        let listenButton = NSButton(frame: NSRect(x: 466, y: 32, width: 90, height: 36))
+        let listenButton = NSButton(frame: NSRect(x: 415, y: 18, width: 90, height: 36))
         listenButton.title = "🎙 Listen"
         listenButton.target = self
         listenButton.action = #selector(startDictation)
         listenButton.bezelStyle = .rounded
+        listenButton.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        listenButton.contentTintColor = NSColor(calibratedRed: 0.44, green: 0.31, blue: 0.74, alpha: 1.0)
 
-        let sendButton = NSButton(frame: NSRect(x: 568, y: 32, width: 90, height: 36))
-        sendButton.title = "Send"
+        let sendButton = NSButton(frame: NSRect(x: 515, y: 18, width: 90, height: 36))
+        sendButton.title = "Send ✨"
         sendButton.target = self
         sendButton.action = #selector(sendMessage)
         sendButton.bezelStyle = .rounded
+        sendButton.font = NSFont.systemFont(ofSize: 13, weight: .bold)
+        sendButton.contentTintColor = NSColor(calibratedRed: 0.74, green: 0.26, blue: 0.68, alpha: 1.0)
 
+        root.addSubview(background)
         root.addSubview(header)
+        root.addSubview(transcriptCard)
         root.addSubview(scroll)
         root.addSubview(input)
         root.addSubview(listenButton)
         root.addSubview(sendButton)
 
         window.contentView = root
+
+        append("""
+        Lucy: Hi, I’m Lucy ✨
+
+        Start typing naturally — no slash commands needed.
+
+        Try things like:
+        • open google
+        • find cute jumping spider pictures
+        • search youtube for lucas the spider
+        • open wikipedia.org
+        • use chrome / use safari
+        • hide for a bit, then come back
+        • write an email to someone@example.com asking to meet
+
+        """)
     }
 
     func show() {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func prepareForTermination() {
+        stopListening(shouldAppend: false)
+        window?.orderOut(nil)
+        window?.delegate = nil
     }
 
 
@@ -369,7 +440,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
     }
 
-    func stopListening() {
+    func stopListening(shouldAppend: Bool = true) {
         if audioEngine.isRunning {
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)
@@ -382,7 +453,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         recognitionTask = nil
         isListening = false
 
-        append("Lucy: Stopped listening. Press Enter or Send when ready.\n\n")
+        if shouldAppend {
+            append("Lucy: Stopped listening. Press Enter or Send when ready.\n\n")
+        }
     }
 
     @objc func sendMessage() {
@@ -505,7 +578,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         if userText.hasPrefix("/") {
             let resolvedCommand = resolveSlashCommand(userText)
             if resolvedCommand.hasPrefix("/__unknown__ ") {
-                let result = runSelfCommand(resolvedCommand)
+                let result = runSlashCommand(resolvedCommand)
                 append("Lucy:\n\(result)\n\n")
                 return
             }
@@ -522,6 +595,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
+        // Normal chat should not be hijacked by broad tool-registry prefixes like
+        // "open ", "find ", or "write an email ". Keep sandbox tools available
+        // through explicit /tool commands and pending approvals, but let natural
+        // requests continue to Lucy's built-in natural command, email, and chat routes.
         if looksLikeGenericApproval(userText),
            let pendingTool = pendingRegistryToolName,
            let pendingRequest = pendingRegistryToolRequest {
@@ -529,15 +606,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             append("Lucy:\nCreating the approved action now through the tool registry.\n\n\(result)\n\n")
             pendingRegistryToolName = nil
             pendingRegistryToolRequest = nil
-            return
-        }
-
-        if let base = registryToolBaseForNaturalRequest(userText),
-           let pair = registryToolPairs()[base] {
-            pendingRegistryToolName = pair.approved
-            pendingRegistryToolRequest = userText
-            let result = runSandboxToolCommand("/tool \(pair.dryRun) " + userText)
-            append("Lucy:\nI matched this request to the registered tool pair `\(base)`, so I ran a dry-run preview.\n\n\(result)\n\nSay `yes create it` if you want me to run the approved action.\n\n")
             return
         }
 
@@ -632,24 +700,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
-
-
-        if lowered == "/reflect" || lowered == "reflect" {
-            append("Lucy:\n\(lucyReflection())\n\n")
-            return
-        }
-
-        if lowered == "/goals" || lowered == "what are your goals" || lowered == "what are your goals?" {
-            append("Lucy:\n\(lucyGoalsSummary())\n\n")
-            return
-        }
-
-        if lowered == "/plan" || lowered == "what should you do next" || lowered == "what should you do next?" {
-            append("Lucy:\n\(lucyNextPlan())\n\n")
-            return
-        }
-
-
         if lowered == "/whoami" || lowered == "who are you" || lowered == "what are you" {
             append("Lucy:\n\(selfIdentitySummary())\n\n")
             return
@@ -664,7 +714,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             append("Lucy:\n\(limitationsSummary())\n\n")
             return
         }
-
 
         if lowered == "/time" || lowered == "time" || lowered == "what time is it" {
             let formatter = DateFormatter()
@@ -828,266 +877,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
-        if lowered == "/project" {
-            append("Lucy:\n\(LucyDevTools.shared.projectSummary())\n\n")
-            return
-        }
-
-        if lowered == "/readself" {
-            append("Lucy:\n\(LucyDevTools.shared.readSwiftPreview())\n\n")
-            return
-        }
-
-
-
-        if lowered == "/dev animation-smoother" {
-            append("Lucy: asking my local dev agent to smooth my animation...\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runDevAgentApply(task: "animation-smoother")
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Dev Agent:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-
-
-
-
-
-
-        if lowered.hasPrefix("/selfbuild ") {
-            let goal = String(userText.dropFirst("/selfbuild ".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if goal.isEmpty {
-                append("Lucy: Tell me what to selfbuild. Example: /selfbuild add email helper\n\n")
-                return
-            }
-
-            append("Lucy: I’ll try to selfbuild this safely:\n\(goal)\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runSelfBuild(goal: goal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Selfbuild:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-        if lowered == "/autopilot once" {
-            append("Lucy: starting one autopilot tick.\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runAutopilot(iterations: 1)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Autopilot:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-        if lowered.hasPrefix("/autopilot ") {
-            let rawCount = String(userText.dropFirst("/autopilot ".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            let count = Int(rawCount) ?? 1
-
-            append("Lucy: starting autopilot for \(max(1, min(count, 5))) tick(s).\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runAutopilot(iterations: count)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Autopilot:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-        if lowered == "/self" || lowered == "/think" {
-            append("Lucy: thinking about what safe command I should give myself...\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runSelfLoop()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Self Loop:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-
-        if lowered.hasPrefix("/develop ") {
-            let goal = String(userText.dropFirst("/develop ".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if goal.isEmpty {
-                append("Lucy: Tell me what to develop. Example: /develop add a safer notes manager\n\n")
-                return
-            }
-
-            append("Lucy: I will try to develop this capability myself:\n\(goal)\n\n")
-            append("Lucy: I will generate a dev task, run it, compile myself, and report back.\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucyDeveloper(goal: goal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Developer:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-        if lowered.hasPrefix("/build ") {
-            let goal = String(userText.dropFirst("/build ".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if goal.isEmpty {
-                append("Lucy: Tell me what to build after /build.\n\n")
-                return
-            }
-
-            append("Lucy: I’ll try to update my own code for this goal:\n\(goal)\n\n")
-            append("Lucy: I will only edit my project files, compile after the change, and roll back if it breaks.\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runBuilderGoal(goal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Builder:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-        if lowered == "/autodev next" {
-            append("Lucy: running my next local autodev task.\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runAutoDevNext()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Autodev:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-        if lowered == "/autodev roadmap" {
-            append("Lucy: starting my local autodev roadmap. I’ll stop if a task fails.\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runAutoDevRoadmap()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Autodev:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-        if lowered.hasPrefix("/agent ") {
-            let goal = String(userText.dropFirst("/agent ".count))
-            append("Lucy: starting my local agent loop. I will plan, use safe tools, observe results, and stop before irreversible actions.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucyAgentLoop(goal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Self Loop:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-
-        if lowered == "/dev diagnose" {
-            append("Lucy: checking my build safely. I will not modify any files.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucyDevDiagnose()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Dev Diagnose:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-        if lowered == "/dev suggest-fix" {
-            append("Lucy: reviewing my latest diagnosis and suggesting a safe next fix. I will not modify any files.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucyDevSuggestFix()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Dev Suggest Fix:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-        if lowered.hasPrefix("/dev autonomous-build ") {
-            let goal = String(lowered.dropFirst("/dev autonomous-build ".count))
-            append("Lucy: starting autonomous build with my local model brain. I may edit approved project files, rebuild, and report the result.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucyAutonomousBuild(goal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Autonomous Build:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-        if lowered == "/devstatus" {
-            append("Lucy: running local dev agent status check...\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runDevAgentStatus()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Dev Agent:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
         if lowered == "/status" {
             append("Lucy:\n\(LucyRuntime.shared.statusText())\n\n")
             return
@@ -1110,98 +899,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             onSoftHideRequested?()
             return
         }
-
-
-        if lowered == "/apply clean-memory" {
-            append("Lucy: applying safe built-in update: clean-memory...\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = LucyDevTools.shared.cleanMemoryFile()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-        if lowered == "/apply hide-command" {
-            append("Lucy: applying safe built-in update: hide-command...\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = LucyDevTools.shared.applyHideCommandUpdate()
-
-                DispatchQueue.main.async {
-                    self.append("Lucy:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-
-        if lowered == "/patches" {
-            append("Lucy:\n\(LucyDevTools.shared.listPatchPlans())\n\n")
-            return
-        }
-
-        if lowered.hasPrefix("/readpatch ") {
-            let name = String(userText.dropFirst("/readpatch ".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if name.isEmpty {
-                append("Lucy: Tell me which patch to read. Example: /readpatch latest\n\n")
-                return
-            }
-
-            append("Lucy:\n\(LucyDevTools.shared.readPatchPlan(name: name))\n\n")
-            return
-        }
-
-        if lowered.hasPrefix("/patch ") {
-            let patchName = String(userText.dropFirst("/patch ".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if patchName.isEmpty {
-                append("Lucy: Tell me the patch name after /patch.\n\n")
-                return
-            }
-
-            let result = LucyDevTools.shared.createPatchPlan(name: patchName)
-            append("Lucy:\n\(result)\n\n")
-            return
-        }
-
-        if lowered.hasPrefix("/selfupdate ") {
-            let request = String(userText.dropFirst("/selfupdate ".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            if request.isEmpty {
-                append("Lucy: Tell me what self-update you want after /selfupdate.\n\n")
-                return
-            }
-
-            append("Lucy: drafting a self-update proposal...\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let proposal = self.askLocalLLMForSelfUpdate(request)
-                let saved = LucyDevTools.shared.createSelfUpdateProposal(
-                    request: request,
-                    mlxAnswer: proposal
-                )
-
-                DispatchQueue.main.async {
-                    self.append("Lucy:\n\(proposal)\n\n\(saved)\n\n")
-                }
-            }
-
-            return
-        }
-
-
-
 
         if lowered == "/settings" {
             append("Lucy: Settings:\n")
@@ -1241,109 +938,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
 
-        if isAgentRetryRequest(userText), let previousGoal = loadLastAgentGoal() {
-            append("Lucy: retrying the last task with my local self-loop.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucySelfLoop(previousGoal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Self Loop:\n\(result)\n\n")
-                }
-            }
-
-            return
-        }
-
-        if routeLinkedInPostDraft(userText) {
-            return
-        }
-
-        if shouldRouteToAgentLoop(userText) {
-            saveLastAgentGoal(userText)
-            let loweredForGoalEngine = userText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let wantsDynamicToolAuthor = loweredForGoalEngine.contains("create a tool")
-                || loweredForGoalEngine.contains("make a tool")
-                || loweredForGoalEngine.contains("build a tool")
-                || loweredForGoalEngine.contains("write a tool")
-
-            if wantsDynamicToolAuthor,
-               let goalResult = runLucyGoalEngine(userText),
-               let ok = goalResult.ok,
-               ok == true {
-                var message = "Lucy:\nI treated this as a tool-authoring request.\n"
-                if let mode = goalResult.mode {
-                    message += "Mode: \(mode)\n"
-                }
-                if let base = goalResult.pair_base {
-                    message += "Tool pair: `\(base)`\n"
-                }
-                if let toolName = goalResult.tool_name {
-                    message += "Created tool: `\(toolName)`\n"
-                    message += "Try: `/tool \(toolName) https://example.com`\n"
-                }
-                if let path = goalResult.path {
-                    message += "Path: `\(path)`\n"
-                }
-                if let registered = goalResult.registered {
-                    message += "Registered: \(registered)\n"
-                }
-                if let dryRun = goalResult.dry_run_output {
-                    message += "\nDry-run preview:\n\(dryRun)\n"
-                }
-                message += "\n"
-                append(message)
-                return
-            }
-
-            let shouldTryGoalEngineBeforeLocalLLM = !userText.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("/")
-            if shouldTryGoalEngineBeforeLocalLLM,
-               let goalResult = runLucyGoalEngine(userText),
-               let ok = goalResult.ok,
-               ok == true {
-                if let approvedTool = goalResult.approved_tool {
-                    pendingGoalApprovedToolName = approvedTool
-                    pendingGoalOriginalRequest = userText
-                }
-
-                var message = "Lucy:\nI treated this as a natural-language goal.\n"
-                if let mode = goalResult.mode {
-                    message += "Mode: \(mode)\n"
-                }
-                if let base = goalResult.pair_base {
-                    message += "Tool pair: `\(base)`\n"
-                }
-                if let toolName = goalResult.tool_name {
-                    message += "Created tool: `\(toolName)`\n"
-                    message += "Try: `/tool \(toolName) https://example.com`\n"
-                }
-                if let path = goalResult.path {
-                    message += "Path: `\(path)`\n"
-                }
-                if let registered = goalResult.registered {
-                    message += "Registered: \(registered)\n"
-                }
-                if let dryRun = goalResult.dry_run_output {
-                    message += "\nDry-run preview:\n\(dryRun)\n"
-                }
-                if goalResult.needs_approval == true {
-                    message += "\nSay `yes create it` if you want me to run the approved action.\n"
-                }
-                message += "\n"
-                append(message)
-                return
-            }
-
-            append("Lucy: I understand this as a task, so I am using my local self-loop.\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runLucySelfLoop(userText)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Self Loop:\n\(result)\n\n")
-                }
-            }
-
+        if !userText.hasPrefix("/") && routeNaturalCommand(userText) {
             return
         }
 
@@ -1490,14 +1085,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return
         }
 
-        if !userText.hasPrefix("/") && routeNaturalSelfBuild(userText) {
-            return
-        }
-
-        if !userText.hasPrefix("/") && routeNaturalCommand(userText) {
-            return
-        }
-
 
         if !userText.hasPrefix("/") && routeAIIntent(userText) {
             return
@@ -1512,27 +1099,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
         if userText.hasPrefix("/") {
-            let result = runSelfCommand(resolveSlashCommand(userText))
+            let result = runSlashCommand(resolveSlashCommand(userText))
             append("Lucy:\n\(result)\n\n")
             return
-        }
-
-        if !userText.hasPrefix("/") {
-            let goalResult = runLucyGoalEngine(userText)
-            if let goalResult = goalResult,
-               goalResult.ok == true,
-               let mode = goalResult.mode,
-               mode != "chat" {
-
-                if let dryRunOutput = goalResult.dry_run_output, !dryRunOutput.isEmpty {
-                    append("Lucy:\n\(dryRunOutput)\n\n")
-                } else if let message = goalResult.message, !message.isEmpty {
-                    append("Lucy: \(message)\n\n")
-                } else {
-                    append("Lucy: routed to \(mode).\n\n")
-                }
-                return
-            }
         }
 
         append("Lucy: thinking...\n")
@@ -1541,7 +1110,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         let userTextSnapshot = userText
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let reply = LucyLocalLLMIntentRouter.shared.chatSync(
+            let reply = LucyMLXIntentRouter.shared.chatSync(
                 history: historySnapshot,
                 userText: userTextSnapshot,
                 timeout: 12.0
@@ -1557,33 +1126,54 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func append(_ text: String) {
-        output.string += text
+        let baseFont = NSFont.systemFont(ofSize: 14.5, weight: .regular)
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 3
+        paragraphStyle.paragraphSpacing = 5
+
+        var color = NSColor.labelColor
+        var font = baseFont
+
+        if text.hasPrefix("You:") {
+            color = NSColor(calibratedRed: 0.26, green: 0.34, blue: 0.78, alpha: 1.0)
+            font = NSFont.systemFont(ofSize: 14.5, weight: .semibold)
+        } else if text.hasPrefix("Lucy") {
+            color = NSColor(calibratedRed: 0.58, green: 0.22, blue: 0.62, alpha: 1.0)
+            font = NSFont.systemFont(ofSize: 14.5, weight: .medium)
+        }
+
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [
+                .font: font,
+                .foregroundColor: color,
+                .paragraphStyle: paragraphStyle
+            ]
+        )
+
+        output.textStorage?.append(attributed)
         output.scrollToEndOfDocument(nil)
     }
 
-    func localLLMPathAndArgs(purpose: String = "chat", maxTokens: Int = 512) -> (String, [String]) {
-        let python = ProcessInfo.processInfo.environment["PYTHON"] ?? "python3"
-        return (
-            "/usr/bin/env",
-            [
-                python,
-                "tools/providers/local_llm.py",
-                "--purpose",
-                purpose,
-                "--max-tokens",
-                String(maxTokens),
-                "--stdin"
-            ]
-        )
+    func mlxPathAndArgs() -> (String, [String]) {
+        let possiblePaths = [
+            "/usr/local/bin/mlx",
+            "/opt/homebrew/bin/mlx"
+        ]
+
+        if let mlxPath = possiblePaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
+            return (mlxPath, ["run", model])
+        }
+
+        return ("/usr/bin/env", ["mlx", "run", model])
     }
 
-    func runLocalLLM(prompt: String, purpose: String = "chat", maxTokens: Int = 512) -> String {
+    func runMLX(prompt: String) -> String {
         let process = Process()
-        let (path, args) = localLLMPathAndArgs(purpose: purpose, maxTokens: maxTokens)
+        let (path, args) = mlxPathAndArgs()
 
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = args
-        process.currentDirectoryURL = LucyPaths.root
 
         let inputPipe = Pipe()
         let outputPipe = Pipe()
@@ -1601,25 +1191,21 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             }
 
             inputPipe.fileHandleForWriting.closeFile()
-            let completed = waitForProcess(process, timeout: 120.0)
-
-            if !completed {
-                return "My local model timed out after 120 seconds. On older Intel Macs, try a smaller GGUF model in data/model_provider.json."
-            }
+            process.waitUntilExit()
 
             let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
             if process.terminationStatus != 0 {
-                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown local model error."
-                return "I had trouble talking to my local model:\n\(errorText)"
+                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown MLX error."
+                return "I had trouble talking to MLX:\n\(errorText)"
             }
 
             let rawText = String(data: data, encoding: .utf8) ?? "I did not get a response."
             return stripTerminalEscapes(rawText)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            return "I could not start my local model. Error: \(error.localizedDescription)"
+            return "I could not start MLX. Error: \(error.localizedDescription)"
         }
     }
 
@@ -1627,25 +1213,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
     func shellQuote(_ text: String) -> String {
         return "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    }
-
-    func waitForProcess(_ process: Process, timeout: TimeInterval = 30.0) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-
-        while process.isRunning && Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.1)
-        }
-
-        if process.isRunning {
-            process.terminate()
-            Thread.sleep(forTimeInterval: 0.2)
-            if process.isRunning {
-                process.interrupt()
-            }
-            return false
-        }
-
-        return true
     }
 
     func runShell(_ command: String) -> String {
@@ -1661,11 +1228,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
-
-            if !completed {
-                return "Command timed out after 30 seconds. I stopped it safely so I would not stay stuck thinking.\nCommand: \(command)"
-            }
+            process.waitUntilExit()
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -1768,101 +1331,14 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return cleaned
     }
 
-    func correctCommonTypos(_ text: String) -> String {
-        var corrected = text
+    func normalizedLinkedInDraftIntent(_ text: String) -> String {
+        return stripPolitePrefix(text)
             .lowercased()
             .replacingOccurrences(of: "`", with: "")
             .replacingOccurrences(of: ".", with: " ")
             .replacingOccurrences(of: ",", with: " ")
             .replacingOccurrences(of: "!", with: " ")
             .replacingOccurrences(of: "?", with: " ")
-
-        let phraseFixes = [
-            "you tube": "youtube",
-            "google mail": "gmail",
-            "remidn me": "remind me",
-            "remind em": "remind me",
-            "set remidner": "set reminder",
-            "set remidn": "set reminder",
-            "thank yuo": "thank you"
-        ]
-
-        for (typo, replacement) in phraseFixes {
-            corrected = corrected.replacingOccurrences(of: typo, with: replacement)
-        }
-
-        let wordFixes: [String: String] = [
-            "opne": "open",
-            "oen": "open",
-            "serach": "search",
-            "searfch": "search",
-            "seach": "search",
-            "saerch": "search",
-            "fnd": "find",
-            "yotube": "youtube",
-            "youtub": "youtube",
-            "ytube": "youtube",
-            "googel": "google",
-            "gogle": "google",
-            "googl": "google",
-            "chorme": "chrome",
-            "crome": "chrome",
-            "safair": "safari",
-            "safar": "safari",
-            "wrtie": "write",
-            "wirte": "write",
-            "wriet": "write",
-            "emial": "email",
-            "mesage": "message",
-            "summrize": "summarize",
-            "anaylze": "analyze",
-            "pleaze": "please",
-            "plesae": "please",
-            "ntoe": "note",
-            "nots": "notes",
-            "shcedule": "schedule",
-            "schedual": "schedule",
-            "remidn": "remind",
-            "remidner": "reminder",
-            "remeber": "remember",
-            "adress": "address",
-            "calender": "calendar",
-            "rember": "remember"
-        ]
-
-        let words = corrected.split(separator: " ").map { raw -> String in
-            let word = String(raw)
-            if let replacement = wordFixes[word] {
-                return replacement
-            }
-
-            let intentWords = [
-                "open", "search", "find", "youtube", "google", "chrome", "safari",
-                "write", "email", "message", "summarize", "analyze", "calendar",
-                "please", "note", "notes", "schedule", "remind", "reminder",
-                "remember", "address"
-            ]
-
-            if let close = intentWords.first(where: { levenshteinDistance(word, $0) == 1 }) {
-                return close
-            }
-
-            return word
-        }
-
-        return words.joined(separator: " ")
-    }
-
-    func normalizedForIntent(_ text: String) -> String {
-        let corrected = correctCommonTypos(stripPolitePrefix(text))
-        return corrected
-            .split(separator: " ")
-            .joined(separator: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    func normalizedLinkedInDraftIntent(_ text: String) -> String {
-        return normalizedForIntent(text)
             .replacingOccurrences(of: "linekdin", with: "linkedin")
             .replacingOccurrences(of: "linkdin", with: "linkedin")
             .replacingOccurrences(of: "linkedn", with: "linkedin")
@@ -1899,8 +1375,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return false
         }
 
-        append("Lucy: drafting locally with a local model now...\n")
-        append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with a local model. I will print the draft here.\n\n")
+        append("Lucy: drafting locally with MLX now...\n")
+        append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with MLX. I will print the draft here.\n\n")
 
         append("Lucy Progress\n[⟳] Research\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
 
@@ -1969,7 +1445,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - gmail_compose
         - email_draft
         - hide
-        - selfbuild
         - chat
 
         JSON schema:
@@ -1993,7 +1468,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - If the user asks to open an app, use open_app.
         - If the user says use Chrome/Safari/default browser, use set_browser.
         - If the user asks Lucy to hide/disappear/go away, use hide.
-        - If the user asks Lucy to add/build/teach/give herself a capability, use selfbuild.
         - If unsure, use chat.
         - Correct obvious typos mentally.
         - Keep query/email_request concise but preserve meaning.
@@ -2002,7 +1476,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         \(userText)
         """
 
-        let raw = runLocalLLM(prompt: prompt)
+        let raw = runMLX(prompt: prompt)
 
         guard let jsonText = extractJSONBlock(raw),
               let data = jsonText.data(using: .utf8),
@@ -2099,21 +1573,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             append("Lucy: okay, I’ll hide. Say `come back` when you want me back.\n\n")
             onSoftHideRequested?()
             return true
-
-        case "selfbuild":
-            let goal = intent["query"] as? String ?? userText
-            append("Lucy: I understand this as a selfbuild request.\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runSelfBuild(goal: goal)
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Selfbuild:\n\(result)\n\n")
-                }
-            }
-
-            return true
-
         default:
             return false
         }
@@ -2122,7 +1581,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
 
     func unsupportedCapabilityResponse(for userText: String) -> String? {
-        let lowered = normalizedForIntent(userText)
+        let lowered = userText.lowercased()
 
         let mentionsNote = lowered.contains("note") || lowered.contains("notes")
         let destructive = lowered.contains("delete")
@@ -2151,8 +1610,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
             I did not delete anything.
 
-            Possible future selfbuild:
-            /selfbuild add notes manager
+            This capability is not enabled yet.
             """
         }
 
@@ -2170,8 +1628,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
             I did not edit anything.
 
-            Possible future selfbuild:
-            /selfbuild add notes manager
+            This capability is not enabled yet.
             """
         }
 
@@ -2235,105 +1692,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return nil
     }
 
-
-    func routeNaturalSelfBuild(_ userText: String) -> Bool {
+    func routeNaturalCommand(_ userText: String) -> Bool {
         let cleaned = stripPolitePrefix(userText)
         let lowered = cleaned.lowercased()
-
-        let asksToBuild = lowered.contains("build")
-            || lowered.contains("add")
-            || lowered.contains("give yourself")
-            || lowered.contains("make yourself")
-            || lowered.contains("teach yourself")
-            || lowered.contains("selfbuild")
-            || lowered.contains("upgrade yourself")
-
-        if !asksToBuild {
-            return false
-        }
-
-        if lowered.contains("email") || lowered.contains("draft") {
-            append("Lucy: I understand this as a selfbuild request for email drafting.\n\n")
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = self.runSelfBuild(goal: "add email helper")
-
-                DispatchQueue.main.async {
-                    self.append("Lucy Selfbuild:\n\(result)\n\n")
-                }
-            }
-
-            return true
-        }
-
-        if lowered.contains("gmail") {
-            if lowered.contains("draft") || lowered.contains("helper") || lowered.contains("add") || lowered.contains("build") || lowered.contains("give yourself") {
-                append("Lucy: I understand this as a selfbuild request for a safe Gmail draft helper.\n\n")
-
-                DispatchQueue.global(qos: .userInitiated).async {
-                    let result = self.runSelfBuild(goal: "add gmail draft helper")
-
-                    DispatchQueue.main.async {
-                        self.append("Lucy Selfbuild:\n\(result)\n\n")
-                    }
-                }
-
-                return true
-            }
-
-            append("""
-            Lucy: I understand you want Gmail control.
-
-            I can build/use a safe Gmail draft helper, but I will not send emails automatically.
-            Safe flow:
-            - draft email text
-            - copy draft to clipboard
-            - open Gmail
-            - you review and send manually
-
-            Try:
-            give yourself Gmail draft helper
-
-            I did not edit my code.
-
-            """)
-            return true
-        }
-
-        if lowered.contains("animation")
-            || lowered.contains("crawl")
-            || lowered.contains("jump")
-            || lowered.contains("spider") {
-            append("Lucy: I can improve animation through my existing dev/autodev tasks. Try /autodev roadmap or /dev better-crawl.\n\n")
-            return true
-        }
-
-        append("""
-        Lucy: I heard a selfbuild-style request, but I do not have a safe template for it yet.
-
-        Available selfbuild templates:
-        - email helper
-
-        Try:
-        give yourself email drafting ability
-
-        I did not edit my code.
-
-        """)
-        return true
-    }
-
-
-    func routeNaturalCommand(_ userText: String) -> Bool {
-        let rawCleaned = stripPolitePrefix(userText)
-        let cleaned = normalizedForIntent(userText)
-        let lowered = cleaned
-
-        // normalizedForIntent uses correctCommonTypos and levenshteinDistance so Lucy can
-        // interpret typoed prompt meaning before matching natural command routes.
-        // Typo examples intentionally live in this router so command-free prompts like
-        // "opne googel", "serach yotube", "use chorme", and "use safair" are covered.
-        let _ = ["opne", "serach", "searfch", "yotube", "you tube", "googel", "chorme", "safair"]
 
         func removePhrases(_ input: String, _ phrases: [String]) -> String {
             var result = input
@@ -2353,14 +1714,14 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             let cleanedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
 
             if cleanedQuery.isEmpty {
-                let result = openURL("https://www.google.com")
-                append("Lucy: \(result)\n\n")
+                _ = openURL("https://www.google.com")
+                append("Lucy: Opening Google for you.\n\n")
                 return true
             }
 
             let encoded = cleanedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? cleanedQuery
-            let result = openURL("https://www.google.com/search?q=\(encoded)")
-            append("Lucy: \(result)\n\n")
+            _ = openURL("https://www.google.com/search?q=\(encoded)")
+            append("Lucy: Searching Google for “\(cleanedQuery)”.\n\n")
             return true
         }
 
@@ -2368,13 +1729,13 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             let cleanedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
 
             if cleanedQuery.isEmpty {
-                let result = openURL("https://www.youtube.com")
-                append("Lucy: \(result)\n\n")
+                _ = openURL("https://www.youtube.com")
+                append("Lucy: Opening YouTube for you.\n\n")
                 return true
             }
 
-            let result = openYouTubeSearch(cleanedQuery)
-            append("Lucy: \(result)\n\n")
+            _ = openYouTubeSearch(cleanedQuery)
+            append("Lucy: Searching YouTube for “\(cleanedQuery)”.\n\n")
             return true
         }
 
@@ -2404,23 +1765,23 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             || lowered == "use google chrome"
             || lowered == "switch to chrome"
             || lowered == "open things in chrome" {
-            let result = setBrowserPreference("Google Chrome")
-            append("Lucy: \(result)\n\n")
+            _ = setBrowserPreference("Google Chrome")
+            append("Lucy: Okay — I’ll use Google Chrome for links.\n\n")
             return true
         }
 
         if lowered == "use safari"
             || lowered == "switch to safari"
             || lowered == "open things in safari" {
-            let result = setBrowserPreference("Safari")
-            append("Lucy: \(result)\n\n")
+            _ = setBrowserPreference("Safari")
+            append("Lucy: Okay — I’ll use Safari for links.\n\n")
             return true
         }
 
         if lowered == "use default browser"
             || lowered == "use system default browser" {
-            let result = setBrowserPreference("default")
-            append("Lucy: \(result)\n\n")
+            _ = setBrowserPreference("default")
+            append("Lucy: Okay — I’ll use your system default browser.\n\n")
             return true
         }
 
@@ -2493,175 +1854,21 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return googleSearch(query)
         }
 
-        if lowered.hasPrefix("open ") && rawCleaned.contains(".") {
-            var url = String(rawCleaned.dropFirst("open ".count))
+        if lowered.hasPrefix("open ") && lowered.contains(".") {
+            var url = String(cleaned.dropFirst("open ".count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             if !url.lowercased().hasPrefix("http://") && !url.lowercased().hasPrefix("https://") {
                 url = "https://\(url)"
             }
 
-            let result = openURL(url)
-            append("Lucy: \(result)\n\n")
+            _ = openURL(url)
+            append("Lucy: Opening \(url).\n\n")
             return true
         }
 
         return false
     }
-
-
-
-
-
-
-    func runLucyDevSuggestFix() -> String {
-        let projectRoot = URL(fileURLWithPath: "/Users/michaelzheng/lucy")
-        let scriptURL = projectRoot
-            .appendingPathComponent("skills")
-            .appendingPathComponent("lucy-dev-diagnose")
-            .appendingPathComponent("scripts")
-            .appendingPathComponent("suggest_fix.py")
-
-        guard FileManager.default.fileExists(atPath: scriptURL.path) else {
-            return "I could not find my suggest-fix script at:\n\(scriptURL.path)"
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = [scriptURL.path, projectRoot.path]
-        process.currentDirectoryURL = projectRoot
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            var output = ""
-            var error = ""
-
-            outputPipe.fileHandleForReading.readabilityHandler = { handle in
-                let data = handle.availableData
-                if data.count > 0, let chunk = String(data: data, encoding: .utf8) {
-                    output += chunk
-                    DispatchQueue.main.async {
-                        self.append(chunk)
-                    }
-                }
-            }
-
-            errorPipe.fileHandleForReading.readabilityHandler = { handle in
-                let data = handle.availableData
-                if data.count > 0, let chunk = String(data: data, encoding: .utf8) {
-                    error += chunk
-                    DispatchQueue.main.async {
-                        self.append(chunk)
-                    }
-                }
-            }
-
-            try process.run()
-            process.waitUntilExit()
-
-            outputPipe.fileHandleForReading.readabilityHandler = nil
-            errorPipe.fileHandleForReading.readabilityHandler = nil
-            let combined = output + "\n" + error
-
-            return """
-            I reviewed my latest diagnostic log.
-
-            \(combined.suffix(5000))
-            """
-        } catch {
-            return "I could not run my suggest-fix skill: \(error.localizedDescription)"
-        }
-    }
-
-
-
-    func runLucyDevDiagnose() -> String {
-        let projectRoot = URL(fileURLWithPath: "/Users/michaelzheng/lucy")
-        let scriptURL = projectRoot
-            .appendingPathComponent("skills")
-            .appendingPathComponent("lucy-dev-diagnose")
-            .appendingPathComponent("scripts")
-            .appendingPathComponent("diagnose_lucy.sh")
-
-        guard FileManager.default.fileExists(atPath: scriptURL.path) else {
-            return "I could not find my diagnose skill script at:\n\(scriptURL.path)"
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptURL.path, projectRoot.path]
-        process.currentDirectoryURL = projectRoot
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-            let output = String(data: outputData, encoding: .utf8) ?? ""
-            let error = String(data: errorData, encoding: .utf8) ?? ""
-            let combined = output + "\n" + error
-
-            if combined.contains("STATUS: PASSED") {
-                return """
-                I checked myself. Build passed.
-
-                No files were modified.
-
-                Relevant output:
-                \(combined.suffix(2000))
-                """
-            }
-
-            if combined.contains("STATUS: FAILED") {
-                return """
-                I checked myself. Build failed.
-
-                No files were modified.
-
-                Relevant output:
-                \(combined.suffix(3500))
-                """
-            }
-
-            if combined.contains("STATUS: INCONCLUSIVE") {
-                return """
-                I checked myself, but the result was inconclusive.
-
-                No files were modified.
-
-                Relevant output:
-                \(combined.suffix(3000))
-                """
-            }
-
-            return """
-            I ran my diagnostic skill, but I could not clearly classify the result.
-
-            Exit code: \(process.terminationStatus)
-
-            No files were modified.
-
-            Relevant output:
-            \(combined.suffix(3000))
-            """
-        } catch {
-            return "I could not run my diagnostic skill: \(error.localizedDescription)"
-        }
-    }
-
-
-
 
     func resolveSlashCommand(_ rawCommand: String) -> String {
         let trimmed = rawCommand.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2672,8 +1879,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         let rest = parts.count > 1 ? " " + String(parts[1]) : ""
 
         let known = [
-            "/memory", "/project", "/readself", "/status", "/selfdevcheck", "/tool", "/quit", "/settings",
-            "/devstatus", "/autodev", "/build", "/develop",
+            "/memory", "/status", "/tool", "/quit", "/settings",
             "/use3d", "/real3d", "/renderinfo", "/modelbounds",
             "/browser", "/youtube", "/openurl", "/openapp"
         ]
@@ -2720,44 +1926,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return previous[b.count]
     }
 
-    func selfDevCheckReport() -> String {
-        let fm = FileManager.default
-        let home = fm.homeDirectoryForCurrentUser.path
-        let candidates = [
-            home + "/lucy",
-            home + "/Lucy",
-            fm.currentDirectoryPath
-        ]
-
-        let root = candidates.first { candidate in
-            fm.fileExists(atPath: candidate + "/swift_app/Sources/ChatWindowController.swift")
-        } ?? fm.currentDirectoryPath
-
-        let devScript = root + "/tools/lucy_autonomous_dev.py"
-        let instructions = root + "/instructions.md"
-        let buildScript = root + "/build_lucy_app.sh"
-        let distApp = root + "/dist/Lucy.app"
-        let appleToolPairTemplate = root + "/tools/lucy_templates/apple_action_tool_pair.md"
-        let toolRegistry = root + "/tools_created_by_lucy/tool_registry.json"
-
-        return """
-        Lucy Self-Dev Check
-        Project root: \(root)
-        Dev script exists: \(fm.fileExists(atPath: devScript))
-        instructions.md exists: \(fm.fileExists(atPath: instructions))
-        build_lucy_app.sh exists: \(fm.fileExists(atPath: buildScript))
-        dist/Lucy.app exists: \(fm.fileExists(atPath: distApp))
-        apple_action_tool_pair template exists: \(fm.fileExists(atPath: appleToolPairTemplate))
-        tool_registry.json exists: \(fm.fileExists(atPath: toolRegistry))
-        """
-    }
-
-
-
-
-
-
-
     func registryToolPairs() -> [String: (dryRun: String, approved: String)] {
         let root = lucyDetectedProjectRootPath()
         let registryURL = URL(fileURLWithPath: root)
@@ -2796,10 +1964,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func registryToolBaseForNaturalRequest(_ text: String) -> String? {
-        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let lowered = normalizedForIntent(text)
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        if rawLowered.hasPrefix("/") {
+        if lowered.hasPrefix("/") {
             return nil
         }
 
@@ -2830,7 +1997,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
             let prefixes = tool.intent_prefixes ?? []
             for rawPrefix in prefixes {
-                let prefix = normalizedForIntent(rawPrefix)
+                let prefix = rawPrefix.lowercased()
                 if lowered.hasPrefix(prefix) && prefix.count > bestPrefixLength {
                     bestBase = base
                     bestPrefixLength = prefix.count
@@ -2839,58 +2006,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
 
         return bestBase
-    }
-
-
-
-    struct LucyGoalEngineResult: Decodable {
-        let ok: Bool?
-        let mode: String?
-        let pair_base: String?
-        let tool_name: String?
-        let path: String?
-        let registered: Bool?
-        let dry_run_tool: String?
-        let approved_tool: String?
-        let request: String?
-        let dry_run_output: String?
-        let stderr: String?
-        let needs_approval: Bool?
-        let approval_instruction: String?
-        let message: String?
-    }
-
-    func runLucyGoalEngine(_ request: String) -> LucyGoalEngineResult? {
-        let root = lucyDetectedProjectRootPath()
-        let scriptPath = URL(fileURLWithPath: root)
-            .appendingPathComponent("tools")
-            .appendingPathComponent("lucy_goal_engine.py")
-            .path
-
-        let process = Process()
-        process.currentDirectoryURL = URL(fileURLWithPath: root)
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        process.arguments = [scriptPath, request]
-
-        let outPipe = Pipe()
-        let errPipe = Pipe()
-        process.standardOutput = outPipe
-        process.standardError = errPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return nil
-        }
-
-        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-        guard let outText = String(data: outData, encoding: .utf8),
-              let data = outText.data(using: .utf8) else {
-            return nil
-        }
-
-        return try? JSONDecoder().decode(LucyGoalEngineResult.self, from: data)
     }
 
     func looksLikeGenericApproval(_ text: String) -> Bool {
@@ -2912,10 +2027,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func looksLikeNoteRequest(_ text: String) -> Bool {
-        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let lowered = normalizedForIntent(text)
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        if rawLowered.hasPrefix("/") {
+        if lowered.hasPrefix("/") {
             return false
         }
 
@@ -2925,9 +2039,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             "make a note ",
             "make note ",
             "add a note ",
-            "add note ",
-            "write a note ",
-            "write note "
+            "add note "
         ]
 
         return starts.contains(where: { lowered.hasPrefix($0) })
@@ -2952,10 +2064,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func looksLikeCalendarRequest(_ text: String) -> Bool {
-        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let lowered = normalizedForIntent(text)
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        if rawLowered.hasPrefix("/") {
+        if lowered.hasPrefix("/") {
             return false
         }
 
@@ -3007,10 +2118,9 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func looksLikeReminderRequest(_ text: String) -> Bool {
-        let rawLowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let lowered = normalizedForIntent(text)
+        let lowered = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        if rawLowered.hasPrefix("/") {
+        if lowered.hasPrefix("/") {
             return false
         }
 
@@ -3103,11 +2213,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             process.standardError = errorPipe
 
             try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
-
-            if !completed {
-                return "Sandbox tool timed out after 30 seconds: \(toolName)\nI stopped it safely so Lucy would not stay stuck thinking."
-            }
+            process.waitUntilExit()
 
             let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
@@ -3139,12 +2245,12 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         }
     }
 
-    func runSelfCommand(_ command: String) -> String {
+    func runSlashCommand(_ command: String) -> String {
         if command.hasPrefix("/__unknown__ ") {
             let pieces = command.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
             let unknown = pieces.count > 1 ? String(pieces[1]) : command
-            let suggestions = pieces.count > 2 ? String(pieces[2]) : "/status, /devstatus, /renderinfo"
-            
+            let suggestions = pieces.count > 2 ? String(pieces[2]) : "/status, /settings, /youtube"
+
             if unknown == "/copydraft" {
                 let postURL = URL(fileURLWithPath: "/tmp/lucy_linkedin_post.txt")
                 if let draft = try? String(contentsOf: postURL, encoding: .utf8),
@@ -3158,215 +2264,20 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
                 }
             }
 
-            return "Unknown command: \(unknown)\nDid you mean: \(suggestions)?"
+            return "Unknown command: \(unknown)\nTry one of: \(suggestions)."
         }
 
         switch command {
-        case "/selfdevcheck":
-            return selfDevCheckReport()
-
         case "/status":
             return LucyRuntime.shared.statusText()
 
         case "/settings":
             return "Settings:\n- Browser: \(preferredBrowser)\n- Settings file: \(LucyPaths.settingsURL.path)"
 
-        case "/devstatus":
-            return runDevAgentStatus()
-
-        case "/dev diagnose":
-            return runLucyDevDiagnose()
-
-        case "/dev suggest-fix":
-            return runLucyDevSuggestFix()
-
-
-
-        case "/autodev roadmap":
-            return runAutoDevRoadmap()
-
-        case "/autodev next":
-            return runAutoDevNext()
-
-        case "/dev animation-smoother":
-            return runDevAgentApply(task: "animation-smoother")
-
-        case "/dev cute-eyes":
-            return runDevAgentApply(task: "cute-eyes")
-
-        case "/dev better-crawl":
-            return runDevAgentApply(task: "better-crawl")
-
-        case "/dev cursor-aware":
-            return runDevAgentApply(task: "cursor-aware")
-
-        case "/dev natural-commands":
-            return runDevAgentApply(task: "natural-commands")
-
         default:
-            return "I refused to run an unsafe or unknown self-command: \(command)"
+            return "Unknown or disabled command: \(command)"
         }
     }
-
-    func chooseSelfCommand() -> (String, String) {
-        // Simple deterministic self-command policy for v1.
-        // Later this can be model-assisted, but still restricted to this allowlist.
-
-        let status = LucyRuntime.shared.statusText()
-        let browser = preferredBrowser
-
-        if browser.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return ("/settings", "My browser setting looks empty, so I should inspect settings.")
-        }
-
-        if LucyRuntime.shared.clickCount == 0 && LucyRuntime.shared.chatCount == 0 {
-            return ("/status", "I just started and do not have much activity yet, so I should check my status.")
-        }
-
-        if status.contains("Dev Mode") {
-            return ("/devstatus", "I should verify that my local dev agent can still compile and inspect my project.")
-        }
-
-        return ("/autodev next", "My basic status looks okay, so I should run the next safe autodev task.")
-    }
-
-
-    func runAutopilot(iterations: Int) -> String {
-        let safeIterations = max(1, min(iterations, 5))
-
-        var report = """
-        Autopilot run started.
-
-        Planned ticks: \(safeIterations)
-
-        """
-
-        for index in 1...safeIterations {
-            report += "\n--- Tick \(index) ---\n"
-            let result = runSelfLoop()
-            report += result
-            report += "\n"
-
-            // Basic stop condition: if a result says compile failed or refused,
-            // stop instead of chaining more actions.
-            let lowered = result.lowercased()
-            if lowered.contains("compile ok: false")
-                || lowered.contains("failed")
-                || lowered.contains("refused")
-                || lowered.contains("timed out") {
-                report += "\nAutopilot stopped early because the last tick looked unsafe or failed.\n"
-                break
-            }
-        }
-
-        report += "\nAutopilot run complete."
-        return report
-    }
-
-
-    func runSelfLoop() -> String {
-        let choice = chooseSelfCommand()
-        let command = choice.0
-        let reason = choice.1
-
-        let result = runSelfCommand(command)
-
-        return """
-        Self-command decision:
-
-        I chose:
-        \(command)
-
-        Why:
-        \(reason)
-
-        Result:
-        \(result)
-        """
-    }
-
-
-
-
-
-
-    func lucyGoalsSummary() -> String {
-        return """
-        My long-term goals:
-
-        1. Become a cute animated jumping-spider desktop companion.
-        2. Help you operate your Mac through safe, approved actions.
-        3. Remember useful preferences and context locally.
-        4. Recognize what I can and cannot do.
-        5. Selfbuild missing safe capabilities when possible.
-        6. Improve myself through dev tasks, autodev, and self-command loops.
-        7. Avoid destructive actions unless a safe approval flow exists.
-
-        My current short-term goals:
-
-        - Make my capability manager smarter.
-        - Recognize unsupported requests instead of pretending.
-        - Add safer selfbuild templates.
-        - Improve my animation and personality.
-        - Eventually package myself as a clickable Mac app.
-        """
-    }
-
-    func lucyReflection() -> String {
-        let status = LucyRuntime.shared.statusText()
-        let capabilities = capabilitiesSummary()
-        let limitations = limitationsSummary()
-
-        return """
-        Reflection:
-
-        I am Lucy, a local-first Mac desktop pet and agent.
-
-        What I know about myself:
-        - I live in the Lucy project folder.
-        - I can chat, remember things, search, open apps, draft Gmail messages, and create Apple Notes.
-        - I can run safe self-commands and autodev tasks.
-        - I have a capability registry and selfbuild templates.
-
-        Current runtime:
-        \(status)
-
-        Capabilities:
-        \(capabilities)
-
-        Limitations:
-        \(limitations)
-
-        My honest self-assessment:
-        I am not truly conscious, but I now have a working self-model. I can describe my identity, goals, abilities, limits, and safe improvement paths. The next step toward stronger agency is to make my capability manager recognize unsupported requests and either selfbuild a safe template or clearly refuse.
-        """
-    }
-
-    func lucyNextPlan() -> String {
-        return """
-        My suggested next self-improvement plan:
-
-        Step 1:
-        Add an unsupported-capability detector.
-        Reason: If you ask me to delete a note, send an email, or do something I cannot safely do, I should recognize the missing capability instead of falling into generic chat.
-
-        Step 2:
-        Add a notes-manager template.
-        Reason: I can create notes now, but I cannot safely list/edit/delete notes yet.
-
-        Step 3:
-        Improve selfbuild routing.
-        Reason: I should map more natural requests to known templates automatically.
-
-        Step 4:
-        Improve animation/personality.
-        Reason: I should feel more alive as a pet, not just a tool.
-
-        Recommended next command:
-        /selfbuild add unsupported capability detector
-        """
-    }
-
 
     func capabilitiesSummary() -> String {
         let url = LucyPaths.root.appendingPathComponent("data").appendingPathComponent("capabilities.json")
@@ -3386,8 +2297,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             - YouTube search
             - Gmail draft compose
             - Apple Notes creation
-            - selfbuild templates
-            - autodev roadmap
             """
         }
 
@@ -3410,15 +2319,11 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
                 unknown.append(line)
             }
         }
-
         return """
         My capability registry:
 
         Installed:
         \(installed.isEmpty ? "- none listed" : installed.joined(separator: "\n"))
-
-        Available selfbuild templates:
-        \(available.isEmpty ? "- none listed" : available.joined(separator: "\n"))
 
         Unknown/other:
         \(unknown.isEmpty ? "- none listed" : unknown.joined(separator: "\n"))
@@ -3434,10 +2339,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - Open websites and apps.
         - Draft emails and open Gmail compose for you to review.
         - Copy the latest email draft.
-        - Create new Apple Notes notes.
-        - Run safe dev/autodev tasks.
-        - Selfbuild known templates like email helper, Gmail draft helper, and Notes helper.
-        - Give myself safe commands through /self and /autopilot.
+        - Create new Apple Notes notes when the Notes helper is available.
+        - Preview approved Notes, Calendar, and Reminder actions through the tool registry.
 
         Things I should NOT do yet:
         - Send emails automatically.
@@ -3445,14 +2348,10 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - Delete files automatically.
         - Click destructive buttons.
         - Make purchases.
-        - Run arbitrary Terminal commands outside my project.
-        - Edit code outside the Lucy project.
+        - Run arbitrary Terminal commands.
+        - Modify my own code at runtime.
 
-        If you ask for something I cannot safely do yet, I should:
-        1. Recognize the missing capability.
-        2. Tell you what is missing.
-        3. Suggest or selfbuild a safe template if one exists.
-        4. Avoid pretending I did it.
+        If you ask for something I cannot safely do, I should tell you clearly instead of pretending I did it.
         """
     }
 
@@ -3460,25 +2359,20 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return """
         I am Lucy.
 
-        I am a local-first Mac desktop AI pet and agent.
+        I am a local-first Mac desktop companion.
         I live in this project:
         \(LucyPaths.root.path)
 
         My current architecture:
         - Swift/AppKit floating desktop pet
-        - local model chat
+        - local MLX chat
         - local memory
         - capability registry
-        - dev task system
-        - autodev roadmap
-        - self-command loop
-        - selfbuild templates
+        - explicit local tools for search, browser/app opening, Gmail drafts, Notes, Calendar, and Reminders
 
-        My long-term goal:
-        become a cute animated jumping-spider desktop companion that can safely improve herself, add new abilities, operate your Mac with approval, and help you without you manually coding every feature.
+        My goal is to be a cute, practical desktop companion that helps with safe user-approved tasks.
         """
     }
-
 
     func capabilityStatus(_ id: String) -> String {
         guard
@@ -3523,31 +2417,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return createMotivationalNote(from: request)
         }
 
-        if status == "available_template" || status == "unknown" {
-            let buildResult = runSelfBuild(goal: "add notes helper")
-
-            if buildResult.lowercased().contains("successfully")
-                || buildResult.lowercased().contains("already installed") {
-                updateCapabilityStatus(id: "apple_notes_writer", status: "installed")
-                return """
-                I installed my Apple Notes helper.
-
-                Now I will create the note.
-
-                \(createMotivationalNote(from: request))
-                """
-            }
-
-            return """
-            I tried to install my Apple Notes helper, but it did not complete.
-
-            \(buildResult)
-            """
-        }
-
-        return "I do not have a safe capability path for Apple Notes yet."
+        return "Apple Notes writing is not enabled in the capability registry. I did not try to modify my own code."
     }
-
 
     func escapeAppleScriptString(_ text: String) -> String {
         return text
@@ -3579,11 +2450,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
-
-            if !completed {
-                return "Apple Notes automation timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
-            }
+            process.waitUntilExit()
 
             let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
@@ -3627,7 +2494,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - output only the note body
         """
 
-        let noteBody = stripTerminalEscapes(runLocalLLM(prompt: prompt))
+        let noteBody = stripTerminalEscapes(runMLX(prompt: prompt))
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let finalBody = noteBody.isEmpty
@@ -3636,215 +2503,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         return writeAppleNote(title: "Motivation from Lucy", body: finalBody)
     }
-
-
-    func runSelfBuild(goal: String) -> String {
-        let loweredGoal = goal.lowercased()
-
-        let taskName: String
-
-        if loweredGoal.contains("notes") || loweredGoal.contains("note") {
-            taskName = "selfbuild-notes-helper"
-        } else if loweredGoal.contains("gmail") {
-            taskName = "selfbuild-gmail-draft-helper"
-        } else if loweredGoal.contains("email") {
-            taskName = "selfbuild-email-helper"
-        } else {
-            return """
-            I do not have a safe selfbuild template for that yet.
-
-            Available selfbuild templates:
-            - /selfbuild add email helper
-
-            I did not edit my code.
-            """
-        }
-
-        return runDevAgentApply(task: taskName)
-    }
-
-
-
-    func runLucyDeveloper(goal: String) -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "tools/lucy_autonomous_dev.py", goal]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-
-            let timeoutSeconds = 300.0
-            let deadline = Date().addingTimeInterval(timeoutSeconds)
-
-            while process.isRunning && Date() < deadline {
-                Thread.sleep(forTimeInterval: 0.2)
-            }
-
-            if process.isRunning {
-                process.terminate()
-                return "Lucy Developer timed out after \(Int(timeoutSeconds)) seconds. I stopped it safely."
-            }
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            return combined.isEmpty ? "Lucy Developer finished with no output." : combined
-        } catch {
-            return "Could not run Lucy Developer: \(error.localizedDescription)"
-        }
-    }
-
-
-    func runBuilderGoal(_ goal: String) -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "tools/lucy_builder.py", "goal", goal]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-
-            let timeoutSeconds = 90.0
-            let deadline = Date().addingTimeInterval(timeoutSeconds)
-
-            while process.isRunning && Date() < deadline {
-                Thread.sleep(forTimeInterval: 0.2)
-            }
-
-            if process.isRunning {
-                process.terminate()
-                Thread.sleep(forTimeInterval: 0.5)
-
-                if process.isRunning {
-                    process.interrupt()
-                }
-
-                return """
-                Builder timed out after \(Int(timeoutSeconds)) seconds.
-
-                I stopped the build attempt so I would not stay stuck thinking forever.
-
-                Try a smaller build goal, for example:
-                /build add a simple /ping command that replies pong
-
-                Or use safer task commands:
-                /autodev roadmap
-                /autodev next
-                /dev better-crawl
-                """
-            }
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Builder finished with no output."
-            }
-
-            return combined
-        } catch {
-            return "Could not run Lucy Builder: \(error.localizedDescription)"
-        }
-    }
-
-
-    func runAutoDevNext() -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "tools/lucy_autodev.py", "next"]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
-
-            if !completed {
-                return "Autodev next timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
-            }
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Autodev next finished with no output."
-            }
-
-            return combined
-        } catch {
-            return "Could not run autodev next: \(error.localizedDescription)"
-        }
-    }
-
-
-    func runAutoDevRoadmap() -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "tools/lucy_autodev.py", "roadmap"]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
-
-            if !completed {
-                return "Autodev roadmap timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
-            }
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Autodev finished with no output."
-            }
-
-            return combined
-        } catch {
-            return "Could not run autodev roadmap: \(error.localizedDescription)"
-        }
-    }
-
-
 
     var lastEmailDraft: String {
         get {
@@ -3995,398 +2653,6 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return openURL("https://mail.google.com/mail/u/0/#inbox")
     }
 
-
-
-
-    func lastAgentGoalURL() -> URL {
-        LucyPaths.root.appendingPathComponent(".lucy/last_agent_goal.txt")
-    }
-
-    func saveLastAgentGoal(_ goal: String) {
-        let url = lastAgentGoalURL()
-        try? FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? goal.write(to: url, atomically: true, encoding: .utf8)
-    }
-
-    func loadLastAgentGoal() -> String? {
-        let url = lastAgentGoalURL()
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-            return nil
-        }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    func isAgentRetryRequest(_ text: String) -> Bool {
-        let lowered = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let retryPhrases = [
-            "try again",
-            "retry",
-            "again",
-            "continue",
-            "keep going",
-            "nothing happened",
-            "it didn't work",
-            "it did not work",
-            "do it again",
-            "rerun",
-            "run it again"
-        ]
-
-        return retryPhrases.contains { lowered == $0 || lowered.contains($0) }
-    }
-
-
-    func shouldRouteToAgentLoop(_ text: String) -> Bool {
-        let rawLowered = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let lowered = normalizedForIntent(text)
-
-        if rawLowered.isEmpty {
-            return false
-        }
-
-        // Explicit slash commands should keep their own routers.
-        if rawLowered.hasPrefix("/") {
-            return false
-        }
-
-        // These examples document and test the normalized prompt forms Lucy should interpret:
-        // "opne", "serach", "wrtie", "emial", "mesage", "summrize", "anaylze".
-
-        // Strong task/action signals. These should use Lucy's agent loop.
-        let strongPatterns = [
-            "open ",
-            "launch ",
-            "start ",
-            "write ",
-            "draft ",
-            "prepare ",
-            "send ",
-            "message ",
-            "imessage",
-            "text ",
-            "email ",
-            "mail ",
-            "find ",
-            "search ",
-            "look up ",
-            "read ",
-            "summarize ",
-            "inspect ",
-            "check ",
-            "analyze ",
-            "tell me about ",
-            "what model",
-            "what time",
-            "whats the time",
-            "current time",
-            "time is it",
-            "today",
-            "date today",
-            "model provider",
-            "project status",
-            "create ",
-            "make ",
-            "build ",
-            "edit ",
-            "update ",
-            "delete ",
-            "move ",
-            "copy ",
-            "paste ",
-            "schedule ",
-            "set up a meeting",
-            "create a meeting",
-            "calendar event",
-            "add to calendar",
-            "put on my calendar",
-            "zoom meeting",
-            "remind ",
-            "call ",
-            "facetime",
-            "use ",
-            "go to ",
-            "navigate "
-        ]
-
-        for pattern in strongPatterns {
-            if lowered.hasPrefix(pattern) || lowered.contains(" " + pattern) {
-                return true
-            }
-        }
-
-        // App-specific action hints.
-        let appHints = [
-            "messages",
-            "contacts",
-            "calendar",
-            "safari",
-            "chrome",
-            "finder",
-            "notes",
-            "terminal",
-            "project",
-            "status",
-            "model provider",
-            "mlx",
-            "qwen"
-        ]
-
-        let actionWords = [
-            "open",
-            "write",
-            "draft",
-            "prepare",
-            "send",
-            "find",
-            "search",
-            "create",
-            "make",
-            "edit",
-            "update"
-        ]
-
-        let hasAppHint = appHints.contains { lowered.contains($0) }
-        let hasActionWord = actionWords.contains { lowered.contains($0) }
-
-        return hasAppHint && hasActionWord
-    }
-
-
-
-    func runLucySelfLoop(_ goal: String) -> String {
-        let trimmedGoal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if trimmedGoal.isEmpty {
-            return "Please give me a goal."
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "python3",
-            "tools/lucy_self_loop.py",
-            trimmedGoal,
-            "--max-cycles",
-            "2",
-            "--agent-steps",
-            "8",
-            "--dev-attempts",
-            "2"
-        ]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
-
-            if !completed {
-                return "Self-loop timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
-            }
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Self-loop finished with no output."
-            }
-
-            return """
-            Exit code: \(process.terminationStatus)
-
-            \(combined)
-            """
-        } catch {
-            return "Could not run Lucy self-loop: \(error.localizedDescription)"
-        }
-    }
-
-
-    func runLucyAgentLoop(_ goal: String) -> String {
-        let trimmedGoal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if trimmedGoal.isEmpty {
-            return "Please give me a goal. Example:\n/agent open Messages and prepare a draft to Andy saying hello"
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "python3",
-            "tools/lucy_agent_loop.py",
-            trimmedGoal,
-            "--max-steps",
-            "8"
-        ]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
-
-            if !completed {
-                return "Agent loop timed out after 30 seconds. I stopped it safely so Lucy would not stay stuck thinking."
-            }
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Agent loop finished with no output."
-            }
-
-            return """
-            Exit code: \(process.terminationStatus)
-
-            \(combined)
-            """
-        } catch {
-            return "Could not run Lucy agent loop: \(error.localizedDescription)"
-        }
-    }
-
-
-
-    func runLucyAutonomousBuild(_ goal: String) -> String {
-        let trimmedGoal = goal.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if trimmedGoal.isEmpty {
-            return "Please give me a goal. Example:\n/dev autonomous-build add a /hello-agent command"
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "python3",
-            "tools/lucy_autonomous_dev.py",
-            trimmedGoal,
-            "--model", "auto/local",
-            "--max-attempts", "3"
-        ]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err]
-                .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                .joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Autonomous build finished with no output."
-            }
-
-            return """
-            Exit code: \(process.terminationStatus)
-
-            \(combined)
-            """
-        } catch {
-            return "Could not run autonomous build: \(error.localizedDescription)"
-        }
-    }
-
-
-
-    func runDevAgentApply(task: String) -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "tools/lucy_dev_agent.py", "apply", task]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Dev agent apply finished with no output."
-            }
-
-            return combined
-        } catch {
-            return "Could not run dev agent apply: \(error.localizedDescription)"
-        }
-    }
-
-
-    func runDevAgentStatus() -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["python3", "tools/lucy_dev_agent.py", "status"]
-        process.currentDirectoryURL = LucyPaths.root
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            let out = String(data: outputPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-            let combined = [out, err].filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.joined(separator: "\n")
-
-            if combined.isEmpty {
-                return "Dev agent finished with no output."
-            }
-
-            return combined
-        } catch {
-            return "Could not run dev agent: \(error.localizedDescription)"
-        }
-    }
-
-
-
     func firstEmailAddress(in text: String) -> String? {
         let pattern = #"[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#
 
@@ -4490,7 +2756,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Mo
         """
 
-        let draft = runLocalLLM(prompt: prompt)
+        let draft = runMLX(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
         let parsed = parseEmailDraft(cleanDraft)
 
@@ -4579,7 +2845,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Mo
         """
 
-        let draft = runLocalLLM(prompt: prompt)
+        let draft = runMLX(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
         saveLastEmailDraft(cleanDraft)
 
@@ -4630,7 +2896,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         - Include the subject if the current draft includes one.
         """
 
-        let revised = stripTerminalEscapes(runLocalLLM(prompt: prompt))
+        let revised = stripTerminalEscapes(runMLX(prompt: prompt))
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         saveLastEmailDraft(revised)
@@ -4713,7 +2979,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
 
-    func askLocalLLM(_ userText: String) -> String {
+    func askMLX(_ userText: String) -> String {
         let memoryText = LucyMemory.shared.memoryPromptText()
 
         let prompt = """
@@ -4739,41 +3005,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         Lucy:
         """
 
-        return runLocalLLM(prompt: prompt)
-    }
-
-    func askLocalLLMForSelfUpdate(_ request: String) -> String {
-        let project = LucyDevTools.shared.projectSummary()
-        let swiftPreview = LucyDevTools.shared.readSwiftPreview()
-
-        let prompt = """
-        You are Lucy, a local-first Mac desktop pet and AI agent.
-
-        The user wants you to eventually self-update, self-adjust, and self-upgrade.
-        For now you are only allowed to create safe self-update proposals.
-        You must not claim you edited files.
-
-        User request:
-        \(request)
-
-        Current project:
-        \(project)
-
-        Current code preview:
-        \(swiftPreview)
-
-        Write a practical self-update proposal with:
-        1. Goal
-        2. Files likely changed
-        3. Exact behavior to add/change
-        4. Risks
-        5. Manual approval needed
-        6. Test plan
-
-        Keep it concise and grounded in the actual project.
-        """
-
-        return runLocalLLM(prompt: prompt)
+        return runMLX(prompt: prompt)
     }
     private func runShellStreaming(_ command: String) {
         let process = Process()
@@ -4795,14 +3027,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         do {
             try process.run()
-            let completed = waitForProcess(process, timeout: 30.0)
+            process.waitUntilExit()
             pipe.fileHandleForReading.readabilityHandler = nil
-
-            if !completed {
-                DispatchQueue.main.async {
-                    self.append("\nLucy: Command timed out after 30 seconds. I stopped it safely so I would not stay stuck thinking.\n")
-                }
-            }
         } catch {
             DispatchQueue.main.async {
                 self.append("Lucy: Streaming shell failed: \(error.localizedDescription)\n")

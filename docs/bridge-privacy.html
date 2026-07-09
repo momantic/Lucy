@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Privacy policy for the Lucy Bridge Chrome extension.">
+<title>Lucy Bridge Chrome Extension Privacy Policy</title>
+<link rel="icon" type="image/png" href="assets/favicon.png?v=3">
+<link rel="stylesheet" href="legal.css?v=1">
+</head>
+<body>
+<main class="container">
+  <nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="index.html"><img src="assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy Center</a>
+      <a href="desktop-privacy.html">Desktop Privacy</a>
+      <a href="terms.html">Terms</a>
+    </div>
+  </nav>
+
+  <header>
+    <span class="badge">Lucy Bridge · Chrome Extension</span>
+    <h1>Privacy Policy for Lucy Bridge</h1>
+    <p class="lead">Lucy Bridge is the optional Chrome extension that lets you send the webpage you choose to the local Lucy desktop app. This policy covers the extension only.</p>
+    <p class="meta">Effective date: July 8, 2026</p>
+  </header>
+
+  <section class="panel">
+    <h2>Short version</h2>
+    <p class="note">Lucy Bridge reads the active tab only after you click the extension icon. It sends the captured page text to Lucy running locally on your Mac at <code>http://127.0.0.1:8765</code>. It does not sell data or send webpage content to third-party servers.</p>
+  </section>
+
+  <section class="section">
+    <h2>What the extension accesses</h2>
+    <p>When you click the Lucy Bridge extension icon, the extension may access the URL, page title, visible page text, and basic page structure from the currently active browser tab. On LinkedIn pages, it may also structure visible post details such as author text, headline text, post text, post URL, and visible engagement text so Lucy can understand the page more accurately. It does not continuously monitor browsing, read tabs in the background, or access a page before you take that action.</p>
+  </section>
+
+  <section class="section">
+    <h2>How the extension uses data</h2>
+    <p>The extension uses the selected page information for one purpose: sending it to the Lucy desktop app through the local bridge so Lucy can summarize, extract, draft, or answer questions about the page on your Mac.</p>
+  </section>
+
+  <section class="section">
+    <h2>What is sent to local Lucy</h2>
+    <p>After your click, Lucy Bridge sends a local request that may include the page URL, page title, extracted page text, raw visible page text, and any structured LinkedIn post details found on the visible page. This request is sent to <code>http://127.0.0.1:8765/page</code>, which is the Lucy bridge server running on your own Mac.</p>
+  </section>
+
+  <section class="section">
+    <h2>Localhost communication</h2>
+    <p>Lucy Bridge communicates with the local Lucy desktop bridge at <code>http://127.0.0.1:8765</code>. This is a local address on your computer. If the local bridge server is not running, the extension cannot send the page to Lucy.</p>
+  </section>
+
+  <section class="section">
+    <h2>Permissions</h2>
+    <ul class="list">
+      <li><strong><code>activeTab</code>:</strong> lets Lucy Bridge access only the active tab after you click the extension icon.</li>
+      <li><strong><code>scripting</code>:</strong> lets Lucy Bridge run a capture script on that active tab after your click.</li>
+      <li><strong><code>http://127.0.0.1:8765/*</code>:</strong> lets Lucy Bridge send the captured page content to the local Lucy bridge on your Mac.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>Data collection, sale, and sharing</h2>
+    <p>We do not collect, sell, rent, or transfer personal data from Lucy Bridge. The extension does not send webpage content to us or to third-party servers. Page content is transmitted only to the local Lucy desktop app when you click the extension icon.</p>
+  </section>
+
+  <section class="section">
+    <h2>Local storage and retention</h2>
+    <p>Lucy Bridge does not use Chrome extension storage to keep page content. After content reaches the local Lucy bridge server, the desktop bridge may keep the latest captured page in local memory and temporary files on your Mac, such as <code>/tmp/lucy_browser_page.txt</code>, <code>/tmp/lucy_browser_raw_page.txt</code>, and <code>/tmp/lucy_browser_linkedin_posts.json</code>, so the desktop app can read it. You can stop the local bridge server or delete those temporary files through macOS if needed.</p>
+  </section>
+
+  <section class="section">
+    <h2>Relationship to Lucy Desktop</h2>
+    <p>After page content reaches the local Lucy desktop app, the desktop app handles it according to the <a href="desktop-privacy.html">Lucy Desktop Privacy Policy</a>. For example, Lucy may include that content in a local chat or memory if you ask it to do so.</p>
+  </section>
+
+  <section class="section">
+    <h2>Changes to this policy</h2>
+    <p>We may update this policy if Lucy Bridge changes. When we do, we will update the effective date and publish the revised policy on this website.</p>
+  </section>
+
+  <section class="section">
+    <h2>Contact</h2>
+    <p>For questions, open an issue on the <a href="https://github.com/momantic/Lucy">Lucy GitHub repository</a>.</p>
+  </section>
+
+  <footer class="footer">
+    <span>Lucy Bridge · Chrome Extension Privacy</span>
+    <span><a href="privacy.html">Privacy Center</a> · <a href="terms.html">Terms</a></span>
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Privacy policy for the Lucy local-first Mac desktop app.">
+<title>Lucy Desktop Privacy Policy</title>
+<link rel="icon" type="image/png" href="assets/favicon.png?v=3">
+<link rel="stylesheet" href="legal.css?v=1">
+</head>
+<body>
+<main class="container">
+  <nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="index.html"><img src="assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy Center</a>
+      <a href="bridge-privacy.html">Bridge Privacy</a>
+      <a href="terms.html">Terms</a>
+    </div>
+  </nav>
+
+  <header>
+    <span class="badge">Lucy Desktop</span>
+    <h1>Privacy Policy for Lucy Desktop</h1>
+    <p class="lead">Lucy Desktop is a local-first AI assistant for Mac. This policy explains how the desktop app handles local memories, chats, settings, models, and optional tools.</p>
+    <p class="meta">Effective date: July 8, 2026</p>
+  </header>
+
+  <section class="panel">
+    <h2>Short version</h2>
+    <p class="note">Lucy Desktop is designed so your core assistant data stays on your Mac. We do not sell your personal data, run an advertising profile, or require a cloud account for local use.</p>
+  </section>
+
+  <section class="section">
+    <h2>Information Lucy Desktop may store locally</h2>
+    <p>Lucy may save app data on your Mac so the assistant can work across sessions. Depending on how you use Lucy, this may include:</p>
+    <ul class="list">
+      <li>Chats, prompts, assistant responses, drafts, and task history.</li>
+      <li>Local memories or notes that help Lucy remember preferences and context.</li>
+      <li>Settings such as model provider choices, enabled tools, UI preferences, and local paths.</li>
+      <li>Local AI model configuration and model files you add to the app.</li>
+      <li>Local logs or diagnostic output needed to troubleshoot features.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>How Lucy uses local data</h2>
+    <p>Lucy uses local app data to answer your requests, remember context you choose to keep, run local tools, configure local AI models, and improve the continuity of your personal workspace. Lucy does not use your data for third-party advertising or sell it to data brokers.</p>
+  </section>
+
+  <section class="section">
+    <h2>AI models and optional internet tools</h2>
+    <p>Lucy is built around local AI execution where available, including MLX on Apple Silicon and local GGUF models through llama.cpp on supported Intel Macs. If you choose to configure an external model provider, web search, remote API, or other internet-enabled tool, the information you send through that feature may be processed by the relevant third-party service under that service’s own terms and privacy policy.</p>
+    <p class="warn">Only enable internet-connected tools if you are comfortable sending the selected request or content to that service.</p>
+  </section>
+
+  <section class="section">
+    <h2>Browser content</h2>
+    <p>Lucy Desktop can receive webpage content from the optional Lucy Bridge Chrome extension through a localhost bridge. Browser content is sent to Lucy only when you click the extension. Depending on the page, the local bridge may receive the page URL, page title, extracted page text, raw visible page text, and structured details for visible LinkedIn posts. The extension has its own separate policy: <a href="bridge-privacy.html">Lucy Bridge Privacy Policy</a>.</p>
+    <p>The local bridge may keep the latest captured page in memory and temporary files on your Mac, including <code>/tmp/lucy_browser_page.txt</code>, <code>/tmp/lucy_browser_raw_page.txt</code>, and <code>/tmp/lucy_browser_linkedin_posts.json</code>, so Lucy can use the page in your local session.</p>
+  </section>
+
+  <section class="section">
+    <h2>Data sharing</h2>
+    <p>Lucy Desktop does not sell, rent, or share your personal data for advertising. Local data remains on your Mac unless you choose to export it, back it up, sync it through your own system tools, or use an optional internet-connected feature that sends selected content to another service.</p>
+  </section>
+
+  <section class="section">
+    <h2>Data deletion and control</h2>
+    <p>You control the data stored by Lucy on your Mac. You can delete chats, memories, settings, model files, exported content, or the Lucy app data folders using the app’s controls where available or through macOS file management. If you back up your Mac, deleted Lucy data may remain in your backups until those backups expire or are removed.</p>
+  </section>
+
+  <section class="section">
+    <h2>Security</h2>
+    <p>Lucy is designed to minimize unnecessary data movement. Still, no software can guarantee perfect security. Keep macOS updated, download Lucy from the official GitHub release or website, and be careful when installing third-party model files or enabling tools from untrusted sources.</p>
+  </section>
+
+  <section class="section">
+    <h2>Children</h2>
+    <p>Lucy is not intended for children under 13. Do not use Lucy to knowingly collect or process children’s personal information.</p>
+  </section>
+
+  <section class="section">
+    <h2>Changes to this policy</h2>
+    <p>We may update this policy as Lucy evolves. When we do, we will update the effective date and publish the revised policy on this website.</p>
+  </section>
+
+  <section class="section">
+    <h2>Contact</h2>
+    <p>For questions, open an issue on the <a href="https://github.com/momantic/Lucy">Lucy GitHub repository</a>.</p>
+  </section>
+
+  <footer class="footer">
+    <span>Lucy v0.1 beta · Desktop Privacy</span>
+    <span><a href="privacy.html">Privacy Center</a> · <a href="terms.html">Terms</a></span>
+  </footer>
+</main>
+</body>
+</html>

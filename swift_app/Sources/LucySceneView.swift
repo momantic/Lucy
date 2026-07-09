@@ -46,6 +46,13 @@ class LucySceneView: SCNView {
         idleTimer?.invalidate()
     }
 
+    func prepareForShutdown() {
+        idleTimer?.invalidate()
+        idleTimer = nil
+        isPlaying = false
+        scene = nil
+    }
+
     func setupScene() {
         wantsLayer = true
         layer?.backgroundColor = NSColor.clear.cgColor

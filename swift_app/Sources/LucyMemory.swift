@@ -15,7 +15,7 @@ class LucyMemory {
                     "Lucy is a local-first AI desktop pet.",
                     "Lucy should stay 100 percent free to run.",
                     "Lucy is visually inspired by a cute jumping spider.",
-                    "Lucy should eventually self-update, self-adjust, and self-upgrade safely."
+                    "Lucy should focus on practical user-facing tools and avoid self-modifying behavior."
                 ]
             ]
 

@@ -7,17 +7,18 @@
 <title>Lucy — Local AI Desktop Agent for Mac</title>
 <link rel="icon" type="image/png" href="assets/favicon.png?v=3">
 <style>
-:root{color-scheme:dark;--bg:#07070b;--panel:rgba(255,255,255,.06);--panel-2:rgba(255,255,255,.1);--line:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.72);--cyan:#00d4ff;--violet:#7c5cff;--green:#6dffb2}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:radial-gradient(circle at 20% 0%,rgba(124,92,255,.28),transparent 34%),radial-gradient(circle at 84% 10%,rgba(0,212,255,.2),transparent 30%),linear-gradient(180deg,#111126 0%,var(--bg) 64%);color:var(--text)}a{color:inherit}.container{max-width:1120px;margin:0 auto;padding:28px 24px 80px}.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:68px}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.brand img{width:34px;height:34px;border-radius:9px}.nav-links{display:flex;gap:10px;flex-wrap:wrap}.nav-links a{text-decoration:none;color:var(--muted);padding:9px 12px;border-radius:999px}.nav-links a:hover{background:var(--panel);color:#fff}.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr);gap:44px;align-items:center}.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:rgba(109,255,178,.09);border:1px solid rgba(109,255,178,.24);color:var(--green);font-size:13px;font-weight:700}.version{color:var(--cyan);font-weight:800}h1{font-size:clamp(48px,8vw,86px);line-height:.95;margin:18px 0 20px;letter-spacing:-.06em;background:linear-gradient(90deg,#fff,#cfd2ff 38%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}.subtitle{font-size:20px;line-height:1.6;color:var(--muted);max-width:720px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:15px;font-weight:800;text-decoration:none;border:1px solid var(--line)}.primary{background:linear-gradient(135deg,var(--violet),var(--cyan));color:#06070a;border:0}.secondary{background:var(--panel);color:#fff}.hero-card{background:linear-gradient(180deg,var(--panel-2),rgba(255,255,255,.04));border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:0 30px 100px rgba(0,0,0,.28)}.icon{width:132px;height:132px;border-radius:28px;display:block;margin:0 auto 20px;box-shadow:0 24px 70px rgba(124,92,255,.35)}.quick{display:grid;gap:12px;margin-top:18px}.quick div{display:flex;gap:10px;color:var(--muted);line-height:1.45}.check{color:var(--green);font-weight:900}.section{margin-top:82px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}.section h2{font-size:32px;margin:0;letter-spacing:-.03em}.section p{color:var(--muted);line-height:1.6}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;min-height:140px}.card strong{display:block;font-size:18px;margin-bottom:8px}.steps{counter-reset:step;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.step{position:relative}.step:before{counter-increment:step;content:counter(step);display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--cyan));color:#05060a;font-weight:900;margin-bottom:14px}.note{border-left:3px solid var(--cyan);padding-left:14px}.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:72px;color:rgba(255,255,255,.58);font-size:14px}.footer a{color:rgba(255,255,255,.78)}@media(max-width:860px){.hero{grid-template-columns:1fr}.grid,.steps{grid-template-columns:1fr}.nav{align-items:flex-start;flex-direction:column}.section-head{display:block}.container{padding-top:22px}.subtitle{font-size:18px}}
+:root{color-scheme:dark;--bg:#07070b;--panel:rgba(255,255,255,.06);--panel-2:rgba(255,255,255,.1);--line:rgba(255,255,255,.12);--text:#fff;--muted:rgba(255,255,255,.72);--cyan:#00d4ff;--violet:#7c5cff;--green:#6dffb2}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:radial-gradient(circle at 20% 0%,rgba(124,92,255,.28),transparent 34%),radial-gradient(circle at 84% 10%,rgba(0,212,255,.2),transparent 30%),linear-gradient(180deg,#111126 0%,var(--bg) 64%);color:var(--text)}a{color:inherit}.container{max-width:1120px;margin:0 auto;padding:28px 24px 80px}.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:68px}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.brand img{width:34px;height:34px;border-radius:9px}.nav-links{display:flex;gap:10px;flex-wrap:wrap}.nav-links a{text-decoration:none;color:var(--muted);padding:9px 12px;border-radius:999px}.nav-links a:hover{background:var(--panel);color:#fff}.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr);gap:44px;align-items:center}.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:rgba(109,255,178,.09);border:1px solid rgba(109,255,178,.24);color:var(--green);font-size:13px;font-weight:700}.version{color:var(--cyan);font-weight:800}h1{font-size:clamp(48px,8vw,86px);line-height:.95;margin:18px 0 20px;letter-spacing:-.06em;background:linear-gradient(90deg,#fff,#cfd2ff 38%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}.subtitle{font-size:20px;line-height:1.6;color:var(--muted);max-width:720px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:15px;font-weight:800;text-decoration:none;border:1px solid var(--line)}.primary{background:linear-gradient(135deg,var(--violet),var(--cyan));color:#06070a;border:0}.secondary{background:var(--panel);color:#fff}.hero-card{background:linear-gradient(180deg,var(--panel-2),rgba(255,255,255,.04));border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:0 30px 100px rgba(0,0,0,.28)}.icon{width:132px;height:132px;border-radius:28px;display:block;margin:0 auto 20px;box-shadow:0 24px 70px rgba(124,92,255,.35)}.quick{display:grid;gap:12px;margin-top:18px}.quick div{display:flex;gap:10px;color:var(--muted);line-height:1.45}.check{color:var(--green);font-weight:900}.section{margin-top:82px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}.section h2{font-size:32px;margin:0;letter-spacing:-.03em}.section p{color:var(--muted);line-height:1.6}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.grid.two{grid-template-columns:repeat(2,1fr)}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;min-height:140px}.card strong{display:block;font-size:18px;margin-bottom:8px}.card-link{display:inline-flex;margin-top:8px;color:var(--cyan);font-weight:800;text-decoration:none}.card-link:hover{text-decoration:underline}.privacy-callout{background:linear-gradient(180deg,rgba(124,92,255,.14),rgba(0,212,255,.06));border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:24px}.privacy-callout .section-head{align-items:center}.steps{counter-reset:step;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.step{position:relative}.step:before{counter-increment:step;content:counter(step);display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--cyan));color:#05060a;font-weight:900;margin-bottom:14px}.note{border-left:3px solid var(--cyan);padding-left:14px}.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:72px;color:rgba(255,255,255,.58);font-size:14px}.footer a{color:rgba(255,255,255,.78)}@media(max-width:860px){.hero{grid-template-columns:1fr}.grid,.grid.two,.steps{grid-template-columns:1fr}.nav{align-items:flex-start;flex-direction:column}.section-head{display:block}.container{padding-top:22px}.subtitle{font-size:18px}}
 </style>
 </head>
 <body>
 <main class="container">
   <nav class="nav" aria-label="Main navigation">
-    <a class="brand" href="/Lucy/"><img src="assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
+    <a class="brand" href="index.html"><img src="assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
     <div class="nav-links">
-      <a href="/Lucy/install/">Install</a>
-      <a href="/Lucy/bridge/">Chrome Bridge</a>
-      <a href="/Lucy/privacy.html">Privacy</a>
+      <a href="install/index.html">Install</a>
+      <a href="bridge/index.html">Chrome Bridge</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
       <a href="https://github.com/momantic/Lucy">GitHub</a>
     </div>
   </nav>
@@ -28,9 +29,9 @@
       <h1>Lucy runs on your Mac.</h1>
       <p class="subtitle">Download Lucy, unzip, open the app, and add Lucy Bridge from the Chrome Web Store when you want Lucy to read webpages. Lucy now supports Apple Silicon with MLX and older Intel Macs with local GGUF models through llama.cpp. No cloud account, no subscription, and no browser content leaves your machine.</p>
       <div class="actions">
-        <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
+        <a class="btn primary" data-download-source="home-hero" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
         <a class="btn secondary" href="https://chromewebstore.google.com/detail/lucy-bridge/annlbnhnlflpofdjlmdmfebcgakhlccn">Add Chrome Bridge</a>
-        <a class="btn secondary" href="/Lucy/install/">Install guide</a>
+        <a class="btn secondary" href="install/index.html">Install guide</a>
       </div>
     </div>
     <aside class="hero-card" aria-label="Fast setup summary">
@@ -47,7 +48,7 @@
   <section class="section">
     <div class="section-head">
       <h2>What Lucy can do</h2>
-      <a class="btn secondary" href="/Lucy/install/">Install Lucy</a>
+      <a class="btn secondary" href="install/index.html">Install Lucy</a>
     </div>
     <div class="grid">
       <div class="card"><strong>Understand webpages</strong><p>Summarize, extract, and reason over the page you choose to share through the local bridge.</p></div>
@@ -66,10 +67,45 @@
     <p class="note">If you only want the desktop app, you can skip the Chrome Bridge until you need webpage reading.</p>
   </section>
 
+  <section class="section privacy-callout" aria-label="Lucy privacy policies">
+    <div class="section-head">
+      <div>
+        <span class="badge">Privacy policies · Effective July 8, 2026</span>
+        <h2>Privacy is documented for each part of Lucy.</h2>
+      </div>
+      <a class="btn secondary" href="privacy.html">Privacy Center</a>
+    </div>
+    <p>Lucy is split into the local-first Mac desktop app and the optional Lucy Bridge Chrome extension. The main Privacy Center links to both policies so you can review exactly how local chats, memories, settings, browser page captures, and localhost bridge communication are handled.</p>
+    <div class="grid two">
+      <article class="card">
+        <strong>Lucy Desktop Privacy Policy</strong>
+        <p>Covers local app data including chats, memories, settings, model files, browser content received from the local bridge, and optional internet-connected tools.</p>
+        <a class="card-link" href="desktop-privacy.html">Read desktop policy →</a>
+      </article>
+      <article class="card">
+        <strong>Lucy Bridge Chrome Extension Privacy Policy</strong>
+        <p>Covers active-tab access after your click, what page details are sent to <code>http://127.0.0.1:8765</code>, extension permissions, and data sharing limits.</p>
+        <a class="card-link" href="bridge-privacy.html">Read extension policy →</a>
+      </article>
+    </div>
+  </section>
+
   <footer class="footer">
     <span>Lucy v0.1 beta · Local-first desktop AI</span>
-    <span><a href="https://github.com/momantic/Lucy">GitHub</a> · <a href="/Lucy/privacy.html">Privacy</a></span>
+    <span><a href="https://github.com/momantic/Lucy">GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
   </footer>
 </main>
+<script src="download-tracker-config.js"></script>
+<script>
+window.LUCY_DOWNLOAD_TRACKER_BASE = window.LUCY_DOWNLOAD_TRACKER_BASE || '';
+(function(){
+  const tracker = String(window.LUCY_DOWNLOAD_TRACKER_BASE || '').replace(/\/$/, '');
+  if (!tracker) return;
+  document.querySelectorAll('[data-download-source]').forEach((link)=>{
+    const source = encodeURIComponent(link.dataset.downloadSource || 'unknown');
+    link.href = `${tracker}/d/lucy?source=${source}`;
+  });
+})();
+</script>
 </body>
 </html>

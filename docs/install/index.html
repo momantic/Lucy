@@ -13,11 +13,12 @@
 <body>
 <main class="container">
   <nav class="nav" aria-label="Main navigation">
-    <a class="brand" href="/Lucy/"><img src="../assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
+    <a class="brand" href="../index.html"><img src="../assets/lucy.jpg" alt="Lucy icon"> Lucy</a>
     <div class="nav-links">
-      <a href="/Lucy/">Home</a>
-      <a href="/Lucy/bridge/">Chrome Bridge</a>
-      <a href="/Lucy/privacy.html">Privacy</a>
+      <a href="../index.html">Home</a>
+      <a href="../bridge/index.html">Chrome Bridge</a>
+      <a href="../privacy.html">Privacy</a>
+      <a href="../terms.html">Terms</a>
       <a href="https://github.com/momantic/Lucy">GitHub</a>
     </div>
   </nav>
@@ -28,7 +29,7 @@
       <h1>Install Lucy in minutes.</h1>
       <p class="lead">Click the Lucy ZIP for a smooth Mac download, or copy the one-line command if you prefer Terminal. The Chrome Bridge is now one click from the Chrome Web Store and is only needed when you want Lucy to read the webpage you choose.</p>
       <div class="actions">
-        <a class="btn primary" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
+        <a class="btn primary" data-download-source="install-hero" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
         <a class="btn secondary" href="https://chromewebstore.google.com/detail/lucy-bridge/annlbnhnlflpofdjlmdmfebcgakhlccn">Add Lucy Bridge to Chrome</a>
       </div>
       <p class="mini">Requires macOS. Apple Silicon uses MLX by default; Intel Macs can use local GGUF models through llama.cpp. Python 3 is needed for bridge mode and Intel local-model setup.</p>
@@ -107,10 +108,24 @@
 
   <footer class="footer">
     <span>Need source files? <a href="https://github.com/momantic/Lucy">View Lucy on GitHub</a></span>
-    <span><a href="/Lucy/">Home</a> · <a href="/Lucy/privacy.html">Privacy</a></span>
+    <span><a href="../index.html">Home</a> · <a href="../privacy.html">Privacy</a> · <a href="../terms.html">Terms</a></span>
   </footer>
 </main>
+<script src="../download-tracker-config.js"></script>
 <script>
+window.LUCY_DOWNLOAD_TRACKER_BASE = window.LUCY_DOWNLOAD_TRACKER_BASE || '';
+(function(){
+  const tracker = String(window.LUCY_DOWNLOAD_TRACKER_BASE || '').replace(/\/$/, '');
+  if (!tracker) return;
+  document.querySelectorAll('[data-download-source]').forEach((link)=>{
+    const source = encodeURIComponent(link.dataset.downloadSource || 'unknown');
+    link.href = `${tracker}/d/lucy?source=${source}`;
+  });
+  const command = document.getElementById('install-command');
+  if (command) {
+    command.textContent = command.textContent.replace('https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip', `${tracker}/d/lucy?source=install-command`);
+  }
+})();
 document.querySelectorAll('.copy').forEach((button)=>{button.addEventListener('click',async()=>{const target=document.getElementById(button.dataset.copy);const text=target?target.textContent.trim():'';try{await navigator.clipboard.writeText(text);const original=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=original,1400)}catch(error){button.textContent='Select text'}})})
 </script>
 </body>
