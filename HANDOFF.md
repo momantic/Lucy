@@ -57,6 +57,16 @@ When starting a new task, read this file first so you know where the previous se
 
 ## Session Log
 
+### 2026-07-17 20:46 America/New_York — Put full privacy changes on the live website Privacy page
+
+- **User request:** “the privacy changes were not added to the actual website. please do that.”
+- **Action taken:** Confirmed GitHub Pages is serving from `main` / `docs/`, then expanded `docs/privacy.html` so the main Privacy page itself contains the full updated desktop-app and Lucy Bridge privacy details instead of only linking to separate policy pages.
+- **Files touched:**
+  - `docs/privacy.html`
+  - `HANDOFF.md`
+- **Verification:** Ran a local HTML reference resolver across `docs/**/*.html` and checked the new Privacy page content markers for effective date, desktop details, browser/local bridge details, extension details, local temp file paths, and `127.0.0.1:8765/page`.
+- **Next recommended step:** After commit/push, wait for GitHub Pages deployment and hard-refresh `https://momantic.github.io/Lucy/privacy.html`.
+
 ### 2026-07-07 15:29 America/New_York — Confirm website compatibility messaging and publish to GitHub
 
 - **User request:** “confirm website includes this new ability and push changes to github”
