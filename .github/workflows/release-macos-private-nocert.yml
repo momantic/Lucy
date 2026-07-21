@@ -1,0 +1,81 @@
+name: Build private no-cert Lucy macOS release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, e.g. v0.1-beta'
+        required: true
+        default: 'v0.1-beta'
+      publish_release:
+        description: 'Replace the GitHub Release ZIP asset'
+        required: true
+        type: boolean
+        default: true
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/release-macos-private-nocert.yml'
+      - 'install_lucy_local_no_cert.sh'
+      - 'release_lucy_zip.sh'
+      - 'build_lucy_app.sh'
+      - 'swift_app/**'
+      - 'assets/**'
+      - 'browser_bridge/**'
+      - 'data/**'
+      - 'tools/**'
+      - 'tools_created_by_lucy/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build-private-nocert-zip:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build private no-cert ZIP
+        env:
+          LUCY_RELEASE_VERSION: ${{ github.event.inputs.version || 'v0.1-beta' }}
+          LUCY_ALLOW_UNNOTARIZED_RELEASE: '1'
+          LUCY_KEEP_EXPANDED_RELEASE: '1'
+        run: |
+          set -euo pipefail
+          zsh ./release_lucy_zip.sh
+
+      - name: Verify private no-cert packaging helpers
+        env:
+          LUCY_RELEASE_VERSION: ${{ github.event.inputs.version || 'v0.1-beta' }}
+        run: |
+          set -euo pipefail
+          python3 -m unittest \
+            tests.test_local_no_cert_install \
+            tests.test_release_lucy_zip \
+            tests.test_single_lucy_app_policy
+          unzip -l "release/Lucy-${LUCY_RELEASE_VERSION}.zip" '*/install_lucy_local_no_cert.sh'
+          ditto -x -k "release/Lucy-${LUCY_RELEASE_VERSION}.zip" "$RUNNER_TEMP/lucy-release-check"
+          cd "$RUNNER_TEMP/lucy-release-check/Lucy-${LUCY_RELEASE_VERSION}"
+          zsh ./install_lucy_local_no_cert.sh --no-open
+          codesign --verify --deep --strict --verbose=2 Lucy.app
+
+      - name: Upload private no-cert ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lucy-${{ github.event.inputs.version || 'v0.1-beta' }}.zip
+          path: release/Lucy-${{ github.event.inputs.version || 'v0.1-beta' }}.zip
+          if-no-files-found: error
+
+      - name: Publish ZIP to GitHub Release
+        if: ${{ github.event_name == 'push' || github.event.inputs.publish_release == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.event.inputs.version || 'v0.1-beta' }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release create "$VERSION" --title "Lucy $VERSION" --notes "Private no-cert Lucy macOS release."
+          fi
+          gh release upload "$VERSION" "release/Lucy-${VERSION}.zip" --clobber

@@ -37,21 +37,47 @@
     <aside class="panel toc" aria-label="Install sections">
       <strong>Quick links</strong>
       <a href="#fast">1. Fast install command</a>
-      <a href="#manual">2. Manual install</a>
-      <a href="#intel">3. Intel/older Mac local models</a>
-      <a href="#bridge">4. Chrome Bridge from Web Store</a>
-      <a href="#fixes">5. Quick fixes</a>
+      <a href="#nocert">2. Private no-cert install</a>
+      <a href="#manual">3. Manual install</a>
+      <a href="#intel">4. Intel/older Mac local models</a>
+      <a href="#bridge">5. Chrome Bridge from Web Store</a>
+      <a href="#fixes">6. Quick fixes</a>
     </aside>
   </section>
 
   <section id="fast" class="section panel">
     <h2>Fastest path</h2>
-    <p>Want the least manual setup? Copy this into Terminal. It downloads the latest Lucy release to <code>~/Downloads</code>, unzips it, clears stale browser quarantine metadata, and opens the app. Public browser downloads should be built by Lucy’s notarized release workflow.</p>
+    <p>Want the least manual setup? Copy this into Terminal. It downloads the latest Lucy release to <code>~/Downloads</code>, unzips it, and runs Lucy’s included local repair helper. Public browser downloads should be built by Lucy’s notarized release workflow; private no-cert builds use the helper path below.</p>
     <div class="code-row">
-      <pre id="install-command">cd ~/Downloads && rm -rf Lucy-v0.1-beta && curl -L -o Lucy-v0.1-beta.zip https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip && unzip -o Lucy-v0.1-beta.zip && { xattr -dr com.apple.quarantine Lucy-v0.1-beta/Lucy.app 2>/dev/null || true; } && open Lucy-v0.1-beta/Lucy.app</pre>
+      <pre id="install-command">cd ~/Downloads && rm -rf Lucy-v0.1-beta Lucy-v0.1-beta.zip && curl -L -o Lucy-v0.1-beta.zip https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip && unzip -q Lucy-v0.1-beta.zip && cd Lucy-v0.1-beta && zsh ./install_lucy_local_no_cert.sh --direct-launch</pre>
       <button class="copy" data-copy="install-command">Copy</button>
     </div>
-    <p class="ok"><strong>Tip:</strong> If macOS blocks the first launch, right-click <strong>Lucy.app</strong>, choose <strong>Open</strong>, then confirm once. If macOS says Lucy is damaged after a browser download, use the Terminal command above or install a ZIP published by the notarized GitHub release workflow.</p>
+    <p class="ok"><strong>Tip:</strong> For the current private no-cert build, use the Terminal command above. If you later publish a notarized Developer ID build, users can also double-click <strong>Lucy.app</strong> or use right-click → <strong>Open</strong> for the first launch.</p>
+  </section>
+
+  <section id="nocert" class="section panel">
+    <h2>Private no-cert install</h2>
+    <p>Do this for local beta testing if you do not have Apple Developer ID signing and notarization yet. It avoids the broken browser-download path by building or repairing Lucy on your own Mac, clearing browser quarantine metadata where macOS allows it, ad-hoc signing the app locally, and opening it.</p>
+    <div class="code-row">
+      <pre id="nocert-command">cd ~/Documents/Lucy && zsh ./install_lucy_local_no_cert.sh</pre>
+      <button class="copy" data-copy="nocert-command">Copy</button>
+    </div>
+    <p>To repair a private ZIP you already downloaded, run:</p>
+    <div class="code-row">
+      <pre id="nocert-zip-command">cd ~/Documents/Lucy && zsh ./install_lucy_local_no_cert.sh --zip ~/Downloads/Lucy-v0.1-beta.zip</pre>
+      <button class="copy" data-copy="nocert-zip-command">Copy</button>
+    </div>
+    <p>If the private ZIP already includes the helper, you can run it from the extracted folder:</p>
+    <div class="code-row">
+      <pre id="nocert-extracted-command">cd ~/Downloads/Lucy-v0.1-beta && zsh ./install_lucy_local_no_cert.sh --direct-launch</pre>
+      <button class="copy" data-copy="nocert-extracted-command">Copy</button>
+    </div>
+    <p>If Finder still blocks the ad-hoc signed app, launch Lucy directly from Terminal:</p>
+    <div class="code-row">
+      <pre id="nocert-direct-command">cd ~/Documents/Lucy && zsh ./install_lucy_local_no_cert.sh --zip ~/Downloads/Lucy-v0.1-beta.zip --direct-launch</pre>
+      <button class="copy" data-copy="nocert-direct-command">Copy</button>
+    </div>
+    <p class="warn"><strong>Important:</strong> This is for private/local installs only. Public downloads still need Developer ID signing and notarization for the normal macOS double-click Gatekeeper experience.</p>
   </section>
 
   <section id="manual" class="section">
@@ -91,8 +117,8 @@
     <div class="panel">
       <h2>Quick fixes</h2>
       <ul class="checklist">
-        <li><strong>Lucy will not open:</strong> confirm you downloaded the latest ZIP, then right-click Lucy.app and choose Open once.</li>
-        <li><strong>Lucy says “damaged”:</strong> use the Fastest path Terminal command above, or delete the old ZIP/app and download the latest ZIP published by the notarized release workflow.</li>
+        <li><strong>Lucy will not open:</strong> use the Fastest path Terminal command above for the private no-cert build.</li>
+        <li><strong>Lucy says “damaged”:</strong> use the private no-cert installer for local beta testing, or delete the old ZIP/app and download the latest ZIP published by the notarized release workflow.</li>
         <li><strong>Older Intel Mac local model fails:</strong> run <code>tools/setup_local_llm_intel.sh</code>, add a small GGUF model, and launch with the setup Python.</li>
         <li><strong>Chrome Bridge will not send the page:</strong> start the local server command above, then click the extension icon again.</li>
         <li><strong>Chrome Web Store does not open:</strong> use the direct bridge link above or search for “Lucy Bridge” in the Chrome Web Store.</li>

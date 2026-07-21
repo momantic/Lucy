@@ -133,6 +133,7 @@ ditto --norsrc --noextattr assets/sprites "$STAGING_RELEASE_DIR/assets/sprites"
 ditto --norsrc --noextattr assets/scenekit "$STAGING_RELEASE_DIR/assets/scenekit"
 ditto --norsrc --noextattr assets/lucy_icon_1024.png "$STAGING_RELEASE_DIR/assets/lucy_icon_1024.png"
 ditto --norsrc --noextattr lucy-store-icon.png "$STAGING_RELEASE_DIR/lucy-store-icon.png"
+ditto --norsrc --noextattr install_lucy_local_no_cert.sh "$STAGING_RELEASE_DIR/install_lucy_local_no_cert.sh"
 
 find "$STAGING_RELEASE_DIR" -type f \( -name '*.sh' -o -name '*.py' -o -name '*.applescript' \) -exec chmod +x {} +
 scrub_macos_metadata "$STAGING_RELEASE_DIR"
@@ -151,6 +152,10 @@ For public website downloads, this ZIP must be built with a Developer ID
 Application certificate and notarized before uploading. Unnotarized builds are
 for private/local QA only and may show "Lucy is damaged and should be moved to
 Trash" when downloaded through a browser.
+
+Private/local no-cert repair:
+- From this extracted folder, run: zsh ./install_lucy_local_no_cert.sh
+- If Finder still blocks opening, run: zsh ./install_lucy_local_no_cert.sh --direct-launch
 
 Intel / older Mac local models:
 1. Open Terminal.
@@ -187,6 +192,7 @@ fi
 # Build the website ZIP from /tmp staging to avoid repo-folder provenance or
 # resource-fork metadata being embedded in public downloads.
 (cd "$STAGING_ROOT" && ditto -c -k --keepParent --norsrc --noextattr --zlibCompressionLevel 9 "$RELEASE_NAME" "$ZIP_PATH")
+xattr -cr "$ZIP_PATH" 2>/dev/null || true
 
 if [ "$ALLOW_UNNOTARIZED_RELEASE" != "1" ]; then
   VERIFY_ROOT="$(mktemp -d)"
