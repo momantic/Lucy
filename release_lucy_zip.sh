@@ -162,6 +162,7 @@ Intel / older Mac local models:
 2. cd into this folder.
 3. Run: tools/setup_local_llm_intel.sh
 4. Add a small GGUF model to assets/models or configure data/model_provider.json.
+5. Reopen Lucy from this same folder. Lucy auto-detects .venv-local-llm.
 
 Chrome Bridge:
 - Install Lucy Bridge from the Chrome Web Store.

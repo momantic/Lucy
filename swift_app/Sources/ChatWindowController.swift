@@ -1155,25 +1155,29 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         output.scrollToEndOfDocument(nil)
     }
 
-    func mlxPathAndArgs() -> (String, [String]) {
-        let possiblePaths = [
-            "/usr/local/bin/mlx",
-            "/opt/homebrew/bin/mlx"
-        ]
+    func runMLX(prompt: String, purpose: String = "chat", maxTokens: Int = 512, timeout: TimeInterval = 120.0) -> String {
+        let process = Process()
+        let python = LucyPaths.localLLMPythonExecutable()
+        let providerRelativePath = "tools/providers/local_llm.py"
+        let providerURL = LucyPaths.root.appendingPathComponent(providerRelativePath)
 
-        if let mlxPath = possiblePaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
-            return (mlxPath, ["run", model])
+        guard FileManager.default.fileExists(atPath: providerURL.path) else {
+            return "I had trouble talking to my local model:\nCould not find \(providerRelativePath) under Lucy project root: \(LucyPaths.root.path)"
         }
 
-        return ("/usr/bin/env", ["mlx", "run", model])
-    }
-
-    func runMLX(prompt: String) -> String {
-        let process = Process()
-        let (path, args) = mlxPathAndArgs()
-
-        process.executableURL = URL(fileURLWithPath: path)
-        process.arguments = args
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = [
+            python,
+            providerRelativePath,
+            "--purpose",
+            purpose,
+            "--max-tokens",
+            String(maxTokens),
+            "--timeout",
+            String(Int(timeout)),
+            "--stdin"
+        ]
+        process.currentDirectoryURL = LucyPaths.root
 
         let inputPipe = Pipe()
         let outputPipe = Pipe()
@@ -1191,21 +1195,31 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             }
 
             inputPipe.fileHandleForWriting.closeFile()
-            process.waitUntilExit()
+
+            let deadline = Date().addingTimeInterval(timeout)
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+
+            if process.isRunning {
+                process.terminate()
+                return "I had trouble talking to my local model:\nTimed out after \(Int(timeout)) seconds."
+            }
 
             let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
             if process.terminationStatus != 0 {
-                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown MLX error."
-                return "I had trouble talking to MLX:\n\(errorText)"
+                let errorText = String(data: errorData, encoding: .utf8) ?? "Unknown local model error."
+                let fallbackOutput = String(data: data, encoding: .utf8) ?? ""
+                return "I had trouble talking to my local model:\n\(errorText.isEmpty ? fallbackOutput : errorText)"
             }
 
             let rawText = String(data: data, encoding: .utf8) ?? "I did not get a response."
             return stripTerminalEscapes(rawText)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            return "I could not start MLX. Error: \(error.localizedDescription)"
+            return "I could not start my local model. Error: \(error.localizedDescription)"
         }
     }
 
@@ -1375,8 +1389,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
             return false
         }
 
-        append("Lucy: drafting locally with MLX now...\n")
-        append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally with MLX. I will print the draft here.\n\n")
+        append("Lucy: drafting locally with Lucy’s local model provider now...\n")
+        append("Lucy: researching LinkedIn with Browser Bridge, analyzing results, then drafting locally. I will print the draft here.\n\n")
 
         append("Lucy Progress\n[⟳] Research\n[ ] Analysis\n[ ] Writing\n[ ] Done\n\n")
 
@@ -1397,7 +1411,8 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         DispatchQueue.global(qos: .userInitiated).async {
             let escaped = userText.replacingOccurrences(of: "'", with: "'\\''")
-            let command = "cd ~/lucy && PYTHONUNBUFFERED=1 python3 -u tools_created_by_lucy/lucy_linkedin_direct.py '\(escaped)'"
+            let python = LucyPaths.localLLMPythonExecutable()
+            let command = "cd \(self.shellQuote(LucyPaths.root.path)) && PYTHONUNBUFFERED=1 \(self.shellQuote(python)) -u tools_created_by_lucy/lucy_linkedin_direct.py '\(escaped)'"
             self.runShellStreaming(command)
 
             DispatchQueue.main.async {
@@ -2142,17 +2157,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
     }
 
     func lucyDetectedProjectRootPath() -> String {
-        let fm = FileManager.default
-        let home = fm.homeDirectoryForCurrentUser.path
-        let candidates = [
-            home + "/lucy",
-            home + "/Lucy",
-            fm.currentDirectoryPath
-        ]
-
-        return candidates.first { candidate in
-            fm.fileExists(atPath: candidate + "/swift_app/Sources/ChatWindowController.swift")
-        } ?? fm.currentDirectoryPath
+        return LucyPaths.root.path
     }
 
     func runSandboxToolCommand(_ rawCommand: String) -> String {
@@ -2365,7 +2370,7 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         My current architecture:
         - Swift/AppKit floating desktop pet
-        - local MLX chat
+        - local model-provider chat
         - local memory
         - capability registry
         - explicit local tools for search, browser/app opening, Gmail drafts, Notes, Calendar, and Reminders
@@ -2721,6 +2726,34 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
         return "https://mail.google.com/mail/?view=cm&fs=1&to=\(encodedTo)&su=\(encodedSubject)&body=\(encodedBody)"
     }
 
+    func isLocalModelFailure(_ text: String) -> Bool {
+        let lowered = text.lowercased()
+        return lowered.contains("i had trouble talking to my local model")
+            || lowered.contains("i could not start my local model")
+            || lowered.contains("could not find tools/providers/local_llm.py")
+            || lowered.contains("can't open file")
+    }
+
+    func fallbackEmailParts(for request: String, recipient: String? = nil) -> (subject: String, body: String) {
+        let cleanedRequest = request
+            .replacingOccurrences(of: "Recipient:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let greeting = recipient?.isEmpty == false ? "Hello," : "Dear [Recipient],"
+        let topic = cleanedRequest.isEmpty ? "your request" : cleanedRequest
+        let subject = "Following up"
+        let body = """
+        \(greeting)
+
+        I wanted to follow up regarding \(topic). Please let me know what works best for you.
+
+        Best,
+        Mo
+        """
+
+        return (subject, body.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
     func draftEmailForGmailCompose(_ request: String) -> String {
         guard let recipient = firstEmailAddress(in: request) else {
             return draftEmailFromRequest(request)
@@ -2758,7 +2791,12 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         let draft = runMLX(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
-        let parsed = parseEmailDraft(cleanDraft)
+        let usedFallbackDraft = isLocalModelFailure(cleanDraft)
+        var parsed = parseEmailDraft(cleanDraft)
+
+        if usedFallbackDraft {
+            parsed = fallbackEmailParts(for: cleanedRequest, recipient: recipient)
+        }
 
         let cleanSubject = stripTerminalEscapes(parsed.subject)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2783,9 +2821,13 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         let openResult = openURL(composeURL)
 
+        let fallbackNote = usedFallbackDraft
+            ? "\nNote: I could not reach the local model, so I used a safe editable template instead of putting the model error into the email body.\n"
+            : ""
+
         return """
         I drafted the email and opened Gmail compose.
-
+        \(fallbackNote)
         \(fullDraft)
 
         \(openResult)
@@ -2847,12 +2889,31 @@ class ChatWindowController: NSObject, NSTextFieldDelegate {
 
         let draft = runMLX(prompt: prompt)
         let cleanDraft = stripTerminalEscapes(draft)
-        saveLastEmailDraft(cleanDraft)
+        let usedFallbackDraft = isLocalModelFailure(cleanDraft)
+        let finalDraft: String
+
+        if usedFallbackDraft {
+            let fallback = fallbackEmailParts(for: request)
+            finalDraft = """
+            Subject: \(fallback.subject)
+
+            \(fallback.body)
+            """
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            finalDraft = cleanDraft
+        }
+
+        saveLastEmailDraft(finalDraft)
+
+        let fallbackNote = usedFallbackDraft
+            ? "\nNote: I could not reach the local model, so I used a safe editable template instead of putting the model error into the email body.\n"
+            : ""
 
         return """
         Here is a draft:
-
-        \(cleanDraft)
+        \(fallbackNote)
+        \(finalDraft)
 
         I saved this as your latest email draft.
         I have not sent anything.

@@ -12,7 +12,7 @@ class InAppLinkedInRouteTests(unittest.TestCase):
     def test_swift_has_dedicated_linkedin_route_before_self_loop(self):
         text = SWIFT.read_text(encoding="utf-8")
         route_call = text.index("if routeLinkedInPostDraft(userText)")
-        self_loop = text.index('append("Lucy: I understand this as a task, so I am using my MLX self-loop.')
+        self_loop = text.index('let reply = LucyMLXIntentRouter.shared.chatSync(')
         self.assertLess(route_call, self_loop)
         self.assertIn("func looksLikeLinkedInPostDraftRequest", text)
         self.assertIn("lucy_linkedin_direct.py", text)

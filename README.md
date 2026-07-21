@@ -16,17 +16,12 @@ For older non-Apple-Silicon Macs, see `docs/intel-mac-local-llm.md` and run:
 tools/setup_local_llm_intel.sh
 ```
 
-If you use the Intel setup virtual environment, launch Lucy with `PYTHON` pointing at that environment so local GGUF inference is available inside the app:
+If you use the Intel setup virtual environment inside the Lucy release/source folder, Lucy now auto-detects that `.venv-local-llm` Python when the app starts. After setup, add a GGUF model under `assets/models` and launch Lucy normally from the same folder.
+
+You can still force that Python manually for debugging:
 
 ```zsh
-PYTHON="$PWD/.venv-local-llm/bin/python" ~/Applications/Lucy.app/Contents/MacOS/Lucy
-```
-
-For Finder/`open` launches, set the GUI environment first:
-
-```zsh
-launchctl setenv PYTHON "$PWD/.venv-local-llm/bin/python"
-open ~/Applications/Lucy.app
+PYTHON="$PWD/.venv-local-llm/bin/python" ./Lucy.app/Contents/MacOS/Lucy
 ```
 
 ## Private/local install without Apple Developer ID

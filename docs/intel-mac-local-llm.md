@@ -22,18 +22,12 @@ tools/setup_local_llm_intel.sh
 
 Then place compatible GGUF files in `assets/models/`, or edit `data/model_provider.json` to point at your model paths.
 
-If you use the setup script's virtual environment, launch Lucy with the same Python so the app can import `llama-cpp-python`:
+If the setup script creates `.venv-local-llm` in the same Lucy release/source folder, the downloaded app now auto-detects that local Python/model path. You can open Lucy normally from Finder or with the included private no-cert helper after adding the GGUF model.
+
+For debugging, you can still force the local Python manually:
 
 ```zsh
-PYTHON="$PWD/.venv-local-llm/bin/python" ./build_lucy_app.sh
-PYTHON="$PWD/.venv-local-llm/bin/python" ~/Applications/Lucy.app/Contents/MacOS/Lucy
-```
-
-If you prefer launching with Finder or `open`, set the environment for GUI apps first:
-
-```zsh
-launchctl setenv PYTHON "$PWD/.venv-local-llm/bin/python"
-open ~/Applications/Lucy.app
+PYTHON="$PWD/.venv-local-llm/bin/python" ./Lucy.app/Contents/MacOS/Lucy
 ```
 
 For command-line provider checks, run:

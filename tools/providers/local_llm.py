@@ -72,10 +72,37 @@ def resolve_provider(config: dict[str, Any] | None = None, arch: str | None = No
     if provider != "auto":
         return provider
 
+    # Finder-launched downloaded apps do not inherit the Terminal install
+    # shortcut's environment. If the user prepared Lucy's local GGUF/llama.cpp
+    # environment in the release folder, honor that portable local path before
+    # choosing MLX on Apple Silicon. This keeps older/non-MLX-capable Macs on the
+    # compatible provider without requiring a PYTHON=... terminal launch.
+    if prepared_llamacpp_runtime(config):
+        return str(config.get("intel_provider", "llamacpp")).strip().lower() or "llamacpp"
+
     if is_apple_silicon(arch):
         return str(config.get("apple_silicon_provider", "mlx")).strip().lower() or "mlx"
 
     return str(config.get("intel_provider", "llamacpp")).strip().lower() or "llamacpp"
+
+
+def prepared_llamacpp_runtime(config: dict[str, Any]) -> bool:
+    provider = str(config.get("intel_provider", "llamacpp")).strip().lower() or "llamacpp"
+    if provider not in {"llamacpp", "llama_cpp", "llama-cpp"}:
+        return False
+
+    venv_python = PROJECT_ROOT / ".venv-local-llm" / "bin" / "python"
+    if not venv_python.exists():
+        return False
+
+    for purpose in ("chat", "dev"):
+        try:
+            if Path(model_for_purpose(config, provider, purpose)).exists():
+                return True
+        except LocalLLMError:
+            continue
+
+    return False
 
 
 def model_for_purpose(config: dict[str, Any], provider: str, purpose: str) -> str:

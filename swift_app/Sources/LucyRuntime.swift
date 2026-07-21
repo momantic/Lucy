@@ -39,7 +39,7 @@ class LucyRuntime {
 
         Current mode:
         - Desktop companion mode
-        - Local MLX chat
+        - Local model-provider chat
         - Local memory
         - Explicit user-facing tools only
         """

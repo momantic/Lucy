@@ -29,16 +29,56 @@ class LucyLocalLLMProviderTests(unittest.TestCase):
         self.assertEqual(local_llm.resolve_provider(config, arch="arm64"), "mlx")
         self.assertEqual(local_llm.resolve_provider(config, arch="x86_64"), "llamacpp")
 
+    def test_prepared_release_llamacpp_runtime_overrides_mlx_auto(self):
+        import sys
+        import tempfile
+        from unittest import mock
+
+        sys.path.insert(0, str(ROOT / "tools" / "providers"))
+        import local_llm  # type: ignore
+
+        with tempfile.TemporaryDirectory() as tmp:
+            release_root = Path(tmp)
+            (release_root / ".venv-local-llm" / "bin").mkdir(parents=True)
+            (release_root / ".venv-local-llm" / "bin" / "python").write_text("", encoding="utf-8")
+            (release_root / "assets" / "models").mkdir(parents=True)
+            model = release_root / "assets" / "models" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+            model.write_text("placeholder", encoding="utf-8")
+
+            config = {
+                "provider": "auto",
+                "apple_silicon_provider": "mlx",
+                "intel_provider": "llamacpp",
+                "llamacpp_chat_model_path": "assets/models/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+            }
+
+            with mock.patch.object(local_llm, "PROJECT_ROOT", release_root):
+                self.assertEqual(local_llm.resolve_provider(config, arch="arm64"), "llamacpp")
+
     def test_swift_local_llm_launchers_honor_python_override(self):
         chat = (ROOT / "swift_app" / "Sources" / "ChatWindowController.swift").read_text()
         router = (ROOT / "swift_app" / "Sources" / "LucyMLXIntentRouter.swift").read_text()
-        self.assertIn('ProcessInfo.processInfo.environment["PYTHON"] ?? "python3"', chat)
-        self.assertIn('ProcessInfo.processInfo.environment["PYTHON"] ?? "python3"', router)
+        paths = (ROOT / "swift_app" / "Sources" / "LucyPaths.swift").read_text()
+        self.assertIn('ProcessInfo.processInfo.environment["PYTHON"]', paths)
+        self.assertIn('".venv-local-llm"', paths)
+        self.assertIn("LucyPaths.localLLMPythonExecutable()", chat)
+        self.assertIn("LucyPaths.localLLMPythonExecutable()", router)
         self.assertIn('"tools/providers/local_llm.py"', chat)
         self.assertIn('"tools/providers/local_llm.py"', router)
 
+    def test_swift_app_no_longer_uses_direct_mlx_launcher(self):
+        chat = (ROOT / "swift_app" / "Sources" / "ChatWindowController.swift").read_text()
+        runtime = (ROOT / "swift_app" / "Sources" / "LucyRuntime.swift").read_text()
+        self.assertNotIn("func mlxPathAndArgs", chat)
+        self.assertNotIn('ProcessInfo.processInfo.environment["PYTHON"] ?? "python3"', chat)
+        self.assertNotIn("drafting locally with MLX", chat)
+        self.assertNotIn("Local MLX chat", runtime)
+
     def test_autonomous_dev_uses_auto_local_provider_not_mlx_model_argument(self):
-        text = (ROOT / "tools" / "lucy_autonomous_dev.py").read_text()
+        path = ROOT / "tools" / "lucy_autonomous_dev.py"
+        if not path.exists():
+            self.skipTest("lucy_autonomous_dev.py is not present in this checkout")
+        text = path.read_text()
         self.assertIn("def call_local_llm(", text)
         self.assertIn('"auto/local"', text)
         self.assertNotIn("def call_mlx_lm(", text)
