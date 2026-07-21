@@ -35,6 +35,8 @@ class LocalNoCertInstallTests(unittest.TestCase):
         self.assertIn("install_lucy_local_no_cert.sh", html)
         self.assertIn("Public downloads still need Developer ID signing and notarization", html)
         self.assertIn("nocert-extracted-command", html)
+        self.assertIn("apple-verify-command", html)
+        self.assertIn("Apple could not verify Lucy is free of malware", html)
         self.assertIn("nocert-direct-command", html)
         self.assertIn("Private/local install without Apple Developer ID", readme)
         self.assertIn("--zip ~/Downloads/Lucy-v0.1-beta.zip", readme)

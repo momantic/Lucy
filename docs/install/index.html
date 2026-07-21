@@ -72,6 +72,11 @@
       <pre id="nocert-extracted-command">cd ~/Downloads/Lucy-v0.1-beta && zsh ./install_lucy_local_no_cert.sh --direct-launch</pre>
       <button class="copy" data-copy="nocert-extracted-command">Copy</button>
     </div>
+    <p class="warn"><strong>If macOS says “Apple could not verify Lucy is free of malware” after you unzip:</strong> do not double-click Lucy.app. Open Terminal and run this from the unzipped folder instead:</p>
+    <div class="code-row">
+      <pre id="apple-verify-command">cd ~/Downloads/Lucy-v0.1-beta && zsh ./install_lucy_local_no_cert.sh --direct-launch</pre>
+      <button class="copy" data-copy="apple-verify-command">Copy</button>
+    </div>
     <p>If Finder still blocks the ad-hoc signed app, launch Lucy directly from Terminal:</p>
     <div class="code-row">
       <pre id="nocert-direct-command">cd ~/Documents/Lucy && zsh ./install_lucy_local_no_cert.sh --zip ~/Downloads/Lucy-v0.1-beta.zip --direct-launch</pre>
@@ -118,6 +123,7 @@
       <h2>Quick fixes</h2>
       <ul class="checklist">
         <li><strong>Lucy will not open:</strong> use the Fastest path Terminal command above for the private no-cert build.</li>
+        <li><strong>Apple could not verify Lucy is free of malware:</strong> after unzipping, run <code>cd ~/Downloads/Lucy-v0.1-beta && zsh ./install_lucy_local_no_cert.sh --direct-launch</code> in Terminal instead of double-clicking Lucy.app.</li>
         <li><strong>Lucy says “damaged”:</strong> use the private no-cert installer for local beta testing, or delete the old ZIP/app and download the latest ZIP published by the notarized release workflow.</li>
         <li><strong>Older Intel Mac local model fails:</strong> run <code>tools/setup_local_llm_intel.sh</code>, add a small GGUF model, and launch with the setup Python.</li>
         <li><strong>Chrome Bridge will not send the page:</strong> start the local server command above, then click the extension icon again.</li>
