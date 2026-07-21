@@ -8,16 +8,42 @@ set -euo pipefail
 # - Do not leave dist/release Lucy.app bundles behind.
 
 ROOT="${LUCY_ROOT:-$HOME/lucy}"
-CANONICAL_APP="$HOME/Applications/Lucy.app"
+CANONICAL_APP="${LUCY_APP_PATH:-$HOME/Applications/Lucy.app}"
+MACOS_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
+BUILD_ARCHS="${LUCY_BUILD_ARCHS:-$(uname -m)}"
+BUNDLE_IDENTIFIER="${LUCY_BUNDLE_IDENTIFIER:-com.momantic.lucy}"
+SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
+BUILD_DIR="$(mktemp -d)"
+APP_PARENT_DIR="$(dirname "$CANONICAL_APP")"
+
+cleanup() {
+  rm -rf "$BUILD_DIR"
+}
+trap cleanup EXIT
 
 cd "$ROOT"
 
-mkdir -p "$HOME/Applications"
+mkdir -p "$APP_PARENT_DIR"
 rm -rf "$CANONICAL_APP"
 mkdir -p "$CANONICAL_APP/Contents/MacOS"
 mkdir -p "$CANONICAL_APP/Contents/Resources"
 
-swiftc swift_app/Sources/*.swift -o "$CANONICAL_APP/Contents/MacOS/Lucy"
+ARCH_OUTPUTS=()
+for ARCH in ${(z)BUILD_ARCHS}; do
+  ARCH_OUTPUT="$BUILD_DIR/Lucy-$ARCH"
+  swiftc \
+    -target "${ARCH}-apple-macos${MACOS_DEPLOYMENT_TARGET}" \
+    -sdk "$SDK_PATH" \
+    swift_app/Sources/*.swift \
+    -o "$ARCH_OUTPUT"
+  ARCH_OUTPUTS+=("$ARCH_OUTPUT")
+done
+
+if [ ${#ARCH_OUTPUTS[@]} -eq 1 ]; then
+  cp "$ARCH_OUTPUTS[1]" "$CANONICAL_APP/Contents/MacOS/Lucy"
+else
+  lipo -create "${ARCH_OUTPUTS[@]}" -output "$CANONICAL_APP/Contents/MacOS/Lucy"
+fi
 chmod +x "$CANONICAL_APP/Contents/MacOS/Lucy"
 
 # Bundle Lucy's app icon and runtime resources so Finder, Dock, app switcher,
@@ -28,7 +54,11 @@ cp lucy-store-icon.png "$CANONICAL_APP/Contents/Resources/LucyStoreIcon.png"
 cp -R assets "$CANONICAL_APP/Contents/Resources/assets"
 cp -R data "$CANONICAL_APP/Contents/Resources/data"
 
-cat > "$CANONICAL_APP/Contents/Info.plist" <<'PLIST'
+# Codesign rejects app bundles that contain resource forks/Finder metadata.
+# Strip copied extended attributes before signing and packaging.
+xattr -cr "$CANONICAL_APP" 2>/dev/null || true
+
+cat > "$CANONICAL_APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -36,7 +66,7 @@ cat > "$CANONICAL_APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleExecutable</key>
     <string>Lucy</string>
     <key>CFBundleIdentifier</key>
-    <string>com.momantic.lucy</string>
+    <string>${BUNDLE_IDENTIFIER}</string>
     <key>CFBundleName</key>
     <string>Lucy</string>
     <key>CFBundleDisplayName</key>
@@ -50,7 +80,7 @@ cat > "$CANONICAL_APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>${MACOS_DEPLOYMENT_TARGET}</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Lucy uses the microphone only when you click Listen, so she can turn your speech into text in the chat box.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
@@ -59,9 +89,16 @@ cat > "$CANONICAL_APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
+if [ "${LUCY_SKIP_CODESIGN:-0}" != "1" ]; then
+  # Sign the executable and bundle so the ZIP preserves a coherent code
+  # signature. Public downloads should set LUCY_CODESIGN_IDENTITY to a
+  # Developer ID Application certificate and notarize the ZIP.
+  codesign --force --sign "${LUCY_CODESIGN_IDENTITY:--}" "$CANONICAL_APP/Contents/MacOS/Lucy"
+  codesign --force --sign "${LUCY_CODESIGN_IDENTITY:--}" "$CANONICAL_APP"
+fi
+
 touch "$CANONICAL_APP"
 
-# Remove old duplicate app bundles created by earlier build/release flows.
-rm -rf "$ROOT/dist/Lucy.app" "$ROOT/release/Lucy-v0.1-beta/Lucy.app"
-
-echo "Built canonical Lucy app: $CANONICAL_APP"
+echo "Built Lucy app: $CANONICAL_APP"
+echo "Architectures: $(lipo -archs "$CANONICAL_APP/Contents/MacOS/Lucy")"
+echo "Minimum macOS target: $MACOS_DEPLOYMENT_TARGET"

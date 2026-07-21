@@ -32,7 +32,7 @@
         <a class="btn primary" data-download-source="install-hero" href="https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip">Download Lucy for Mac</a>
         <a class="btn secondary" href="https://chromewebstore.google.com/detail/lucy-bridge/annlbnhnlflpofdjlmdmfebcgakhlccn">Add Lucy Bridge to Chrome</a>
       </div>
-      <p class="mini">Requires macOS. Apple Silicon uses MLX by default; Intel Macs can use local GGUF models through llama.cpp. Python 3 is needed for bridge mode and Intel local-model setup.</p>
+      <p class="mini">Requires macOS 12 or newer. The current download is a universal Mac app for Apple Silicon and Intel. Apple Silicon uses MLX by default; Intel Macs can use local GGUF models through llama.cpp. Python 3 is needed for bridge mode and Intel local-model setup.</p>
     </div>
     <aside class="panel toc" aria-label="Install sections">
       <strong>Quick links</strong>
@@ -46,19 +46,19 @@
 
   <section id="fast" class="section panel">
     <h2>Fastest path</h2>
-    <p>Want the least manual setup? Copy this into Terminal. It downloads the latest Lucy release to <code>~/Downloads</code>, unzips it, and opens the app.</p>
+    <p>Want the least manual setup? Copy this into Terminal. It downloads the latest Lucy release to <code>~/Downloads</code>, unzips it, clears stale browser quarantine metadata, and opens the app. Public browser downloads should be built by Lucy’s notarized release workflow.</p>
     <div class="code-row">
-      <pre id="install-command">cd ~/Downloads && curl -L -o Lucy-v0.1-beta.zip https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip && unzip -o Lucy-v0.1-beta.zip && open Lucy-v0.1-beta/Lucy.app</pre>
+      <pre id="install-command">cd ~/Downloads && rm -rf Lucy-v0.1-beta && curl -L -o Lucy-v0.1-beta.zip https://github.com/momantic/Lucy/releases/latest/download/Lucy-v0.1-beta.zip && unzip -o Lucy-v0.1-beta.zip && { xattr -dr com.apple.quarantine Lucy-v0.1-beta/Lucy.app 2>/dev/null || true; } && open Lucy-v0.1-beta/Lucy.app</pre>
       <button class="copy" data-copy="install-command">Copy</button>
     </div>
-    <p class="ok"><strong>Tip:</strong> If macOS blocks the first launch, right-click <strong>Lucy.app</strong>, choose <strong>Open</strong>, then confirm once.</p>
+    <p class="ok"><strong>Tip:</strong> If macOS blocks the first launch, right-click <strong>Lucy.app</strong>, choose <strong>Open</strong>, then confirm once. If macOS says Lucy is damaged after a browser download, use the Terminal command above or install a ZIP published by the notarized GitHub release workflow.</p>
   </section>
 
   <section id="manual" class="section">
     <h2>Manual install</h2>
     <div class="steps">
       <div class="step panel"><div><h3>Download Lucy</h3><p>Click <strong>Download Lucy for Mac</strong> above and unzip it. Keep the folder in Downloads or move <strong>Lucy.app</strong> to Applications.</p></div></div>
-      <div class="step panel"><div><h3>Open the app</h3><p>Open <strong>Lucy-v0.1-beta/Lucy.app</strong>. If macOS shows a security prompt, use right-click → <strong>Open</strong> for the first launch.</p></div></div>
+      <div class="step panel"><div><h3>Open the app</h3><p>Open <strong>Lucy-v0.1-beta/Lucy.app</strong>. The release build targets macOS 12+ and includes both Apple Silicon and Intel slices. If macOS shows a security prompt, use right-click → <strong>Open</strong> for the first launch.</p></div></div>
       <div class="step panel"><div><h3>Start using Lucy</h3><p>Ask Lucy to draft, summarize, or help with local tasks. Add the Chrome Bridge below only when webpage reading is needed.</p></div></div>
     </div>
   </section>
@@ -91,7 +91,8 @@
     <div class="panel">
       <h2>Quick fixes</h2>
       <ul class="checklist">
-        <li><strong>Lucy will not open:</strong> right-click Lucy.app and choose Open once.</li>
+        <li><strong>Lucy will not open:</strong> confirm you downloaded the latest ZIP, then right-click Lucy.app and choose Open once.</li>
+        <li><strong>Lucy says “damaged”:</strong> use the Fastest path Terminal command above, or delete the old ZIP/app and download the latest ZIP published by the notarized release workflow.</li>
         <li><strong>Older Intel Mac local model fails:</strong> run <code>tools/setup_local_llm_intel.sh</code>, add a small GGUF model, and launch with the setup Python.</li>
         <li><strong>Chrome Bridge will not send the page:</strong> start the local server command above, then click the extension icon again.</li>
         <li><strong>Chrome Web Store does not open:</strong> use the direct bridge link above or search for “Lucy Bridge” in the Chrome Web Store.</li>

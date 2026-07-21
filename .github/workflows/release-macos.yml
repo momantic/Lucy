@@ -1,0 +1,102 @@
+name: Build notarized Lucy macOS release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, e.g. v0.1-beta'
+        required: true
+        default: 'v0.1-beta'
+      publish_release:
+        description: 'Upload ZIP to the matching GitHub Release'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-notarized-zip:
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Import Developer ID certificate
+        env:
+          APPLE_DEVELOPER_ID_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_P12_BASE64 }}
+          APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_DEVELOPER_ID_CERTIFICATE_P12_BASE64:-}" ] || [ -z "${APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD:-}" ]; then
+            echo "Missing Developer ID certificate secrets." >&2
+            exit 1
+          fi
+          KEYCHAIN_PATH="$RUNNER_TEMP/lucy-signing.keychain-db"
+          CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+          echo "$APPLE_DEVELOPER_ID_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+      - name: Store notarization credentials
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_APP_SPECIFIC_PASSWORD:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ]; then
+            echo "Missing Apple notarization secrets." >&2
+            exit 1
+          fi
+          xcrun notarytool store-credentials lucy-notary \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --validate
+
+      - name: Build Developer ID signed and notarized ZIP
+        env:
+          LUCY_RELEASE_VERSION: ${{ inputs.version }}
+          LUCY_CODESIGN_IDENTITY: ${{ secrets.LUCY_CODESIGN_IDENTITY }}
+          LUCY_NOTARY_PROFILE: lucy-notary
+          LUCY_KEEP_EXPANDED_RELEASE: '1'
+        run: |
+          set -euo pipefail
+          if [ -z "${LUCY_CODESIGN_IDENTITY:-}" ]; then
+            echo "Missing LUCY_CODESIGN_IDENTITY secret, e.g. Developer ID Application: Your Name (TEAMID)." >&2
+            exit 1
+          fi
+          zsh ./release_lucy_zip.sh
+
+      - name: Verify downloaded-release Gatekeeper acceptance
+        env:
+          LUCY_RELEASE_VERSION: ${{ inputs.version }}
+          LUCY_EXPECT_PUBLIC_RELEASE_ZIP: '1'
+        run: python3 -m unittest tests.test_release_lucy_zip.LucyReleaseZipTests.test_release_zip_contains_gatekeeper_acceptable_downloaded_app
+
+      - name: Upload notarized ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lucy-${{ inputs.version }}.zip
+          path: release/Lucy-${{ inputs.version }}.zip
+          if-no-files-found: error
+
+      - name: Publish ZIP to GitHub Release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release create "$VERSION" --title "Lucy $VERSION" --notes "Notarized Lucy macOS release."
+          fi
+          gh release upload "$VERSION" "release/Lucy-${VERSION}.zip" --clobber
